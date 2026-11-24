@@ -7,7 +7,12 @@ from uuid import uuid4
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, Response, status
 from fastapi.responses import StreamingResponse
 from fastapi.security import HTTPAuthorizationCredentials
-from open_webui.utils.machines import normalize_machine_id
+from open_webui.utils.machines import (
+    get_folder_directory,
+    machine_id_of,
+    normalize_machine_id,
+    require_chat_folder_machine,
+)
 from open_webui.config import (
     CONTEXT_COMPACTION_RETENTION_PERCENTAGE,
     CONTEXT_COMPACTION_TOKEN_THRESHOLD,
@@ -19,7 +24,7 @@ from open_webui.events import EVENTS, publish_event
 from open_webui.internal.db import get_async_session
 from open_webui.models.access_grants import AccessGrants
 from open_webui.models.chat_messages import ChatMessages
-from open_webui.models.chat_views import ChatViewStateForm, ChatViewStates
+from open_webui.models.chat_views import ChatViewStateForm, ChatViewStates, read_bounded_view
 from open_webui.models.chats import (
     AggregateChatStats,
     ChatBody,
@@ -54,7 +59,6 @@ from open_webui.utils.tool_permissions import DEFAULT_TOOL_PERMISSIONS_AUTO_PROM
 from open_webui.utils.tool_search import DEFAULT_TOOL_SEARCH_DECISIONS_PROMPT, validate_decisions_config
 from pydantic import BaseModel, Field, ValidationError, field_validator, model_validator
 from sqlalchemy.ext.asyncio import AsyncSession
-from starlette.requests import ClientDisconnect
 
 log = logging.getLogger(__name__)
 
@@ -889,6 +893,11 @@ async def create_new_chat(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
+    normalize_machine_id(form_data.chat)
+    await require_chat_folder_machine(form_data.folder_id, machine_id_of(form_data.chat))
+    directory = await get_folder_directory(form_data.folder_id)
+    if directory and machine_id_of(form_data.chat):
+        form_data.chat['working_directory'] = directory
 
     try:
         set_message_authors(form_data.chat, user)
@@ -1440,17 +1449,9 @@ async def get_chat_view(
 
 
 async def bounded_chat_view(request: Request):
-    # Bound the body before JSON/schema parsing, including chunked requests.
-    body = bytearray()
+    body = await read_bounded_view(request)
     try:
-        async for chunk in request.stream():
-            body.extend(chunk)
-            if len(body) > 1024 * 1024:
-                raise HTTPException(status_code=413, detail='Chat view is too large')
-    except ClientDisconnect:
-        raise HTTPException(status_code=499)
-    try:
-        return ChatViewStateForm.model_validate_json(bytes(body))
+        return ChatViewStateForm.model_validate_json(body)
     except ValueError:
         raise HTTPException(status_code=422, detail='Invalid chat view')
 
@@ -1532,6 +1533,13 @@ async def update_chat_by_id(
                 )
             form_data.chat['title'] = title.strip()
     if chat:
+        if machine_id_of(form_data.chat) != machine_id_of(chat.chat):
+            await require_chat_folder_machine(chat.folder_id, machine_id_of(form_data.chat))
+        directory = form_data.chat.get('working_directory')
+        if directory and directory != (chat.chat or {}).get('working_directory'):
+            folder_directory = await get_folder_directory(chat.folder_id)
+            if folder_directory and directory != folder_directory:
+                raise HTTPException(status.HTTP_409_CONFLICT, 'Chats in this folder start in its directory')
         set_message_authors(form_data.chat, user)
         touch = 'history' in form_data.chat or 'messages' in form_data.chat
         chat = await Chats.update_chat_by_id(id, form_data.chat, db=db, touch=touch)

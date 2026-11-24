@@ -57,6 +57,7 @@
 	export let prompt = '';
 	export let files = [];
 	export let machineContext: MachineContext | null = null;
+	export let machineSelectionEnabled = true;
 	export let selectedMachineId: Pick<Writable<string | null>, 'subscribe' | 'set'>;
 	export let machineSkills: Writable<any[]>;
 	export let messageInput = null;
@@ -153,6 +154,7 @@
 {#snippet composer(placeholder = '')}
 	<MessageInput
 		{selectedMachineId}
+		{machineSelectionEnabled}
 		{machineSkills}
 		{chatId}
 		{onTemporaryChange}

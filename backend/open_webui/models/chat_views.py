@@ -3,10 +3,12 @@
 import time
 from typing import Annotated, Literal
 
+from fastapi import HTTPException, Request
 from open_webui.internal.db import Base
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from sqlalchemy import JSON, BigInteger, Column, Text, update
 from sqlalchemy.exc import IntegrityError
+from starlette.requests import ClientDisconnect
 
 
 class ViewModel(BaseModel):
@@ -125,6 +127,19 @@ class ChatViewData(ViewModel):
             legacy = data.pop('selectedTerminalId')
             data.setdefault('selectedMachineId', legacy)
         return data
+
+
+async def read_bounded_view(request: Request) -> bytes:
+    """Bound the body before JSON/schema parsing, including chunked requests."""
+    body = bytearray()
+    try:
+        async for chunk in request.stream():
+            body.extend(chunk)
+            if len(body) > 1024 * 1024:
+                raise HTTPException(status_code=413, detail='View is too large')
+    except ClientDisconnect:
+        raise HTTPException(status_code=499)
+    return bytes(body)
 
 
 class ChatViewStateForm(ViewModel):

@@ -51,7 +51,13 @@ from open_webui.utils.recurrence import (
 from open_webui.utils.prompt_variables import fill_variables
 from open_webui.utils.task import prompt_template
 from open_webui.utils.agents.discovery import get_models as get_agent_models
-from open_webui.utils.machines import initialize_machine_directory, resolve_machine_connection
+from open_webui.utils.machines import (
+    can_use_machine,
+    get_folder_machine,
+    get_folder_machine_mismatch,
+    initialize_machine_directory,
+    resolve_machine_connection,
+)
 from starlette.datastructures import Headers
 
 log = logging.getLogger(__name__)
@@ -460,6 +466,10 @@ async def _execute_automation(app, automation: AutomationModel, variables: Optio
         parent_id = None
         defaults = await _resolve_model_defaults(app, model_id)
         machine = automation_machine_of(automation.data)
+        if folder_id and await get_folder_machine_mismatch(folder_id, machine.get('server_id')):
+            folder_machine = await get_folder_machine(folder_id)
+            if machine.get('server_id') or await can_use_machine(user, folder_machine['machine_id']):
+                machine = {'server_id': folder_machine['machine_id'], 'cwd': folder_machine['working_directory']}
         machine_id = machine.get('server_id') or defaults.get('machine_id')
 
         # An ongoing chat gets this run at its end; the first run, or a run after the chat was deleted, starts it.

@@ -14,7 +14,12 @@ from fastapi import HTTPException
 
 from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL, AIOHTTP_CLIENT_TIMEOUT_MACHINE, ENABLE_TOOL_SERVERS
 from open_webui.utils.headers import bearer_auth_header
-from open_webui.utils.chat_id import is_saved_chat_id
+from open_webui.utils.chat_id import (
+    FOLDER_SESSION_ID_PREFIX,
+    folder_session_id,
+    get_folder_id_of_session,
+    is_saved_chat_id,
+)
 from open_webui.utils.skill_files import (
     SKILL_CONTENT_MAX_CHARS,
     bounded_skill_manifest,
@@ -339,10 +344,17 @@ async def require_model_access(user, model_id, machine_id, request=None):
 
 def machine_headers(connection):
     """Only consumes context produced by find_machine_connection, never browser headers."""
+    headers = {}
+    if connection.get('workspace'):
+        headers['X-Workspace-Id'] = connection['workspace']['id']
+        if connection['workspace'].get('directory'):
+            headers['X-Workspace-Directory'] = quote(connection['workspace']['directory'])
     if not connection.get('template_id'):
-        return {'X-User-Id': connection['instance_user_id']} if connection.get('instance_user_id') else {}
+        if connection.get('instance_user_id'):
+            headers['X-User-Id'] = connection['instance_user_id']
+        return headers
     context = connection['machine_context']
-    headers = {
+    headers |= {
         'X-Terminal-Template-Id': connection['template_id'],
         'X-User-Id': context['user_id'],
     }
@@ -382,7 +394,11 @@ async def find_machine_connection(user, machine_id, metadata=None, request=None)
     shared_session = None
     instance_user = user
     chat_id = metadata.get('chat_id')
-    if chat_id and is_saved_chat_id(chat_id):
+    folder_id = None
+    if isinstance(chat_id, str) and chat_id.startswith(FOLDER_SESSION_ID_PREFIX):
+        folder_id = get_folder_id_of_session(chat_id, user.id)
+        await require_folder_panels(user, folder_id)
+    elif chat_id and is_saved_chat_id(chat_id):
         chat = await Chats.get_chat_metadata_by_id(chat_id)
         if chat is None or not await Chats.has_chat_access(chat_id, user, permission='write', chat=chat):
             if chat is None or not await has_machine_write_access(user, machine_id):
@@ -395,6 +411,12 @@ async def find_machine_connection(user, machine_id, metadata=None, request=None)
             return await find_machine_connection(user, machine_id, metadata, request=request)
         from open_webui.utils.agents.session import get_session, model_id
 
+        folder_id = chat.folder_id
+        if folder_id and await get_folder_machine_mismatch(folder_id, machine_id):
+            # A chat that was on another machine before keeps it.
+            full_chat = await Chats.get_chat_by_id(chat_id)
+            if full_chat is None or machine_id_of(full_chat.chat) != machine_id:
+                raise HTTPException(409, 'Chats in this folder run on its machine')
         if not chat.current_message_id:
             # Only the full chat knows where the history ends.
             chat = await Chats.get_chat_by_id(chat_id)
@@ -410,7 +432,19 @@ async def find_machine_connection(user, machine_id, metadata=None, request=None)
             if instance_user is None:
                 raise HTTPException(403, 'Agent machine owner is unavailable')
 
+    workspace = None
+    if folder_id:
+        folder_machine = await get_folder_machine(folder_id)
+        workspace = {
+            'id': folder_session_id(folder_id, user.id),
+            'directory': folder_machine['working_directory']
+            if folder_machine and folder_machine['machine_id'] == machine_id
+            else None,
+        }
+
     def authorized_connection(connection):
+        if workspace:
+            connection = {**connection, 'workspace': workspace}
         if shared_session:
             connection = {**connection, 'instance_user_id': instance_user.id}
         return connection
@@ -586,11 +620,71 @@ async def get_folder_machine_defaults(user, folder_id):
     folder = await Folders.get_folder_by_id(folder_id)
     if not folder or not await has_folder_access(user.id, folder, 'write', None):
         raise HTTPException(403, 'Folder is unavailable')
-    data = folder.data or {}
-    return {
-        'machine_id': machine_id_of(data),
-        'working_directory': data.get('working_directory'),
-    }
+    return await get_folder_machine(folder_id) or {}
+
+
+async def get_folder_machine(folder_id):
+    """The machine a folder is on, and the directory there."""
+    from open_webui.models.folders import Folders
+
+    folder = await Folders.get_folder_by_id(folder_id)
+    data = (folder.data or {}) if folder else {}
+    if not machine_id_of(data):
+        return None
+    return {'machine_id': machine_id_of(data), 'working_directory': data.get('working_directory')}
+
+
+async def get_folder_machine_mismatch(folder_id, machine_id):
+    """The folder's machine id when it is a different one that everything in the folder has to use."""
+    folder_machine = await get_folder_machine(folder_id)
+    if not folder_machine or folder_machine['machine_id'] == machine_id:
+        return None
+    if folder_machine['machine_id'].startswith('template:'):
+        # A machine per chat or model is not one place, so the folder only suggests it.
+        from open_webui.models.users import Users
+        from open_webui.models.folders import Folders
+
+        folder = await Folders.get_folder_by_id(folder_id)
+        owner = await Users.get_user_by_id(folder.user_id)
+        try:
+            _, template = await template_connection(owner, folder_machine['machine_id'])
+        except HTTPException:
+            return None
+        if (template.get('data') or {}).get('scope') in ('chat', 'model'):
+            return None
+    return folder_machine['machine_id']
+
+
+async def get_folder_directory(folder_id):
+    """The directory everything in the folder starts in, when its machine is fixed and it has one."""
+    if not folder_id or not await get_folder_machine_mismatch(folder_id, None):
+        return None
+    return (await get_folder_machine(folder_id))['working_directory']
+
+
+async def can_use_machine(user, machine_id, request=None):
+    try:
+        return await find_machine_connection(user, machine_id, request=request) is not None
+    except HTTPException:
+        return False
+
+
+async def require_chat_folder_machine(folder_id, machine_id):
+    if folder_id and machine_id and await get_folder_machine_mismatch(folder_id, machine_id):
+        raise HTTPException(409, 'Chats in this folder run on its machine')
+
+
+async def require_folder_panels(user, folder_id):
+    """Check that a person may have panels in a folder; machine access is checked apart.
+
+    Shells left on the folder's earlier machine stay reachable, so its current one is not required.
+    """
+    from open_webui.models.folders import Folders
+    from open_webui.utils.access_control.folders import has_folder_access
+
+    folder = await Folders.get_folder_by_id(folder_id) if folder_id else None
+    if not folder or (user.role != 'admin' and not await has_folder_access(user.id, folder, 'read', None)):
+        raise HTTPException(403, 'Folder access denied')
 
 
 async def initialize_machine_directory(request, user, metadata, machine_id, path):
@@ -727,24 +821,45 @@ async def get_machine_file(request, user, metadata: dict, path: str, *, max_byte
     return bytes(data)
 
 
+async def get_chat_folder_directory(metadata: dict) -> str | None:
+    """The directory of the chat's folder, when the chat runs on the folder's machine."""
+    from open_webui.models.chats import Chats
+
+    chat_id = metadata.get('chat_id')
+    chat = await Chats.get_chat_metadata_by_id(chat_id) if is_saved_chat_id(chat_id) else None
+    folder_machine = await get_folder_machine(chat.folder_id) if chat and chat.folder_id else None
+    if not folder_machine or folder_machine['machine_id'] != metadata.get('machine_id'):
+        return None
+    return folder_machine['working_directory']
+
+
 async def get_machine_agents_md(request, user, metadata: dict, extra_params: dict | None = None) -> str | None:
-    """Load the selected terminal user's home AGENTS.md afresh for this turn."""
+    """Load the machine user's home AGENTS.md, then the folder's, afresh for this turn."""
     try:
         async with asyncio.timeout(5):
             data = await get_machine_json(request, user, metadata, '/files/cwd', extra_params)
             home = data.get('home') if isinstance(data, dict) else None
             if not isinstance(home, str) or not (posixpath.isabs(home) or ntpath.isabs(home)):
                 return None
-            path = quote(posixpath.join(home, 'AGENTS.md'), safe='')
-            data = await get_machine_json(request, user, metadata, f'/files/read?path={path}', extra_params)
-
-        content = data.get('content') if isinstance(data, dict) else None
-        if not isinstance(content, str) or not content.strip():
-            return None
-        if len(content.encode('utf-8')) > MAX_AGENTS_MD_BYTES:
-            log.warning('Skipping terminal AGENTS.md: exceeds %s bytes', MAX_AGENTS_MD_BYTES)
-            return None
-        return f'# AGENTS.md\n\n{content}'
+            contents = []
+            candidates = [[home, ('AGENTS.md',)]]
+            directory = await get_chat_folder_directory(metadata)
+            if directory and directory != home:
+                candidates.append([directory, ('AGENTS.md', 'CLAUDE.md')])
+            for directory, names in candidates:
+                for name in names:
+                    path = quote(posixpath.join(directory, name), safe='')
+                    data = await get_machine_json(request, user, metadata, f'/files/read?path={path}', extra_params)
+                    content = data.get('content') if isinstance(data, dict) else None
+                    if not isinstance(content, str) or not content.strip():
+                        continue
+                    size = sum(len(text.encode('utf-8')) for text in [*contents, content])
+                    if size > MAX_AGENTS_MD_BYTES:
+                        log.warning('Skipping machine %s: exceeds %s bytes', name, MAX_AGENTS_MD_BYTES)
+                    else:
+                        contents.append(f'# {name}\n\n{content}')
+                    break
+        return '\n\n'.join(contents) or None
     except Exception as e:
         log.debug('Failed to load terminal AGENTS.md (%s)', type(e).__name__)
         return None

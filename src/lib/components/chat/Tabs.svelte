@@ -34,7 +34,9 @@
 		embed,
 		temporaryChat,
 		machines,
+		selectedFolder,
 		showTabs,
+		activeChatTabId,
 		chatTabRequest,
 		showSidebar,
 		mobile,
@@ -101,7 +103,7 @@
 	import UntitledFile from './Tabs/UntitledFile.svelte';
 	import QuickOpen from './Tabs/QuickOpen.svelte';
 	import MachinePicker, { type MachineOption } from './Tabs/MachinePicker.svelte';
-	import { selectMachine } from '$lib/utils/machines';
+	import { machineIdOf, selectMachine } from '$lib/utils/machines';
 	import { terminalIconName } from '$lib/utils/terminal';
 	import VoiceNote from './Tabs/VoiceNote.svelte';
 	import Browser from './Tabs/Browser.svelte';
@@ -120,7 +122,13 @@
 	import ConfirmDialog from '../common/ConfirmDialog.svelte';
 	let stopTerminalChoice: ((stop: boolean) => void) | null = null;
 	import SplitPanel from '../icons/SplitPanel.svelte';
-	import { isSavedChatId, isTemporaryChatId } from '$lib/utils/chatId';
+	import {
+		folderSessionId,
+		isFolderSessionId,
+		isSavedChatId,
+		isTemporaryChatId
+	} from '$lib/utils/chatId';
+	import { getChatView } from '$lib/apis/chats/view';
 
 	const i18n = getContext<any>('i18n');
 	const appLayout = getContext<AppLayoutContext | undefined>('appLayout');
@@ -188,6 +196,8 @@
 	};
 	$: if (!mainTabFolder) isRenamingFolder = false;
 	$: mainTabTitle = mainTabFolder?.name ?? title;
+	/** What the open tabs belong to: the folder on screen, or the chat. */
+	$: panelChatId = mainTabFolder && $user ? folderSessionId(mainTabFolder.id, $user.id) : chatId;
 	export let getEmbeddedDraft: (
 		text?: string,
 		files?: any[]
@@ -338,7 +348,7 @@
 			panels: carried,
 			selectedMachineId: $selectedMachineId
 		};
-		setView({ status: 'carrying', entry, fromChatId: chatId });
+		setView({ status: 'carrying', entry, fromChatId: panelChatId });
 		tabs = carried;
 		hasExtraTabs = carried.tabs.some((tab) => tab.id !== mainChatTabId);
 	}
@@ -389,6 +399,7 @@
 		return done;
 	}
 
+	let lastFolderView: string | null = null;
 	async function restoreChatView(id: string | null) {
 		if (!$user?.id) return;
 		captureView();
@@ -410,8 +421,11 @@
 			let panels = setMainChatTab(entry.state.panels, true, mainTabTitle);
 			const mainGroup = panels.groups.find((group) => group.tabIds.includes(mainChatTabId));
 			const activeIds = [panels.activeId, mainGroup?.activeId];
-			// Opening a chat shows that chat, not the page or other chat it was left on.
-			if (
+			// Opening a chat shows that chat, not the page or other chat it was left on. A folder opens
+			// as it was left; opening it again from inside shows the folder itself.
+			if (isFolderSessionId(id)) {
+				if (id === lastFolderView && !pendingPageTab) panels = activateTab(panels, mainChatTabId);
+			} else if (
 				panels.tabs.some(
 					(tab) =>
 						activeIds.includes(tab.id) &&
@@ -430,7 +444,10 @@
 			commentAnchor = {};
 			sessionFailures = {};
 			sessionAttempts = {};
+			lastFolderView = isFolderSessionId(id) ? id : null;
 			setView({ status: 'ready', entry, chatId: id, error: entry.error });
+			if (isFolderSessionId(id) && !entry.persisted && machineIdOf($selectedFolder?.data))
+				openFiles($selectedMachineId, $selectedFolder?.data?.working_directory || undefined);
 			hasExtraTabs = tabs.tabs.some((tab) => tab.id !== mainChatTabId);
 		} catch (error) {
 			if (viewState === loading)
@@ -440,6 +457,8 @@
 	/** Keeps the layout in step with the chat: carry it over, attach it to the new chat id, or load. */
 	function followChat(current: ViewState, id: string | null) {
 		if (current.status === 'idle') return void restoreChatView(id);
+		// A folder keeps its own tabs; nothing is carried into it.
+		if (isFolderSessionId(id) && current.entry.chatId !== id) return void restoreChatView(id);
 		if (current.status === 'carrying') {
 			if (id === current.fromChatId) return;
 			if (id) void attachChatViewTo(id).catch(() => {});
@@ -511,7 +530,11 @@
 			tab.machineId,
 			$machines ?? [],
 			localStorage.token ?? '',
-			tab.target?.context ?? { chatId, modelId: modelId ?? null }
+			tab.target?.context ?? {
+				// A session that came along with a chat stays under that chat.
+				chatId: (tab.kind !== 'chat' && tab.chatId) || panelChatId,
+				modelId: modelId ?? null
+			}
 		);
 		if (target) tab.target = target;
 		return target;
@@ -520,7 +543,15 @@
 		const target = resolveTabConnection(tab);
 		if (target) {
 			delete sessionFailures[tab.id];
-			void createViewSession(chatView, tab.id, target);
+			void createViewSession(
+				chatView,
+				tab.id,
+				target,
+				getCurrentDirectory(target.selector) ||
+					(machineIdOf($selectedFolder?.data) === target.selector
+						? $selectedFolder?.data?.working_directory || undefined
+						: undefined)
+			);
 		}
 	};
 
@@ -560,7 +591,7 @@
 		if (!canVoiceNote || !$user) return;
 		voiceNoteDestination = {
 			target: selectedConnection,
-			chatId,
+			chatId: panelChatId,
 			directory: getCurrentDirectory(selectedConnection.selector)
 		};
 	};
@@ -691,7 +722,7 @@
 			const target =
 				tab.target ??
 				resolveMachineTarget(tab.machineId, $machines ?? [], localStorage.token, {
-					chatId: chatId,
+					chatId: panelChatId,
 					modelId: modelId ?? null
 				});
 			tab = { ...tab, target: target ?? undefined };
@@ -718,13 +749,16 @@
 		tabs.tabs.find(
 			(tab) =>
 				(tab.href && pageTabKey(new URL(tab.href, location.origin)) === pageTabKey(url)) ||
-				(tab.chatId && url.pathname === `/c/${tab.chatId}`) ||
+				(tab.kind === 'chat' && tab.chatId && url.pathname === `/c/${tab.chatId}`) ||
 				(url.pathname === '/workspace' && tab.href?.startsWith('/workspace/'))
 		);
+	// A folder's tabs are not there yet while the chat being left is still shown.
+	const isPanelViewReady = (id: string | null, entry: ChatViewEntry | null) =>
+		!isFolderSessionId(id) || entry?.chatId === id;
 	export const openPageTab = (request: { href: string; label: string; inSplit?: boolean }) => {
 		const url = new URL(request.href, location.origin);
 		if (url.origin !== location.origin || !pageTabKey(url)) return;
-		if (!viewReady) {
+		if (!viewReady || !isPanelViewReady(panelChatId, viewEntry)) {
 			pendingPageTab = request;
 			return;
 		}
@@ -742,6 +776,28 @@
 			)
 				void navigatePageTab(existing.id, request.href);
 		} else openPanel(createPageTab(request), request.inSplit);
+	};
+	/** Brings the live shells and browsers of a chat into its folder's tabs. */
+	export const joinChatSessions = async (id: string) => {
+		const saved = await getChatView(id).catch(() => null);
+		const entry = viewEntry;
+		if (!entry || !isFolderSessionId(panelChatId) || entry.chatId !== panelChatId) return;
+		for (const tab of saved?.state?.panels.tabs ?? []) {
+			if (!tab.sessionId || !tab.machineId || !['terminal', 'browser'].includes(tab.kind)) continue;
+			const joined = { ...tab, chatId: id };
+			const target = resolveTabConnection(joined);
+			const path = tab.kind === 'terminal' ? '/api/terminals' : '/browser/sessions';
+			const alive =
+				target &&
+				(await machineRequest(target, `${path}/${encodeURIComponent(tab.sessionId)}`).then(
+					() => true,
+					() => false
+				));
+			if (!alive || entry !== viewEntry || !viewReady) continue;
+			if (tabs.tabs.some((item) => item.id === tab.id)) continue;
+			const activeId = tabs.activeId;
+			tabs = activateTab(openTab(tabs, joined), activeId);
+		}
 	};
 	const navigatePageTab = async (id: string, href: string) => {
 		const url = new URL(href, location.origin);
@@ -763,10 +819,11 @@
 		await tick();
 	};
 
-	$: if (viewReady && pendingPageTab) {
+	$: if (viewReady && pendingPageTab && isPanelViewReady(panelChatId, viewEntry)) {
 		const request = pendingPageTab;
 		pendingPageTab = null;
-		openPageTab(request);
+		// Once the restored tabs are in place, so they cannot overwrite the choice.
+		void tick().then(() => openPageTab(request));
 	}
 	$: if (viewReady && chatId) {
 		const duplicate = tabs.tabs.find(
@@ -785,7 +842,7 @@
 			return askForMachine(() => openFiles($selectedMachineId, directory, newTab, sourceModelId));
 		if (machineId ? !isMachineReachable(machineId) : !showFilesTab) return;
 		const target = resolveMachineTarget(machineId, $machines ?? [], localStorage.token, {
-			chatId: chatId,
+			chatId: panelChatId,
 			modelId: sourceModelId ?? null
 		});
 		const pinnedModel = target?.context.modelId ?? null;
@@ -831,7 +888,7 @@
 	) => {
 		if (!isMachineReachable(machineId)) return;
 		const target = resolveMachineTarget(machineId, $machines ?? [], localStorage.token, {
-			chatId: chatId,
+			chatId: panelChatId,
 			modelId: sourceModelId ?? null
 		});
 		const pinnedModel = target?.context.modelId ?? null;
@@ -1097,7 +1154,7 @@
 					? findPageTab(new URL(droppedPage.href!, location.origin))?.id
 					: savedId === chatId
 						? mainChatTabId
-						: tabs.tabs.find((tab) => tab.chatId === savedId)?.id);
+						: tabs.tabs.find((tab) => tab.kind === 'chat' && tab.chatId === savedId)?.id);
 			let id = existing;
 			if (!id) {
 				focusGroup(groupId);
@@ -1207,7 +1264,7 @@
 		}
 		const target = machineId
 			? resolveMachineTarget(machineId, $machines ?? [], localStorage.token ?? '', {
-					chatId: chatId,
+					chatId: panelChatId,
 					modelId: modelId ?? null
 				})
 			: null;
@@ -1215,8 +1272,8 @@
 		const machine = ($machines ?? []).find((item) => item.id === machineId);
 		const proxyBase =
 			baseUrl ??
-			(target && chatContextNeedsSavedChat(machine) && chatId
-				? `${target.baseUrl}/chats/${encodeURIComponent(chatId)}`
+			(target && chatContextNeedsSavedChat(machine) && panelChatId
+				? `${target.baseUrl}/chats/${encodeURIComponent(panelChatId)}`
 				: target?.baseUrl);
 		const id = uuidv4();
 		openPanel({
@@ -1647,7 +1704,7 @@
 	$: selectedConnection =
 		supportsMachineFiles && isMounted
 			? resolveMachineTarget($selectedMachineId, $machines ?? [], localStorage.token ?? '', {
-					chatId: chatId,
+					chatId: panelChatId,
 					modelId: modelId ?? null
 				})
 			: null;
@@ -1700,11 +1757,11 @@
 	};
 	$: {
 		selectedConnection;
-		chatId;
+		panelChatId;
 		void loadMachineFeatures();
 	}
 
-	$: if (isMounted && !chatLoading && $user?.id) followChat(viewState, chatId);
+	$: if (isMounted && !chatLoading && $user?.id) followChat(viewState, panelChatId);
 	$: if (
 		isMounted &&
 		viewReady &&
@@ -1777,7 +1834,8 @@
 		if (from?.url.pathname === to?.url.pathname) {
 			// The router stays on the main chat while other tabs are in front; going there uncovers it.
 			if (to && location.pathname !== to.url.pathname) {
-				focusMainChat();
+				// A folder's chats are tabs, opened again by the route.
+				if (!mainTabFolder || !to.url.pathname.startsWith('/c/')) focusMainChat();
 				if (!isLargeScreen) showTabs.set(false);
 			}
 			return;
@@ -1844,6 +1902,10 @@
 			mediaQuery.removeEventListener('change', handleMediaQuery);
 		};
 	});
+	$: activeChatTabId.set(
+		activeTab?.kind === 'chat' && activeTab.id !== mainChatTabId ? (activeTab.chatId ?? null) : null
+	);
+	onDestroy(() => activeChatTabId.set(null));
 	// Tab-opening handlers mutate tabs indirectly, so derive visibility and placement after them.
 	$: renderedTabs = fullWidth ? tabs : setMainChatTab(tabs, false);
 	$: layoutRects = fullWidth
@@ -1860,6 +1922,10 @@
 			.filter((group) => fullWidth || group.id === renderedTabs.activeGroupId)
 			.map((group) => group.activeId)
 	);
+	// A folder remembers many chats; each loads when it is first looked at.
+	let seenTabIds = new Set<string>();
+	$: if ([...visibleTabIds].some((id) => !seenTabIds.has(id)))
+		seenTabIds = new Set([...seenTabIds, ...visibleTabIds]);
 	$: mainChatActive = fullWidth && visibleTabIds.has(mainChatTabId);
 	$: if (isMounted && viewReady && !chatLoading) {
 		const active = tabs.tabs.find((tab) => tab.id === tabs.activeId);
@@ -1971,10 +2037,10 @@
 {/if}
 
 {#if showQuickOpen && supportsMachineFiles && selectedConnection}
-	{#key JSON.stringify([selectedConnection.baseUrl, selectedConnection.context.modelId, chatId])}
+	{#key JSON.stringify( [selectedConnection.baseUrl, selectedConnection.context.modelId, panelChatId] )}
 		<QuickOpen
 			target={selectedConnection}
-			{chatId}
+			chatId={panelChatId}
 			onclose={() => {
 				showQuickOpen = false;
 			}}
@@ -2104,7 +2170,7 @@
 				></div>
 			</div>
 		{/each}
-		{#each (viewReady ? tabs.tabs : []).filter((tab) => tab.id !== mainChatTabId) as tab (tab.kind === 'page' ? tab.id : `${viewEntry?.instanceId}:${tab.id}`)}
+		{#each (viewReady ? tabs.tabs : []).filter((tab) => tab.id !== mainChatTabId && (tab.kind !== 'chat' || !mainTabFolder || seenTabIds.has(tab.id))) as tab (tab.kind === 'page' ? tab.id : `${viewEntry?.instanceId}:${tab.id}`)}
 			{@const chatView = viewEntry!}
 			{@const target =
 				isMounted && $config && $user && $settings && $machines !== null

@@ -1118,7 +1118,13 @@ async def chat_completion(
     tasks = form_data.pop('background_tasks', None)
     normalize_machine_id(form_data)
 
-    from open_webui.utils.machines import get_folder_machine_defaults, initialize_machine_directory
+    from open_webui.utils.machines import (
+        can_use_machine,
+        get_folder_directory,
+        get_folder_machine_defaults,
+        initialize_machine_directory,
+        require_chat_folder_machine,
+    )
 
     folder_defaults = {}
     requested_directory = form_data.pop('machine_cwd', None)
@@ -1127,10 +1133,17 @@ async def chat_completion(
         requested_directory = legacy_directory
     if 'parent_id' in form_data and form_data['parent_id'] is None and not form_data.get('chat_id'):
         folder_defaults = await get_folder_machine_defaults(user, form_data.get('folder_id'))
-        if 'machine_id' not in form_data and folder_defaults.get('machine_id'):
-            form_data['machine_id'] = folder_defaults['machine_id']
-        if requested_directory is None and form_data.get('machine_id') == folder_defaults.get('machine_id'):
-            requested_directory = folder_defaults.get('working_directory')
+        if not form_data.get('machine_id') and folder_defaults.get('machine_id'):
+            # People without access to the folder's machine still chat there, without it.
+            if await can_use_machine(user, folder_defaults['machine_id'], request):
+                form_data['machine_id'] = folder_defaults['machine_id']
+        await require_chat_folder_machine(form_data.get('folder_id'), form_data.get('machine_id'))
+        if form_data.get('machine_id') and form_data['machine_id'] == folder_defaults.get('machine_id'):
+            requested_directory = (
+                await get_folder_directory(form_data.get('folder_id'))
+                or requested_directory
+                or folder_defaults.get('working_directory')
+            )
     else:
         requested_directory = None
 

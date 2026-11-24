@@ -63,6 +63,7 @@
 	import { refreshChatList, refreshFolderChatLists, setChatTitle } from '$lib/stores/chatList';
 	import { updateFolderById } from '$lib/apis/folders';
 	import {
+		loadFolderDetails,
 		getFolderAgentModels,
 		loadFolderAgentModels,
 		setFolderModelConnections,
@@ -568,6 +569,17 @@
 	$: canOpenArtifacts = !embedded || !!onOpenArtifacts;
 
 	let chat: any = null;
+	// A folder on a machine fixes it for its chats. One per chat or model is only suggested.
+	let machineFixed = false;
+	const checkFolderMachine = async (id: string | null) => {
+		machineFixed = false;
+		const folder = id ? await loadFolderDetails(localStorage.token, id).catch(() => null) : null;
+		const machineId = machineIdOf(folder?.data);
+		const scope = ($machines ?? []).find((machine) => machine.id === machineId)?.scope;
+		if (id === chatFolderId) machineFixed = !!machineId && scope !== 'chat' && scope !== 'model';
+	};
+	$: chatFolderId = (chat ? chat.folder_id : (draftFolderId ?? $selectedFolder?.id)) ?? null;
+	$: if ($machines) void checkFolderMachine(chatFolderId);
 	let tags = [];
 
 	// Non-owners may reply when the sharing mode allows it, but cannot save chat edits.
@@ -2850,6 +2862,33 @@
 		});
 		return () => bridge?.end();
 	});
+	/** A chat in a folder opens as one of the folder's tabs. */
+	const openInFolder = async (id: string, preserveTabs: boolean) => {
+		// Phones show one chat at a time, and links into a message need the chat itself.
+		if ($mobile || $page.url.search || $page.url.hash) return false;
+		const promise =
+			pendingChatRequest?.id === id
+				? pendingChatRequest.promise
+				: getChatById(localStorage.token, id);
+		pendingChatRequest = { id, promise };
+		const found = await promise.catch(() => null);
+		const folder = found?.folder_id
+			? await loadFolderDetails(localStorage.token, found.folder_id).catch(() => null)
+			: null;
+		if ($page.params.id !== id) return true;
+		if (!folder) return false;
+		pendingChatRequest = null;
+		const href = `/folders/${folder.id}`;
+		if ($selectedFolder?.id !== folder.id || $chatId || mainChatHref !== href) {
+			selectedFolder.set(folder);
+			await initNewChat({ preserveTabs, url: new URL(href, location.origin) });
+			await tick();
+			if ($page.params.id !== id) return true;
+		}
+		tabs?.openPageTab({ href: `/c/${id}`, label: found.title });
+		void tabs?.joinChatSessions(id);
+		return true;
+	};
 	// The layout keeps this component mounted; route changes update only the main pane.
 	let routeInitialized = false;
 	const followRoute = async () => {
@@ -2857,7 +2896,10 @@
 		routeInitialized = true;
 		await tick();
 		if ($page.route.id === '/(app)/c/[id]') {
-			chatIdProp = $page.params.id ?? '';
+			const id = $page.params.id ?? '';
+			if (await openInFolder(id, preserveTabs)) return;
+			if ($page.params.id !== id) return;
+			chatIdProp = id;
 		} else if ($page.params.folderId || $page.url.pathname === '/') {
 			selectedFolder.set($page.data.folder ?? null);
 			// On a first load the input is on screen before set-up, which resets it;
@@ -6456,6 +6498,7 @@
 								>
 									<MessageInput
 										{selectedMachineId}
+										machineSelectionEnabled={!machineFixed}
 										{machineSkills}
 										{messagesContainerId}
 										{inputId}
@@ -6589,6 +6632,7 @@
 								<div id={embedded ? messageInputDropzoneId : undefined} class="pb-2 z-10">
 									<MessageInput
 										{selectedMachineId}
+										machineSelectionEnabled={!machineFixed}
 										{machineSkills}
 										{messagesContainerId}
 										{inputId}
@@ -6675,6 +6719,7 @@
 									onNewFolderChat={() => tabs?.openFeatureTab('chat')}
 									bind:folderTabActions
 									{selectedMachineId}
+									machineSelectionEnabled={!machineFixed}
 									{machineSkills}
 									chatId={$chatId}
 									{onTemporaryChange}

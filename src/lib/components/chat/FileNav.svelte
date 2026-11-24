@@ -45,7 +45,7 @@
 		type MachineFileRoot,
 		type MachineCwd
 	} from '$lib/apis/machines';
-	import { isSavedChatId, isTemporaryChatId } from '$lib/utils/chatId';
+	import { isFolderSessionId, isSavedChatId, isTemporaryChatId } from '$lib/utils/chatId';
 	import { copyToClipboard } from '$lib/utils';
 	import { normalizeDocumentTargetPage } from '$lib/utils/documentPreview';
 
@@ -73,7 +73,9 @@
 	// savedPath is only a placeholder until a directory has loaded.
 	let savedPathLoaded = false;
 	$: folderDirectory =
-		!onSelectDirectory && !chatId && machineIdOf($selectedFolder?.data) === effectiveMachineId
+		!onSelectDirectory &&
+		(!chatId || isFolderSessionId(chatId)) &&
+		machineIdOf($selectedFolder?.data) === effectiveMachineId
 			? $selectedFolder.data.working_directory
 			: null;
 	let savedFileRoot: MachineFileRoot | null = null;

@@ -38,6 +38,7 @@
 		updateChatFolderIdById
 	} from '$lib/apis/chats';
 	import {
+		activeChatTabId,
 		chatId,
 		folders,
 		pinnedChats,
@@ -160,7 +161,7 @@
 	// would overwrite the `lastReadAt` prop with a stale server value.
 	let viewedAt: number | null = null;
 
-	$: if (id === $chatId) {
+	$: if (id === $chatId || id === $activeChatTabId) {
 		viewedAt = updatedAt ?? Date.now() / 1000;
 	}
 
@@ -179,7 +180,7 @@
 		selected ||
 		multiSelected;
 	$: chatItemClass = ` w-full flex justify-between rounded-xl px-2 py-1.5 ${
-		id === $chatId || confirmEdit
+		id === $chatId || id === $activeChatTabId || confirmEdit
 			? ($settings?.highContrastMode ?? false)
 				? 'bg-base-1000/[0.035] dark:bg-base-0/[0.06] selected'
 				: 'bg-base-1000/[0.035] dark:bg-base-0/[0.045] selected'

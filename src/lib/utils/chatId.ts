@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 const TEMPORARY_CHAT_ID_PREFIX = 'temporary:';
 const LEGACY_TEMPORARY_CHAT_ID_PREFIX = 'local:'; // Legacy temporary chat prefix.
 const CHANNEL_CHAT_ID_PREFIX = 'channel:';
+const FOLDER_SESSION_ID_PREFIX = 'folder:';
 
 export const createTemporaryChatId = (sessionId: string | undefined) => {
 	if (!sessionId) throw new Error('Connect before starting a temporary chat');
@@ -15,4 +16,14 @@ export const isTemporaryChatId = (chatId: string | null | undefined) =>
 		chatId.startsWith(LEGACY_TEMPORARY_CHAT_ID_PREFIX));
 
 export const isSavedChatId = (chatId: string | null | undefined) =>
-	!!chatId && !isTemporaryChatId(chatId) && !chatId.startsWith(CHANNEL_CHAT_ID_PREFIX);
+	!!chatId &&
+	!isTemporaryChatId(chatId) &&
+	!chatId.startsWith(CHANNEL_CHAT_ID_PREFIX) &&
+	!chatId.startsWith(FOLDER_SESSION_ID_PREFIX);
+
+/** The session a person's panels in a folder run under, in place of a chat id. */
+export const folderSessionId = (folderId: string, userId: string) =>
+	`${FOLDER_SESSION_ID_PREFIX}${folderId}:${userId}`;
+
+export const isFolderSessionId = (id: string | null | undefined) =>
+	!!id && id.startsWith(FOLDER_SESSION_ID_PREFIX);

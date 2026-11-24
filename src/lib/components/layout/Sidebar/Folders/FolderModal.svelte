@@ -367,9 +367,9 @@
 								class="grid min-h-7 grid-cols-[7rem_minmax(0,1fr)] items-center gap-2 px-1 text-xs font-normal text-base-600 dark:text-base-400 sm:grid-cols-[8rem_minmax(0,1fr)]"
 							>
 								<ModelSettingsLabel
-									label={$i18n.t('Default machine')}
+									label={$i18n.t('Machine')}
 									description={$i18n.t(
-										'Select the machine used by default for new chats in this folder.'
+										'Chats, files and terminals in this folder run on this machine.'
 									)}
 								/>
 								<div class="flex min-w-0">
@@ -379,7 +379,7 @@
 												type="button"
 												class="flex w-fit max-w-full min-w-0 items-center gap-1 bg-transparent px-0.5 text-left text-xs font-normal text-base-900 dark:text-base-100"
 											>
-												<span class="sr-only">{$i18n.t('Default machine')}: </span>
+												<span class="sr-only">{$i18n.t('Machine')}: </span>
 												<span class="truncate">{selected ? label : $i18n.t('None')}</span>
 												<ChevronDown className="size-3 shrink-0" />
 											</button>
@@ -398,7 +398,7 @@
 										<ModelSettingsLabel
 											label={$i18n.t('Working directory')}
 											description={$i18n.t(
-												'Path on the selected machine. Applies to new chats only.'
+												'Path on the selected machine. Chats, files and terminals in this folder start here.'
 											)}
 										/>
 									</label>

@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Literal, Optional
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile, status
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from open_webui.config import UPLOAD_DIR
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.events import EVENTS, publish_event
@@ -17,6 +17,8 @@ from open_webui.models.automations import AutomationResponse, AutomationRuns, Au
 from open_webui.models.chat_messages import ChatMessages
 from open_webui.models.chats import FOLDER_PRIORITIES, NO_FOLDER_PRIORITY, Chats
 from open_webui.models.config import Config
+from open_webui.models.chat_views import read_bounded_view
+from open_webui.models.folder_views import FolderViewStateForm, FolderViewStates
 from open_webui.models.folders import (
     FolderForm,
     FolderModel,
@@ -749,6 +751,40 @@ async def check_folder_read_access(request: Request, id: str, user, db: AsyncSes
     return folder
 
 
+# A view is private to its authenticated viewer, even for shared folders.
+@router.get('/{id}/view')
+async def get_folder_view(
+    request: Request, id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+):
+    await check_folder_read_access(request, id, user, db)
+    return await FolderViewStates.get(user.id, id, db)
+
+
+async def bounded_folder_view(request: Request):
+    body = await read_bounded_view(request)
+    try:
+        return FolderViewStateForm.model_validate_json(body)
+    except ValueError:
+        raise HTTPException(status_code=422, detail='Invalid folder view')
+
+
+@router.post('/{id}/view')
+async def update_folder_view(
+    request: Request,
+    id: str,
+    user=Depends(get_verified_user),
+    form: FolderViewStateForm = Depends(bounded_folder_view),
+    db: AsyncSession = Depends(get_async_session),
+):
+    await check_folder_read_access(request, id, user, db)
+    saved = await FolderViewStates.save(
+        user.id, id, form.state.model_dump(exclude_unset=True), form.revision, db
+    )
+    if not saved:
+        return JSONResponse(await FolderViewStates.get(user.id, id, db), status_code=409)
+    return saved
+
+
 @router.get('/{id}/automations')
 async def get_folder_automations(
     request: Request, id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
@@ -981,6 +1017,7 @@ async def delete_folder_by_id(
         if folder:
             try:
                 folder_ids = await Folders.delete_folder_by_id_and_user_id(folder.id, folder_owner_id, db=db)
+                await FolderViewStates.delete_by_folder_ids(folder_ids, db)
 
                 for folder_id in folder_ids:
                     if delete_contents:
