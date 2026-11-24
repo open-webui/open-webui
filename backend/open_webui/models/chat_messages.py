@@ -297,6 +297,18 @@ class ChatMessageTable:
             updated_at=now,
         )
 
+    @classmethod
+    def _message_to_dict(cls, message: ChatMessage) -> dict:
+        """Convert a row to the chat.history.messages shape, keeping only the fields it has set."""
+        return {
+            'id': message.id.removeprefix(f'{message.chat_id}-'),
+            **{
+                cls.DB_TO_JSON_KEY_MAP.get(column.key, column.key): getattr(message, column.key)
+                for column in ChatMessage.__table__.columns
+                if column.key not in cls.EXCLUDED_COLUMNS and getattr(message, column.key) is not None
+            },
+        }
+
     async def upsert_message(
         self,
         message_id: str,
@@ -431,25 +443,9 @@ class ChatMessageTable:
         if not rows:
             return None
 
-        # Strip the composite-id prefix ("{chat_id}-") to recover the
-        # original message_id used as map key.
-        prefix = f'{chat_id}-'
-        prefix_len = len(prefix)
-        col_keys = [c.key for c in ChatMessage.__table__.columns]
-
         messages_map: dict[str, dict] = {}
         for row in rows:
-            msg_id = row.id[prefix_len:] if row.id.startswith(prefix) else row.id
-
-            msg: dict = {'id': msg_id}
-            for key in col_keys:
-                if key in self.EXCLUDED_COLUMNS:
-                    continue
-                val = getattr(row, key)
-                if val is None:
-                    continue
-                json_key = self.DB_TO_JSON_KEY_MAP.get(key, key)
-                msg[json_key] = val
+            msg = self._message_to_dict(row)
 
             # Ensure content always has a value
             msg.setdefault('content', '')
@@ -458,7 +454,7 @@ class ChatMessageTable:
             if 'usage' in msg:
                 msg['info'] = {'usage': msg['usage']}
 
-            messages_map[msg_id] = msg
+            messages_map[msg['id']] = msg
 
         # Reconstruct childrenIds from parentId links so that the map
         # is fully navigable (callers like the frontend rely on this).

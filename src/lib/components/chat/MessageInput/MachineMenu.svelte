@@ -198,6 +198,19 @@
 </script>
 
 {#snippet menuItems()}
+	{#if $selectedMachineId && !selectedSystemMachine}
+		<button
+			type="button"
+			role="menuitemradio"
+			aria-checked="true"
+			class="{rowClass} pr-2 bg-base-50/40 dark:bg-base-800/40"
+			on:click={() => toggleMachine($selectedMachineId)}
+		>
+			<Cloud className="size-3.5 shrink-0" strokeWidth="2" />
+			<span class="flex-1 truncate text-left">{selectedLabel}</span>
+			<Check className="size-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+		</button>
+	{/if}
 	<!-- Machines, then the user's own devices -->
 	{#each systemSections as section}
 		<div class="flex items-center justify-between pl-2 pr-1 py-1">

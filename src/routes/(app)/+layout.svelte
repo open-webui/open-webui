@@ -431,25 +431,13 @@
 		delete localStorage.selectedTerminalId;
 		if (storedMachineId) localStorage.selectedMachineId = storedMachineId;
 		selectedMachineId.set(
-			$config?.features?.enable_tool_servers &&
-				$machines?.some((machine) => machine.id === storedMachineId)
-				? storedMachineId
-				: null
+			$config?.features?.enable_tool_servers ? (storedMachineId ?? null) : null
 		);
 
 		// Set last: the chat sets itself up once the model list is in, and that set-up
 		// reads tools, machines and the selected machine as well.
 		models.set(await modelList);
 	});
-
-	$: if (
-		loaded &&
-		$selectedMachineId &&
-		$machines !== null &&
-		!$machines.some((machine) => machine.id === $selectedMachineId)
-	) {
-		selectedMachineId.set(null);
-	}
 
 	// `$page.url` must be referenced here: `$:` only tracks variables used in
 	// the statement itself, and reads inside openSettingsFromUrl don't count —

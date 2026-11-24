@@ -515,14 +515,7 @@ class ChatTable:
             message = dict(history.get('messages', {}).get(message_id) or {})
             row = await session.get(ChatMessage, f'{chat_id}-{message_id}')
             if row is not None:
-                message.update(
-                    {
-                        ChatMessages.DB_TO_JSON_KEY_MAP.get(column.key, column.key): getattr(row, column.key)
-                        for column in ChatMessage.__table__.columns
-                        if column.key not in ChatMessages.EXCLUDED_COLUMNS and getattr(row, column.key) is not None
-                    }
-                )
-                message['id'] = message_id
+                message.update(ChatMessages._message_to_dict(row))
             if not message:
                 yield None
                 return
@@ -1323,12 +1316,16 @@ class ChatTable:
         return history_messages
 
     async def get_message_by_id_and_message_id(self, id: str, message_id: str) -> dict | None:
-        messages_map = await ChatMessages.get_messages_map_by_chat_id(id)
-        if messages_map and message_id in messages_map:
-            return messages_map[message_id]
-
-        # Messages the frontend saved straight into the chat blob have no chat_message row yet.
         async with get_async_db_context() as session:
+            row = await session.get(ChatMessage, f'{id}-{message_id}')
+            if row is not None:
+                message = ChatMessages._message_to_dict(row)
+                message.setdefault('content', '')
+                if 'usage' in message:
+                    message['info'] = {'usage': message['usage']}
+                return message
+
+            # Messages the frontend saved straight into the chat blob have no chat_message row yet.
             result = await session.execute(select(Chat.chat[('history', 'messages')]).filter_by(id=id))
             row = result.one_or_none()
 

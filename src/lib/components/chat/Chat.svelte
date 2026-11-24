@@ -3194,8 +3194,9 @@
 		// Clear the previous chat first, so its id and history don't affect the new chat's defaults.
 		await chatId.set('');
 		if (!machineIdOf(destinationFolder?.data)) {
-			const machineId = localStorage.selectedMachineId;
-			selectedMachineId.set(isMachineAvailable(machineId) ? machineId : null);
+			selectedMachineId.set(
+				$config?.features?.enable_tool_servers ? (localStorage.selectedMachineId ?? null) : null
+			);
 		}
 		if (preserveTabs) {
 			chatIdProp = '';
@@ -3409,7 +3410,8 @@
 					machines.set(servers);
 				}
 				const machineId = machineIdOf(chatContent);
-				selectedMachineId.set(machineId && isMachineAvailable(machineId) ? machineId : null);
+				// A machine missing from the list may only be unreachable for now.
+				selectedMachineId.set($config?.features?.enable_tool_servers ? (machineId ?? null) : null);
 				machineContext =
 					$selectedMachineId &&
 					$selectedMachineId === machineId &&

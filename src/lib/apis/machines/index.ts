@@ -1015,8 +1015,7 @@ export const configureMachine = (
 	token: string,
 	id: string,
 	form: { start_dir: string; flags: string }
-) =>
-	managedMachineRequest<{ status: boolean }>(token, managedPath(id, '/configure'), 'POST', form);
+) => managedMachineRequest<{ status: boolean }>(token, managedPath(id, '/configure'), 'POST', form);
 
 export const restartMachine = (token: string, id: string) =>
 	managedMachineRequest<{ status: boolean }>(token, managedPath(id, '/restart'), 'POST');

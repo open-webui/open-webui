@@ -467,7 +467,8 @@ async def provision(
     """Create (target given, or is_local) or upgrade/repair (neither) a machine, streaming progress to the admin.
 
     `version` is 'latest' or an exact Open Terminal version, `start_dir` is where sessions start,
-    `flags` are extra `open-terminal run` flags (see clean_flags), and `deps` and `packages` are what `open-terminal install-deps` adds (see install_args).
+    `flags` are extra `open-terminal run` flags (see clean_flags), and `deps` and `packages` are
+    what `open-terminal install-deps` adds (see install_args).
     When omitted, the machine keeps what the admin chose last time.
     """
     from open_webui.utils.machines import notify_machines_changed
