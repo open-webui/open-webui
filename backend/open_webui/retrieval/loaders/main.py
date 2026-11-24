@@ -3,6 +3,7 @@ import csv
 import logging
 import os
 import sys
+import time
 import zipfile
 
 import ftfy
@@ -261,7 +262,7 @@ class DoclingLoader:
                 headers['X-Api-Key'] = f'{self.api_key}'
 
             r = requests.post(
-                f'{self.url}/v1/convert/file',
+                f'{self.url}/v1/convert/file/async',
                 files={
                     'files': (
                         os.path.basename(self.file_path),
@@ -281,6 +282,21 @@ class DoclingLoader:
                 headers=headers,
                 verify=AIOHTTP_CLIENT_SESSION_SSL,
             )
+
+        while r.ok and r.json()['task_status'] in ['pending', 'started']:
+            time.sleep(2)
+            r = requests.get(
+                f'{self.url}/v1/status/poll/{r.json()["task_id"]}', headers=headers, verify=AIOHTTP_CLIENT_SESSION_SSL
+            )
+
+        if r.ok:
+            task = r.json()
+            if task['task_status'] == 'failure':
+                raise Exception(f'Error calling Docling: conversion failed - {task.get("error_message")}')
+            r = requests.get(
+                f'{self.url}/v1/result/{task["task_id"]}', headers=headers, verify=AIOHTTP_CLIENT_SESSION_SSL
+            )
+
         if r.ok:
             result = r.json()
             # Docling reports failed and skipped conversions inside HTTP 200 responses.

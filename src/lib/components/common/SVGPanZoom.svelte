@@ -39,7 +39,7 @@
 	</PanzoomContainer>
 
 	{#if content}
-		<div class=" absolute top-2.5 right-2.5">
+		<div class="buttons absolute top-2.5 right-2.5">
 			<div class="flex gap-1">
 				<Tooltip content={$i18n.t('Download as SVG')}>
 					<button

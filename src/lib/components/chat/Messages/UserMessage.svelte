@@ -475,7 +475,7 @@
 
 			{#if edit !== true && !(message?.meta?.internal === true && message?.meta?.type === 'subagent') && !(message?.meta?.internal === true && message?.meta?.type === 'timer')}
 				<div
-					class="flex items-center {chatBubble
+					class="buttons flex items-center {chatBubble
 						? isOwn
 							? 'justify-end'
 							: 'justify-start'

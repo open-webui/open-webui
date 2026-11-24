@@ -494,7 +494,7 @@
 					</Tooltip>
 				</div>
 
-				<div class="flex max-w-full items-center gap-0.5 shrink-0 overflow-x-auto">
+				<div class="buttons flex max-w-full items-center gap-0.5 shrink-0 overflow-x-auto">
 					{#if isDiff && edit}
 						<button
 							class="flex h-6 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2 text-xs font-normal text-base-600 transition-colors duration-100 hover:bg-base-100/40 disabled:opacity-60 dark:text-base-400 dark:hover:bg-base-0/5"

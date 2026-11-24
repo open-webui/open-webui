@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { toast } from 'svelte-sonner';
 	import { getContext, tick } from 'svelte';
 
 	import fileSaver from 'file-saver';
@@ -16,6 +17,7 @@
 	} from '$lib/apis/chats';
 	import { chats, folders, settings, theme, user, visibleControls } from '$lib/stores';
 	import { createMessagesList } from '$lib/utils';
+	import { saveChatPdf, saveTextPdf } from '$lib/utils/pdf';
 	import { getOutputText } from '$lib/components/chat/Messages/structuredOutput';
 	import ArchiveBoxIcon from '$lib/components/icons/ArchiveBox.svelte';
 	import CopyIcon from './icons/Copy.svelte';
@@ -97,204 +99,18 @@
 			return;
 		}
 
-		const [{ default: jsPDF }, { default: html2canvas }] = await Promise.all([
-			import('jspdf'),
-			import('html2canvas-pro')
-		]);
+		const filename = `chat-${chat.chat.title}.pdf`;
+		if (!($settings?.stylizedPdfExport ?? true)) {
+			await saveTextPdf(await getChatAsText(chat), filename);
+			return;
+		}
 
-		if ($settings?.stylizedPdfExport ?? true) {
-			showFullMessages = true;
-			await tick();
-
-			const containerElement = document.getElementById('full-messages-container');
-			if (containerElement) {
-				try {
-					const isDarkMode = document.documentElement.classList.contains('dark');
-					const virtualWidth = 800; // px, fixed width for cloned element
-
-					// Clone and style
-					const clonedElement = containerElement.cloneNode(true);
-					clonedElement.classList.add('text-base-1000');
-					clonedElement.classList.add('dark:text-base-0');
-					clonedElement.style.width = `${virtualWidth}px`;
-					clonedElement.style.position = 'absolute';
-					clonedElement.style.left = '-9999px';
-					clonedElement.style.height = 'auto';
-					document.body.appendChild(clonedElement);
-
-					// Override content-visibility so html2canvas can capture all messages
-					clonedElement.querySelectorAll('.message-virtualized').forEach((el) => {
-						el.style.contentVisibility = 'visible';
-					});
-
-					// Let the browser compute layout for the cloned element
-					await new Promise((r) => requestAnimationFrame(r));
-
-					const pdf = new jsPDF('p', 'mm', 'a4');
-					const pageWidthMM = 210;
-					const pageHeightMM = 297;
-
-					const pagePixelHeight = Math.floor((virtualWidth * pageHeightMM) / pageWidthMM);
-					const rootTop = clonedElement.getBoundingClientRect().top;
-					const contentHeight = Math.ceil(clonedElement.getBoundingClientRect().height);
-
-					const blocks = [];
-					const trackedElements = new Set();
-					const collectBlocks = (element) => {
-						const children = Array.from(element.children);
-						const splittable =
-							children.length > 0 &&
-							(getComputedStyle(element).display === 'contents' ||
-								(element.getBoundingClientRect().height > pagePixelHeight / 4 &&
-									!Array.from(element.childNodes).some(
-										(childNode) =>
-											childNode.nodeType === Node.TEXT_NODE && childNode.textContent?.trim()
-									) &&
-									children.every(
-										(child) => !getComputedStyle(child).display.startsWith('inline')
-									)));
-
-						if (element !== clonedElement) trackedElements.add(element);
-
-						if (splittable) {
-							children.forEach(collectBlocks);
-						} else {
-							const { top, bottom } = element.getBoundingClientRect();
-							blocks.push({ element, top: top - rootTop, bottom: bottom - rootTop });
-						}
-					};
-					collectBlocks(clonedElement);
-
-					clonedElement.setAttribute('data-pdf-root', '');
-
-					let offsetY = 0;
-					let page = 0;
-
-					while (offsetY < contentHeight) {
-						const sliceHeight = Math.min(pagePixelHeight, contentHeight - offsetY);
-						const sliceBlocks = blocks.filter(
-							(block) => block.bottom > offsetY && block.top < offsetY + sliceHeight
-						);
-
-						const keptElements = new Set();
-						for (const { element } of sliceBlocks) {
-							for (
-								let current = element;
-								current && current !== clonedElement;
-								current = current.parentElement
-							) {
-								keptElements.add(current);
-							}
-						}
-
-						const anchor = sliceBlocks.find((block) => block.bottom > block.top);
-						anchor?.element.setAttribute('data-pdf-anchor', '');
-
-						const canvas = await html2canvas(clonedElement, {
-							backgroundColor: isDarkMode ? '#000' : '#fff',
-							useCORS: true,
-							logging: false,
-							scale: 2, // increase resolution
-							width: virtualWidth,
-							height: sliceHeight,
-							y: offsetY,
-							ignoreElements: (element) =>
-								(element.parentElement === document.body &&
-									element !== clonedElement &&
-									!['STYLE', 'LINK'].includes(element.tagName)) ||
-								(trackedElements.has(element) && !keptElements.has(element)),
-							onclone: (clonedDocument) => {
-								const clonedRoot = clonedDocument.querySelector('[data-pdf-root]');
-								const clonedAnchor = clonedDocument.querySelector('[data-pdf-anchor]');
-								if (!clonedRoot || !clonedAnchor) return;
-
-								const spacer = clonedDocument.createElement('div');
-								clonedRoot.prepend(spacer);
-
-								let spacerHeight = 0;
-								for (let pass = 0; pass < 2; pass++) {
-									spacerHeight +=
-										anchor.top -
-										(clonedAnchor.getBoundingClientRect().top -
-											clonedRoot.getBoundingClientRect().top);
-									spacer.style.height = `${spacerHeight}px`;
-								}
-							}
-						});
-
-						anchor?.element.removeAttribute('data-pdf-anchor');
-
-						const imgData = canvas.toDataURL('image/jpeg', 0.7);
-						const imgHeightMM = (sliceHeight * pageWidthMM) / virtualWidth;
-
-						if (page > 0) pdf.addPage();
-
-						if (isDarkMode) {
-							pdf.setFillColor(0, 0, 0);
-							pdf.rect(0, 0, pageWidthMM, pageHeightMM, 'F'); // black bg
-						}
-
-						pdf.addImage(imgData, 'JPEG', 0, 0, pageWidthMM, imgHeightMM);
-
-						offsetY += sliceHeight;
-						page++;
-					}
-
-					document.body.removeChild(clonedElement);
-
-					pdf.save(`chat-${chat.chat.title}.pdf`);
-
-					showFullMessages = false;
-				} catch (error) {
-					console.error('Error generating PDF', error);
-				}
-			}
-		} else {
-			console.log('Downloading PDF');
-
-			const chatText = await getChatAsText(chat);
-
-			const doc = new jsPDF();
-
-			// Margins
-			const left = 15;
-			const top = 20;
-			const right = 15;
-			const bottom = 20;
-
-			const pageWidth = doc.internal.pageSize.getWidth();
-			const pageHeight = doc.internal.pageSize.getHeight();
-			const usableWidth = pageWidth - left - right;
-			const usableHeight = pageHeight - top - bottom;
-
-			// Font size and line height
-			const fontSize = 8;
-			doc.setFontSize(fontSize);
-			const lineHeight = fontSize * 1; // adjust if needed
-
-			// Split the markdown into lines (handles \n)
-			const paragraphs = chatText.split('\n');
-
-			let y = top;
-
-			for (let paragraph of paragraphs) {
-				// Wrap each paragraph to fit the width
-				const lines = doc.splitTextToSize(paragraph, usableWidth);
-
-				for (let line of lines) {
-					// If the line would overflow the bottom, add a new page
-					if (y + lineHeight > pageHeight - bottom) {
-						doc.addPage();
-						y = top;
-					}
-					doc.text(line, left, y);
-					y += lineHeight * 0.5;
-				}
-				// Add empty line at paragraph breaks
-				y += lineHeight * 0.1;
-			}
-
-			doc.save(`chat-${chat.chat.title}.pdf`);
+		showFullMessages = true;
+		await tick();
+		try {
+			await saveChatPdf(document.getElementById('full-messages-container')!, filename);
+		} finally {
+			showFullMessages = false;
 		}
 	};
 
@@ -319,7 +135,7 @@
 		<div id="full-messages-container">
 			<Messages
 				className="h-full flex pt-4 pb-8 w-full"
-				chatId={`chat-preview-${chat?.id ?? ''}`}
+				chatId={`chat-pdf-${chat?.id ?? ''}`}
 				user={$user}
 				readOnly={true}
 				history={chat.chat.history}
@@ -405,7 +221,10 @@
 						draggable="false"
 						class="flex h-[1.6875rem] gap-2 items-center rounded-xl px-2 text-[0.8125rem] cursor-pointer hover:bg-base-100 dark:hover:bg-base-900 select-none w-full"
 						on:click={() => {
-							downloadPdf();
+							toast.promise(downloadPdf(), {
+								loading: $i18n.t('Preparing download...'),
+								error: $i18n.t('Download failed')
+							});
 						}}
 					>
 						<div class="flex items-center line-clamp-1">{$i18n.t('PDF document (.pdf)')}</div>

@@ -3,6 +3,7 @@ import { toast } from 'svelte-sonner';
 
 import { createNewNote } from '$lib/apis/notes';
 import { getTimeRange } from '$lib/utils';
+import { saveElementPdf } from '$lib/utils/pdf';
 import { safeImageUrl } from '$lib/utils/safeImageUrl';
 import { marked } from 'marked';
 // @ts-expect-error The installed file-saver package has no type declarations.
@@ -60,11 +61,6 @@ export const downloadNote = async (
 };
 
 export const downloadPdf = async (note) => {
-	const [{ default: jsPDF }, { default: html2canvas }] = await Promise.all([
-		import('jspdf'),
-		import('html2canvas-pro')
-	]);
-
 	// Define a fixed virtual screen size
 	const virtualWidth = 1024; // Fixed width (adjust as needed)
 	const virtualHeight = 1400; // Fixed height (adjust as needed)
@@ -121,121 +117,16 @@ export const downloadPdf = async (note) => {
 		Array.from(node.querySelectorAll('img')).map((img) => img.decode().catch(() => {}))
 	);
 
-	// A4 page settings
-	const pdf = new jsPDF('p', 'mm', 'a4');
-	const pageWidthMM = 210; // A4 width in mm
-	const pageHeightMM = 297; // A4 height in mm
-
-	const pagePixelHeight = Math.floor((virtualWidth * pageHeightMM) / pageWidthMM);
-	const rootTop = node.getBoundingClientRect().top;
-	const contentHeight = Math.ceil(node.getBoundingClientRect().height);
-	const pageBoundaries = Array.from(node.querySelectorAll('[data-note-page]'))
-		.slice(1)
-		.map((element) => Math.floor(element.getBoundingClientRect().top - rootTop));
-
-	const blocks = [];
-	const trackedElements = new Set();
-	const collectBlocks = (element) => {
-		const children = Array.from(element.children);
-		const splittable =
-			children.length > 0 &&
-			(getComputedStyle(element).display === 'contents' ||
-				(element.getBoundingClientRect().height > pagePixelHeight / 4 &&
-					!Array.from(element.childNodes).some(
-						(childNode) => childNode.nodeType === Node.TEXT_NODE && childNode.textContent?.trim()
-					) &&
-					children.every((child) => !getComputedStyle(child).display.startsWith('inline'))));
-
-		if (element !== node) trackedElements.add(element);
-
-		if (splittable) {
-			children.forEach(collectBlocks);
-		} else {
-			const { top, bottom } = element.getBoundingClientRect();
-			blocks.push({ element, top: top - rootTop, bottom: bottom - rootTop });
-		}
-	};
-	collectBlocks(node);
-
-	node.setAttribute('data-pdf-root', '');
-
-	let offsetY = 0;
-	let page = 0;
-
-	while (offsetY < contentHeight) {
-		const nextBoundary = pageBoundaries.find((top) => top > offsetY) ?? contentHeight;
-		const sliceHeight = Math.min(pagePixelHeight, contentHeight - offsetY, nextBoundary - offsetY);
-		const sliceBlocks = blocks.filter(
-			(block) => block.bottom > offsetY && block.top < offsetY + sliceHeight
-		);
-
-		const keptElements = new Set();
-		for (const { element } of sliceBlocks) {
-			for (let current = element; current && current !== node; current = current.parentElement) {
-				keptElements.add(current);
-			}
-		}
-
-		const anchor = sliceBlocks.find((block) => block.bottom > block.top);
-		anchor?.element.setAttribute('data-pdf-anchor', '');
-
-		const canvas = await html2canvas(node, {
-			useCORS: true,
-			logging: false,
-			backgroundColor: isDarkMode ? '#000' : '#fff',
-			scale: 2, // Keep at 1x to avoid unexpected enlargements
-			width: virtualWidth, // Set fixed virtual screen width
-			windowWidth: virtualWidth, // Ensure consistent rendering
+	try {
+		await saveElementPdf(node, `${note.title}.pdf`, {
+			width: virtualWidth,
+			windowWidth: virtualWidth,
 			windowHeight: virtualHeight,
-			height: sliceHeight,
-			y: offsetY,
-			ignoreElements: (element) =>
-				(element.parentElement === document.body &&
-					element !== node &&
-					!['STYLE', 'LINK'].includes(element.tagName)) ||
-				(trackedElements.has(element) && !keptElements.has(element)),
-			onclone: (clonedDocument) => {
-				const clonedRoot = clonedDocument.querySelector('[data-pdf-root]');
-				const clonedAnchor = clonedDocument.querySelector('[data-pdf-anchor]');
-				if (!clonedRoot || !clonedAnchor) return;
-
-				const spacer = clonedDocument.createElement('div');
-				clonedRoot.prepend(spacer);
-
-				let spacerHeight = 0;
-				for (let pass = 0; pass < 2; pass++) {
-					spacerHeight +=
-						anchor.top -
-						(clonedAnchor.getBoundingClientRect().top - clonedRoot.getBoundingClientRect().top);
-					spacer.style.height = `${spacerHeight}px`;
-				}
-			}
+			pageBreakSelector: '[data-note-page]'
 		});
-
-		anchor?.element.removeAttribute('data-pdf-anchor');
-
-		const imgData = canvas.toDataURL('image/jpeg', 0.7);
-		const imgHeightMM = (sliceHeight * pageWidthMM) / virtualWidth;
-
-		if (page > 0) pdf.addPage();
-
-		if (isDarkMode) {
-			pdf.setFillColor(0, 0, 0);
-			pdf.rect(0, 0, pageWidthMM, pageHeightMM, 'F'); // black bg
-		}
-
-		pdf.addImage(imgData, 'JPEG', 0, 0, pageWidthMM, imgHeightMM);
-
-		offsetY += sliceHeight;
-		page++;
+	} finally {
+		node.remove();
 	}
-
-	// Remove hidden node if needed
-	if (!(html instanceof HTMLElement)) {
-		document.body.removeChild(node);
-	}
-
-	pdf.save(`${note.title}.pdf`);
 };
 
 // Notes by when they were updated, as [time range, notes] in the list's order.

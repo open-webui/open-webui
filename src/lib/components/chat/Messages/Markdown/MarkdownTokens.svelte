@@ -221,7 +221,9 @@
 			<CodeBlock
 				id={`${id}-${tokenIdx}`}
 				className={markdown?.document ? 'document-code-block' : ''}
-				collapsed={markdown?.document ? false : ($settings?.collapseCodeBlocks ?? false)}
+				collapsed={markdown?.document || id.startsWith('chat-pdf-')
+					? false
+					: ($settings?.collapseCodeBlocks ?? false)}
 				{token}
 				lang={token?.lang ?? ''}
 				code={token?.text ?? ''}
