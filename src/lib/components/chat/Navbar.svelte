@@ -50,6 +50,7 @@
 	export let tabBarActions: Snippet | undefined = undefined;
 	/** The chat menu, owned by Chat so main and side chats share it. */
 	export let chatMenu: Snippet | undefined = undefined;
+	export let chatStatus: Snippet | undefined = undefined;
 	$: tabActions = renderChatActions;
 	$: tabBarActions = renderTabBarActions;
 	export let onSaveTempChat: () => {};
@@ -94,6 +95,7 @@
 			<ChatParticipants participants={liveParticipants} mode="presence" avatarClass="size-4" />
 		</div>
 	{/if}
+	{@render chatStatus?.()}
 {/snippet}
 
 {#snippet renderChatActions()}
@@ -137,6 +139,7 @@
 		</div>
 	{/if}
 
+	{#if !tabbed}{@render chatStatus?.()}{/if}
 	{@render chatMenu?.()}
 {/snippet}
 

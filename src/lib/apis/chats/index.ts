@@ -1479,6 +1479,26 @@ export const resolveChatMessageToolCall = async (
 	return res;
 };
 
+export type ChatChild = {
+	id: string;
+	title: string;
+	type: 'subagent' | 'timer';
+	status: 'waiting' | 'running' | 'scheduled' | 'done';
+	created_at: number;
+	due_at: number | null;
+};
+
+export const getChatChildren = async (token: string, id: string): Promise<ChatChild[]> => {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/${id}/children`, {
+		headers: {
+			Accept: 'application/json',
+			authorization: `Bearer ${token}`
+		}
+	});
+	if (!res.ok) throw getErrorDetail(await res.json());
+	return res.json();
+};
+
 export const deleteChatById = async (token: string, id: string) => {
 	let error = null;
 

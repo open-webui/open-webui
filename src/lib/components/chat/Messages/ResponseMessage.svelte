@@ -32,7 +32,8 @@
 		formatMessageTimestamp,
 		formatMessageTimestampFull,
 		removeDetails,
-		removeAllDetails
+		removeAllDetails,
+		isInternalMessage
 	} from '$lib/utils';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 	import { resolveLocalizedModelName } from '$lib/utils/localizedContent';
@@ -55,6 +56,8 @@
 	import CodeExecutions from './CodeExecutions.svelte';
 	import ContentRenderer from './ContentRenderer.svelte';
 	import ContextCompactionLabel from './ContextCompactionLabel.svelte';
+	import SubagentResultRow from './SubagentResultRow.svelte';
+	import TimerRow from './TimerRow.svelte';
 	import { KokoroWorker } from '$lib/workers/KokoroWorker';
 	import FileItem from '$lib/components/common/FileItem.svelte';
 	import FollowUps from './ResponseMessage/FollowUps.svelte';
@@ -223,6 +226,7 @@
 	$: showSelectedModel = !!message?.selectedModelId && message?.strategy !== 'random';
 	$: responseTimestamp = message?.meta?.response_ended_at ?? message?.timestamp;
 
+	$: parentMessage = history.messages[message?.parentId];
 	$: statusEntries = message?.statusHistory ?? [...(message?.status ? [message?.status] : [])];
 	$: hasVisibleStatus =
 		(model?.info?.meta?.capabilities?.status_updates ?? true) &&
@@ -772,6 +776,14 @@
 						<span class="truncate text-base-500">{selectedModelName}</span>
 					{/if}
 				</Name>
+			{/if}
+
+			{#if isInternalMessage(parentMessage)}
+				{#if parentMessage.meta.type === 'timer'}
+					<TimerRow content={parentMessage.content} />
+				{:else}
+					<SubagentResultRow content={parentMessage.content} />
+				{/if}
 			{/if}
 
 			{#if message.contextSummary}

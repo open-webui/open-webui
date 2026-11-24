@@ -843,6 +843,7 @@ async def get_builtin_tools(
         is_builtin_tool_enabled('subagents')
         and config.get('subagents.enable')
         and getattr(request.state, 'internal', False) is not True
+        and getattr(request.state, 'subagent', False) is not True
         and not is_temporary_chat_id(metadata.get('chat_id'))
         and await has_user_permission('subagents')
     ):
@@ -984,7 +985,7 @@ async def get_builtin_tools(
     ):
         builtin_functions.append(notify)
 
-    if getattr(request.state, 'internal', False) is True:
+    if getattr(request.state, 'internal', False) is True or getattr(request.state, 'subagent', False) is True:
         from open_webui.utils.subagents import MUTATING_MEMORY_TOOLS
 
         builtin_functions = [func for func in builtin_functions if func.__name__ not in MUTATING_MEMORY_TOOLS]

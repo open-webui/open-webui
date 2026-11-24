@@ -58,7 +58,6 @@
 		isHeicImage,
 		normalizeImageFile,
 		compressImage,
-		copyToClipboard,
 		createMessagesList,
 		extractContentFromFile,
 		extractCurlyBraceWords,
@@ -134,6 +133,7 @@
 	import Expand from '../icons/Expand.svelte';
 	import QueuedMessageItem from './MessageInput/QueuedMessageItem.svelte';
 	import TaskList from './Messages/ResponseMessage/TaskList.svelte';
+	import StatusDetails from './StatusDetails.svelte';
 	import { getChatContext } from '$lib/components/chat/context';
 	import { machineIdOf } from '$lib/utils/machines';
 
@@ -333,7 +333,6 @@
 
 	let showValvesModal = false;
 	let showStatusPanel = false;
-	let copiedStatusChatId = false;
 	let selectedValvesType = 'tool'; // 'tool' or 'function'
 	let selectedValvesItemId = null;
 	let showInputMenu = false;
@@ -571,15 +570,6 @@
 		focus({ preventScroll: true });
 	};
 
-	const formatTokenCount = (value: number) => {
-		if (value >= 1_000_000) return `${trimNumber(value / 1_000_000)}m`;
-		if (value >= 1_000) return `${trimNumber(value / 1_000)}k`;
-		return String(value ?? 0);
-	};
-
-	const trimNumber = (value: number) =>
-		value >= 10 ? String(Math.round(value)) : value.toFixed(1).replace(/\.0$/, '');
-
 	const getLocalContextUsage = (chatHistory: typeof history, system: string) => {
 		if (!chatHistory?.currentId) {
 			return null;
@@ -630,30 +620,7 @@
 		};
 	};
 
-	const copyStatusChatId = async () => {
-		if (!chatId) return;
-		if (!(await copyToClipboard(chatId))) return;
-		copiedStatusChatId = true;
-		setTimeout(() => {
-			copiedStatusChatId = false;
-		}, 1600);
-	};
-
 	$: statusContextUsage = contextUsage ?? getLocalContextUsage(history, $settings?.system ?? '');
-	$: contextHasThreshold = Number(statusContextUsage?.threshold) > 0;
-	$: contextPercent = contextHasThreshold
-		? Math.max(0, Math.round(statusContextUsage?.percent ?? 0))
-		: null;
-	$: contextTokens = formatTokenCount(
-		statusContextUsage?.estimated_tokens || statusContextUsage?.tokens || 0
-	);
-	$: contextValue = statusContextUsage
-		? contextHasThreshold
-			? `${contextPercent}% ${contextTokens}/${formatTokenCount(statusContextUsage.threshold)}`
-			: `${contextTokens} ${$i18n.t('tokens')}`
-		: $i18n.t('unknown');
-	$: contextBarPercent = contextHasThreshold ? Math.min(contextPercent, 100) : 0;
-
 	const getCommand = () => {
 		const chatInput = document.getElementById(inputId);
 		let word = '';
@@ -2250,62 +2217,13 @@
 									</button>
 								</div>
 
-								<div class="space-y-0.5 px-3 pb-2">
-									<div class="rounded-xl py-0.5 text-base-600 dark:text-base-400">
-										<div class="flex min-h-4 items-center gap-3">
-											<span class="min-w-0 flex-1 truncate">{$i18n.t('Context usage')}</span>
-											<span
-												class="shrink-0 font-mono text-[0.625rem] text-base-400 dark:text-base-600"
-											>
-												{contextValue}
-											</span>
-										</div>
-										{#if contextHasThreshold}
-											<div
-												class="mt-1.5 h-0.5 overflow-hidden rounded-full bg-base-100 dark:bg-base-0/8"
-											>
-												<div
-													class="h-full rounded-full bg-base-300 dark:bg-base-0/20"
-													style={`width: ${contextBarPercent}%`}
-												></div>
-											</div>
-										{/if}
-									</div>
-
-									{#if messageQueue.length}
-										<div class="flex min-h-5 items-center gap-3 text-base-600 dark:text-base-400">
-											<span class="min-w-0 flex-1 truncate">{$i18n.t('Queued messages')}</span>
-											<span class="font-mono text-[0.625rem] text-base-400 dark:text-base-600">
-												{messageQueue.length}
-											</span>
-										</div>
-									{/if}
-
-									{#if chatTasks.length}
-										<div class="flex min-h-5 items-center gap-3 text-base-600 dark:text-base-400">
-											<span class="min-w-0 flex-1 truncate">{$i18n.t('Tasks')}</span>
-											<span class="font-mono text-[0.625rem] text-base-400 dark:text-base-600">
-												{chatTasks.length}
-											</span>
-										</div>
-									{/if}
-
-									<div class="flex min-h-5 items-center gap-3 text-base-600 dark:text-base-400">
-										<span class="min-w-0 flex-1 truncate">{$i18n.t('Chat ID')}</span>
-										{#if chatId}
-											<button
-												type="button"
-												class="min-w-0 max-w-[18rem] truncate font-mono text-[0.625rem] text-base-400 underline-offset-2 transition-colors duration-75 hover:text-base-700 hover:underline dark:text-base-600 dark:hover:text-base-200"
-												on:click={copyStatusChatId}
-											>
-												{copiedStatusChatId ? $i18n.t('Copied') : chatId}
-											</button>
-										{:else}
-											<span class="font-mono text-[0.625rem] text-base-400 dark:text-base-600">
-												none
-											</span>
-										{/if}
-									</div>
+								<div class="px-3 pb-2">
+									<StatusDetails
+										contextUsage={statusContextUsage}
+										queuedCount={messageQueue.length}
+										taskCount={chatTasks.length}
+										{chatId}
+									/>
 								</div>
 							</div>
 						{/if}

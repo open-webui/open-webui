@@ -772,6 +772,19 @@ class ChatTable:
             )
             return list(result.scalars().all())
 
+    async def get_children_by_parent_id(self, parent_chat_id: str, user_id: str) -> list:
+        async with get_async_db_context() as session:
+            result = await session.execute(
+                select(Chat.id, Chat.title, Chat.meta, Chat.timer_at, Chat.created_at)
+                .where(
+                    Chat.user_id == user_id,
+                    Chat.meta['internal'].as_boolean().is_(True),
+                    Chat.meta['parent_chat_id'].as_string() == parent_chat_id,
+                )
+                .order_by(Chat.created_at.desc())
+            )
+            return list(result.all())
+
     async def get_internal_chat_by_note_id(
         self, note_id: str, user_id: str, db: AsyncSession | None = None
     ) -> ChatModel | None:

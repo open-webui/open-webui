@@ -6,7 +6,7 @@
 	const i18n = getContext('i18n');
 
 	import { settings } from '$lib/stores';
-	import { copyToClipboard } from '$lib/utils';
+	import { copyToClipboard, isInternalMessage } from '$lib/utils';
 
 	import MultiResponseMessages from './MultiResponseMessages.svelte';
 	import ResponseMessage from './ResponseMessage.svelte';
@@ -52,6 +52,11 @@
 	export let onInsertToNote: ((content: string) => void) | null = null;
 	export let onOpenArtifacts: ((code?: string) => void) | null = null;
 
+	// Shown at the top of the reply to it.
+	$: shownInReply =
+		isInternalMessage(history.messages[messageId]) &&
+		history.messages[messageId].childrenIds?.length > 0;
+
 	// Keep the latest turn's real height when assigning a chat ID remounts the message list.
 	$: isCurrentTurn =
 		messageId === history.currentId || messageId === history.messages[history.currentId]?.parentId;
@@ -72,6 +77,7 @@
 	class="flex flex-col justify-between px-3.5 mb-3 w-full {($settings?.widescreenMode ?? null)
 		? 'max-w-full'
 		: 'max-w-[58rem]'} mx-auto rounded-lg group message-listitem"
+	class:hidden={shownInReply}
 	class:message-virtualized={!isWebKit && !isFirefox && !isCurrentTurn}
 >
 	{#if history.messages[messageId]}

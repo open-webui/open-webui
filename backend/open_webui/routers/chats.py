@@ -1437,6 +1437,50 @@ async def compact_chat_by_id(
 
 
 # A view is private to its authenticated viewer, even for shared chats.
+class ChatChildResponse(BaseModel):
+    id: str
+    title: str
+    type: Literal['subagent', 'timer']
+    status: Literal['waiting', 'running', 'scheduled', 'done']
+    created_at: int
+    due_at: int | None = None
+
+
+@router.get('/{id}/children', response_model=list[ChatChildResponse])
+async def get_chat_children(request: Request, id: str, user=Depends(get_verified_user)):
+    """The user's sub-agents and scheduled timers of a chat."""
+    children = await Chats.get_children_by_parent_id(id, user.id)
+    waiting_ids = await ChatMessages.get_chat_ids_with_pending_approval([child.id for child in children])
+    results = []
+    for child in children:
+        meta = child.meta or {}
+        if meta.get('type') == 'subagent':
+            if child.id in waiting_ids:
+                status = 'waiting'
+            # Its task goes on after its reply, to hand over the report.
+            elif await has_active_tasks(
+                request.app.state.redis, child.id
+            ) and await ChatMessages.has_unfinished_assistant_by_chat_id(child.id):
+                status = 'running'
+            else:
+                status = 'done'
+        elif meta.get('type') == 'timer' and meta.get('status') == 'pending':
+            status = 'scheduled'
+        else:
+            continue
+        results.append(
+            ChatChildResponse(
+                id=child.id,
+                title=child.title,
+                type=meta['type'],
+                status=status,
+                created_at=child.created_at,
+                due_at=child.timer_at // 1_000_000_000 if child.timer_at else None,
+            )
+        )
+    return results
+
+
 @router.get('/{id}/view')
 async def get_chat_view(
     id: str,

@@ -1294,6 +1294,8 @@ async def chat_completion(
         chat_id = form_data.pop('chat_id', None) or ''
         chat_variables = form_data.pop('chat_variables', None)
         existing_chat = await Chats.get_chat_by_id(chat_id) if is_saved_chat_id(chat_id) else None
+        # Also when the user answers or writes in the sub-agent's own chat.
+        request.state.subagent = bool(existing_chat and (existing_chat.meta or {}).get('type') == 'subagent')
         if existing_chat and existing_chat.user_id != user.id:
             chat_variables = {}
         elif chat_variables is None:

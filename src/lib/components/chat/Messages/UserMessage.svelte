@@ -28,6 +28,7 @@
 	import Image from '$lib/components/common/Image.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import SubagentResultRow from './SubagentResultRow.svelte';
+	import TimerRow from './TimerRow.svelte';
 	import { getChatContext } from '$lib/components/chat/context';
 
 	const { models } = getChatContext();
@@ -82,7 +83,6 @@
 					: null;
 	$: isOwn = Boolean($_user?.id && authorId === $_user.id);
 	$: authorName = author?.name || $i18n.t('Unknown User');
-	let timerExpanded = false;
 	$: if (history.messages) {
 		const source = history.messages[messageId];
 		if (source) {
@@ -382,41 +382,9 @@
 					</div>
 				</div>
 			{:else if message?.meta?.internal === true && message?.meta?.type === 'timer'}
-				<div class="w-full min-w-0">
-					<button
-						type="button"
-						class="flex w-full min-w-0 items-center gap-2 text-left text-base-500 transition-colors hover:text-base-700 dark:text-base-400 dark:hover:text-base-300"
-						aria-expanded={timerExpanded}
-						on:click={() => {
-							timerExpanded = !timerExpanded;
-						}}
-					>
-						<span class="shrink-0 text-[0.75rem] font-medium">{$i18n.t('Timer')}</span>
-						<span class="min-w-0 flex-1 truncate text-[0.75rem]">{message.content}</span>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							fill="none"
-							viewBox="0 0 24 24"
-							stroke-width="2"
-							stroke="currentColor"
-							class="size-3 shrink-0 text-base-400 transition-transform duration-150 dark:text-base-600 {timerExpanded
-								? 'rotate-180'
-								: ''}"
-						>
-							<path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-						</svg>
-					</button>
-					{#if timerExpanded}
-						<div
-							class="mt-2 ml-3 whitespace-pre-wrap break-words border-l border-base-100 pl-3 text-[0.78125rem] leading-relaxed text-base-600 dark:border-base-0/10 dark:text-base-400"
-							dir={$settings?.chatDirection ?? 'auto'}
-						>
-							{message.content}
-						</div>
-					{/if}
-				</div>
+				<TimerRow content={message.content} />
 			{:else if message?.meta?.internal === true && message?.meta?.type === 'subagent'}
-				<SubagentResultRow content={message.content} result={message.meta} />
+				<SubagentResultRow content={message.content} />
 			{:else if message.content !== ''}
 				<div class="w-full">
 					<div

@@ -159,6 +159,7 @@
 	import MessageInput from '$lib/components/chat/MessageInput.svelte';
 	import Messages from '$lib/components/chat/Messages.svelte';
 	import Navbar from '$lib/components/chat/Navbar.svelte';
+	import ChatStatus from './ChatStatus.svelte';
 	import Sparkles from '$lib/components/layout/Sidebar/icons/Sparkles.svelte';
 	import Tabs from './Tabs.svelte';
 	import EventConfirmDialog from '../common/ConfirmDialog.svelte';
@@ -4545,6 +4546,7 @@
 			($user?.permissions?.chat?.export ?? true));
 	// Renaming hides the menu, like the tab's close button.
 	$: chatMenu = showChatMenu && !editingTitle ? renderChatMenu : undefined;
+	$: chatStatus = showChatMenu && !$temporaryChat && !isShared ? renderChatStatus : undefined;
 	$: if (embedded && tabbed) tabActions = chatMenu;
 
 	export const getOverview = () => ({ history, chatUser: chatOwner, showMessage });
@@ -6057,6 +6059,15 @@
 	</ChatMenu>
 {/snippet}
 
+{#snippet renderChatStatus()}
+	<ChatStatus
+		chatId={$chatId}
+		{contextUsage}
+		queuedCount={messageQueue.length}
+		taskCount={chatTasks.length}
+	/>
+{/snippet}
+
 {#snippet renderTitleEditor()}
 	<input
 		bind:this={titleInput}
@@ -6349,6 +6360,7 @@
 							tabbed={fullWidthTabs}
 							{tabTitleEditor}
 							{chatMenu}
+							{chatStatus}
 							bind:tabActions
 							bind:tabBarActions
 							{liveParticipants}

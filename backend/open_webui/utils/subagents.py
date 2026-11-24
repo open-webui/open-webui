@@ -20,6 +20,7 @@ from open_webui.utils.auth import VERIFIED_USER_ROLES, create_token
 from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.misc import add_or_update_system_message, get_message_list, is_raster_image_content_type
 from open_webui.utils.models import get_filtered_models
+from open_webui.utils.session_records import has_pending_tool_approval
 from open_webui.utils.tool_calling import strip_tool_approval_prompt
 from open_webui.utils.tool_search import strip_deferred_tools_manifest
 from starlette.datastructures import Headers
@@ -683,7 +684,12 @@ async def delegate(
         return f'Error: failed to create {prefix}sub-agent: {exc}'
 
     async def run_reserved() -> dict:
+        from open_webui.socket.main import sio
+
         try:
+            await sio.emit(
+                'events', {'chat_id': parent_chat_id, 'data': {'type': 'chat:children'}}, room=f'user:{user.id}'
+            )
             child_request = await _build_request(request, user.id, internal=True)
             child_request.state.max_tool_call_iterations = max_iterations
             chat_context = copy.deepcopy(run.get('chat_context') or {})
@@ -719,6 +725,11 @@ async def delegate(
                 form_data['machine_id'] = machine_id_of(run)
             await request.app.state.CHAT_COMPLETION_HANDLER(child_request, form_data, user=user)
             message = await Chats.get_message_by_id_and_message_id(chat_id, assistant_message_id)
+            # A question or tool approval pauses the reply. The user's answer continues it in its own chat.
+            if not metadata.get('automation_id') and message and has_pending_tool_approval(message.get('output')):
+                while message and message.get('done') is False:
+                    await asyncio.sleep(1)
+                    message = await Chats.get_message_by_id_and_message_id(chat_id, assistant_message_id)
             if not message:
                 return {
                     'status': 'error',
@@ -746,6 +757,22 @@ async def delegate(
             error = message.get('error')
             if isinstance(error, dict):
                 error = error.get('content') or 'Sub-agent failed.'
+            # Still paused: an automation has no one to answer.
+            pending = next(
+                (item for item in message.get('output') or [] if item.get('status') == 'pending'),
+                None,
+            )
+            if not error and pending and message.get('done') is False:
+                waiting_for = (
+                    f'answer these questions: {pending.get("arguments")}'
+                    if pending.get('name') == 'ask_user'
+                    else f'approve {pending.get("name")}'
+                )
+                return {
+                    'status': 'waiting',
+                    'summary': summary,
+                    'error': f'Sub-agent has not finished. It is waiting for the user to {waiting_for}',
+                }
             return {
                 'status': 'error' if error else 'completed',
                 'summary': summary or ('Sub-agent produced no output.' if not error else ''),
@@ -771,6 +798,16 @@ async def delegate(
                     _background_active.discard(delegation_id)
             elif foreground_semaphore:
                 foreground_semaphore.release()
+            # The reply ends while this task still counts as active, so it doesn't tell the chat itself.
+            await sio.emit(
+                'events',
+                {
+                    'chat_id': chat_id,
+                    'message_id': assistant_message_id,
+                    'data': {'type': 'chat:active', 'data': {'active': False}},
+                },
+                room=f'user:{user.id}',
+            )
 
     async def run_background() -> dict:
         started_at = time.time()
