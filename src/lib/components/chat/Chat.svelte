@@ -386,6 +386,7 @@
 
 	const normalizeSelectedModels = (modelIds: string[] = []) => {
 		if (
+			isMachineAvailable($selectedMachineId) &&
 			modelIds.some(
 				(id) =>
 					id.startsWith('agent:') && decodeURIComponent(id.split(':')[1]) === $selectedMachineId
@@ -1298,7 +1299,7 @@
 	};
 
 	/** Check whether a machine ID references an available machine. */
-	const isMachineAvailable = (tid: string): boolean => {
+	const isMachineAvailable = (tid: string | null): boolean => {
 		return (
 			$config?.features?.enable_tool_servers === true &&
 			($machines ?? []).some((t) => !!tid && t.id === tid)
@@ -3512,7 +3513,7 @@
 						? { machineId: $selectedMachineId, currentDirectory: chatContent.working_directory }
 						: null;
 				if (selectedModels[0]?.startsWith('agent:')) {
-					if ($selectedMachineId) {
+					if (isMachineAvailable($selectedMachineId)) {
 						const environment = getAgentEnvironment();
 						if (
 							!(fresh && environment === previousEnvironment) &&
