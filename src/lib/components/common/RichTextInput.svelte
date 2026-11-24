@@ -485,6 +485,7 @@
 
 	let floatingMenuElement: Element | null = null;
 	let bubbleMenuElement: Element | null = null;
+	let formattingMenuContainer: HTMLElement | undefined;
 	let formattingDismissed = false;
 	let element: Element | null = null;
 
@@ -964,6 +965,11 @@
 			provider = new SocketIOCollaborationProvider(documentId, socket, user, content);
 		}
 		if (destroyed) return;
+		if (richText && showFormattingToolbar) {
+			formattingMenuContainer = document.body.appendChild(document.createElement('div'));
+			bubbleMenuElement?.remove();
+			floatingMenuElement?.remove();
+		}
 		editor = new Editor({
 			element: element,
 			extensions: [
@@ -1071,7 +1077,7 @@
 					? [
 							BubbleMenu.configure({
 								element: bubbleMenuElement,
-								appendTo: () => document.body,
+								appendTo: formattingMenuContainer,
 								options: {
 									strategy: 'fixed',
 									placement: 'top',
@@ -1088,7 +1094,7 @@
 							}),
 							MountedFloatingMenu.configure({
 								element: floatingMenuElement,
-								appendTo: () => document.body,
+								appendTo: formattingMenuContainer,
 								options: {
 									strategy: 'fixed',
 									placement: floatingMenuPlacement,
@@ -1500,18 +1506,6 @@
 				formattingDismissed = false;
 				onSelectionUpdate(event);
 			},
-			onBlur: () => {
-				// Force-hide floating menus when editor loses focus.
-				// shouldShow alone isn't enough because it only runs on transactions.
-				if (bubbleMenuElement) {
-					bubbleMenuElement.style.visibility = 'hidden';
-					bubbleMenuElement.style.opacity = '0';
-				}
-				if (floatingMenuElement) {
-					floatingMenuElement.style.visibility = 'hidden';
-					floatingMenuElement.style.opacity = '0';
-				}
-			},
 			enableInputRules: richText && autoFormat,
 			enablePasteRules: richText && autoFormat
 		});
@@ -1548,6 +1542,7 @@
 			editor.destroy();
 			editor = null;
 		}
+		formattingMenuContainer?.remove();
 	});
 
 	$: if (value !== null && editor && !collaboration) {
