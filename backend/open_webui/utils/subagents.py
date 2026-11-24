@@ -403,6 +403,14 @@ async def process_pending_internal_messages(
                 held_files = [file for message in batch for file in message.get('files') or []]
                 if held_files:
                     user_message['files'] = held_files
+                # The files the browser sends with a follow-up.
+                branch_file_ids = {file.get('id') for message in message_list for file in message.get('files') or []}
+                chat_files = [
+                    file
+                    for file in (chat.chat or {}).get('files') or []
+                    if file.get('id') in branch_file_ids and file not in held_files
+                ]
+                run = {**run, 'files': chat_files}
             assistant_message = {
                 'id': assistant_message_id,
                 'parentId': user_message_id,
