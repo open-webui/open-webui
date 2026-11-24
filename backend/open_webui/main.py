@@ -653,8 +653,9 @@ async def initialize_runtime_config(app: FastAPI):
         if tool_server_connection.get('type', 'openapi') == 'mcp':
             server_id = (tool_server_connection.get('info') or {}).get('id')
             auth_type = tool_server_connection.get('auth_type', 'none')
+            oauth_client_info = (tool_server_connection.get('info') or {}).get('oauth_client_info', '')
 
-            if server_id and auth_type in ('oauth_2.1', 'oauth_2.1_static'):
+            if server_id and auth_type in ('oauth_2.1', 'oauth_2.1_static') and oauth_client_info:
                 try:
                     oauth_client_info = resolve_oauth_client_info(tool_server_connection)
                     oauth_client_info = await recover_oauth_client_metadata(tool_server_connection, oauth_client_info)
