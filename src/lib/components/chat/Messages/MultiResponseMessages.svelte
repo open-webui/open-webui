@@ -27,6 +27,7 @@
 	import { getChatContext } from '$lib/components/chat/context';
 
 	const { models } = getChatContext();
+	const exporting = getContext('exporting');
 	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
 	export let chatId;
@@ -237,7 +238,7 @@
 			class="flex snap-x snap-mandatory overflow-x-auto scrollbar-hidden"
 			id="responses-container-{chatId}-{parentMessage.id}"
 		>
-			{#if $settings?.displayMultiModelResponsesInTabs ?? false}
+			{#if !exporting && ($settings?.displayMultiModelResponsesInTabs ?? false)}
 				<div class="w-full">
 					<div
 						class=" flex w-full mb-4.5 border-b border-base-200 dark:border-base-850 {compactPreview

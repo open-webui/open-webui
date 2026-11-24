@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import { getContext, tick } from 'svelte';
+	import { getContext, setContext, tick } from 'svelte';
 
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
@@ -32,6 +32,7 @@
 	import ChatCheckIcon from '$lib/components/icons/ChatCheck.svelte';
 
 	const i18n = getContext('i18n');
+	setContext('exporting', true);
 
 	export let shareHandler: Function;
 	export let moveChatHandler: Function;
@@ -135,7 +136,7 @@
 		<div id="full-messages-container">
 			<Messages
 				className="h-full flex pt-4 pb-8 w-full"
-				chatId={`chat-pdf-${chat?.id ?? ''}`}
+				chatId={`chat-preview-${chat?.id ?? ''}`}
 				user={$user}
 				readOnly={true}
 				history={chat.chat.history}

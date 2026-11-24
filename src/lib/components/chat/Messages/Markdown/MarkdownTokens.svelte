@@ -4,6 +4,7 @@
 	import type { Readable } from 'svelte/store';
 	import type { Action } from 'svelte/action';
 	const i18n = getContext('i18n');
+	const exporting = getContext('exporting');
 	const markdown = getContext<
 		| {
 				document?: boolean;
@@ -221,7 +222,7 @@
 			<CodeBlock
 				id={`${id}-${tokenIdx}`}
 				className={markdown?.document ? 'document-code-block' : ''}
-				collapsed={markdown?.document || id.startsWith('chat-pdf-')
+				collapsed={markdown?.document || exporting
 					? false
 					: ($settings?.collapseCodeBlocks ?? false)}
 				{token}

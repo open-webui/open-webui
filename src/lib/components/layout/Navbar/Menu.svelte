@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import { getContext, tick } from 'svelte';
+	import { getContext, setContext, tick } from 'svelte';
 
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
@@ -38,6 +38,7 @@
 	import EditPencilIcon from '$lib/components/layout/Sidebar/icons/EditPencil.svelte';
 
 	const i18n = getContext('i18n');
+	setContext('exporting', true);
 
 	export let shareEnabled: boolean = false;
 	export let readOnly: boolean = false;
@@ -121,7 +122,7 @@
 		<div id="full-messages-container">
 			<Messages
 				className="h-full flex pt-4 pb-8 w-full"
-				chatId={`chat-pdf-${chat?.id ?? ''}`}
+				chatId={`chat-preview-${chat?.id ?? ''}`}
 				user={$user}
 				readOnly={true}
 				history={chat.chat.history}
