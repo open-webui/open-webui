@@ -16,7 +16,7 @@
 	import PinSlash from '$lib/components/icons/PinSlash.svelte';
 	import CloudArrowUp from '$lib/components/icons/CloudArrowUp.svelte';
 	import Bold from '$lib/components/icons/Bold.svelte';
-	import FolderIcon from '$lib/components/layout/Sidebar/icons/Folder.svelte';
+	import FolderIcon from '$lib/components/icons/Folder.svelte';
 	import Check from '$lib/components/icons/Check.svelte';
 	import { folders } from '$lib/stores';
 	import EditPencilIcon from '$lib/components/layout/Sidebar/icons/EditPencil.svelte';

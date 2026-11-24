@@ -64,7 +64,7 @@
 	import Collapsible from '../../common/Collapsible.svelte';
 	import DragGhost from '$lib/components/common/DragGhost.svelte';
 
-	import FolderIcon from './icons/Folder.svelte';
+	import FolderIcon from '$lib/components/icons/Folder.svelte';
 	import MoreHorizontal from './icons/MoreHorizontal.svelte';
 
 	import ChatItem from './ChatItem.svelte';
@@ -721,7 +721,7 @@
 			class="w-fit max-w-40 rounded-lg bg-base-0/95 px-2.5 py-1.5 text-xs text-base-600 shadow-sm ring-1 ring-base-1000/5 dark:bg-base-850/95 dark:text-base-300 dark:ring-base-0/10"
 		>
 			<div class="flex items-center gap-1.5">
-				<FolderIcon className="size-3.5 shrink-0" strokeWidth="1.5" />
+				<FolderIcon className="size-3.5 shrink-0" strokeWidth="2" />
 				<div class="min-w-0 truncate">
 					{folders[folderId].name}
 				</div>
@@ -786,7 +786,7 @@
 						</div>
 					{:else}
 						<div class="flex group-hover:hidden transition-all">
-							<FolderIcon className="size-3.5" strokeWidth="1.5" />
+							<FolderIcon className="size-3.5" strokeWidth="2" />
 						</div>
 
 						<div class="hidden group-hover:flex transition-all p-[0.0625rem]">

@@ -23,7 +23,7 @@
 	import CopyIcon from './icons/Copy.svelte';
 	import DownloadIcon from './icons/Download.svelte';
 	import EditPencilIcon from './icons/EditPencil.svelte';
-	import FolderIcon from './icons/Folder.svelte';
+	import FolderIcon from '$lib/components/icons/Folder.svelte';
 	import Messages from '$lib/components/chat/Messages.svelte';
 	import PinIcon from './icons/Pin.svelte';
 	import PinSlashIcon from './icons/PinSlash.svelte';

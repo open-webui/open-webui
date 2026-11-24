@@ -15,7 +15,7 @@
 	import ChevronDown from './icons/ChevronDown.svelte';
 	import ChevronRight from './icons/ChevronRight.svelte';
 	import Eye from './icons/Eye.svelte';
-	import FolderIcon from './icons/Folder.svelte';
+	import FolderIcon from '$lib/components/icons/Folder.svelte';
 
 	export let folder: any;
 	export let allSharedFolders: any[] = [];
@@ -92,7 +92,7 @@
 				{/if}
 			</div>
 
-			<FolderIcon className="size-3.5 shrink-0" strokeWidth="1.5" />
+			<FolderIcon className="size-3.5 shrink-0" strokeWidth="2" />
 
 			<div class="flex-1 truncate">
 				{folder.name}

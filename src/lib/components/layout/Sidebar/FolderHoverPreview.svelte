@@ -11,7 +11,7 @@
 	import { models } from '$lib/stores';
 	import Emoji from '$lib/components/common/Emoji.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
-	import FolderIcon from './icons/Folder.svelte';
+	import FolderIcon from '$lib/components/icons/Folder.svelte';
 	import EditPencil from './icons/EditPencil.svelte';
 	import ChatBubble from '$lib/components/icons/ChatBubble.svelte';
 	import Document from '$lib/components/icons/Document.svelte';

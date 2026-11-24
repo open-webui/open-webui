@@ -9,7 +9,7 @@
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
 	import EditPencil from '../icons/EditPencil.svelte';
-	import FolderIcon from '../icons/Folder.svelte';
+	import FolderIcon from '$lib/components/icons/Folder.svelte';
 	import NotesIcon from '../icons/Notes.svelte';
 	import TrashIcon from '../icons/Trash.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';

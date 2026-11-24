@@ -92,6 +92,7 @@
 	import Emoji from '$lib/components/common/Emoji.svelte';
 	import Annotation from '$lib/components/icons/Annotation.svelte';
 	import Map from '$lib/components/icons/Map.svelte';
+	import FolderIcon from '$lib/components/icons/Folder.svelte';
 	import HomeIcon from '$lib/components/icons/Home.svelte';
 	import HashtagIcon from '$lib/components/icons/Hashtag.svelte';
 	import NotesIcon from '$lib/components/layout/Sidebar/icons/Notes.svelte';
@@ -2584,7 +2585,7 @@
 								{#if mainTabFolder.icon}
 									<Emoji shortCode={mainTabFolder.icon} className="size-3.5" />
 								{:else}
-									<Icon name="folder" size={14} />
+									<FolderIcon className="size-3.5 shrink-0" strokeWidth="2" />
 								{/if}
 							{:else if tab.kind === 'preview' && tab.embed?.file?.knowledgeId}
 								<Database className="size-3.5 shrink-0" />
