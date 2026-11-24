@@ -96,6 +96,7 @@ class CreateForm(Pinned):
     name: str = Field('', max_length=100)
     version: str = Field('latest', max_length=20)  # 'latest' or an exact Open Terminal version
     start_dir: str = Field('', max_length=1024)
+    flags: str = Field('', max_length=1024)  # extra flags for `open-terminal run`
     # For `open-terminal install-deps`: dependency sets it knows by name, and apt packages. Needs passwordless sudo.
     deps: list[str] = Field(default_factory=list, max_length=16)
     packages: list[str] = Field(default_factory=list, max_length=64)
@@ -106,6 +107,7 @@ class LocalForm(BaseModel):
     name: str = Field('', max_length=100)
     version: str = Field('latest', max_length=20)
     start_dir: str = Field('', max_length=1024)  # empty: the project folder Open WebUI picks
+    flags: str = Field('', max_length=1024)
 
 
 class UpgradeForm(BaseModel):
@@ -119,8 +121,9 @@ class InstallForm(BaseModel):
     packages: list[str] = Field(default_factory=list, max_length=64)
 
 
-class StartDirForm(BaseModel):
+class ConfigureForm(BaseModel):
     start_dir: str = Field('', max_length=1024)  # empty: the default (home over SSH)
+    flags: str = Field('', max_length=1024)
 
 
 def _ssh_fail(error: BaseException):
@@ -171,6 +174,7 @@ async def create_machine(request: Request, form: CreateForm, user=Depends(get_ad
         version = managed.requested_version(form.version)
         managed.install_args(form.deps, form.packages)
         start_dir = managed.clean_start_dir(form.start_dir) or None
+        flags = managed.clean_flags(form.flags)
     except MachineError as error:
         _ssh_fail(error)
     target = form.model_dump(include={'host', 'port', 'username', 'host_key'})
@@ -183,6 +187,7 @@ async def create_machine(request: Request, form: CreateForm, user=Depends(get_ad
             target=target,
             version=version,
             start_dir=start_dir,
+            flags=flags,
             deps=form.deps,
             packages=form.packages,
         )
@@ -211,11 +216,19 @@ async def create_local_machine(request: Request, form: LocalForm, user=Depends(g
     try:
         version = managed.requested_version(form.version)
         start_dir = managed.clean_start_dir(form.start_dir) or None
+        flags = managed.clean_flags(form.flags)
     except MachineError as error:
         _ssh_fail(error)
     _ssh_start(
         managed.provision(
-            request, form.id, user.id, name=form.name, is_local=True, version=version, start_dir=start_dir
+            request,
+            form.id,
+            user.id,
+            name=form.name,
+            is_local=True,
+            version=version,
+            start_dir=start_dir,
+            flags=flags,
         )
     )
     return {'id': form.id, 'status': 'installing'}
@@ -258,11 +271,11 @@ async def install_machine_packages(request: Request, machine_id: str, form: Inst
     return {'id': machine_id, 'status': 'installing'}
 
 
-@router.post('/managed/{machine_id}/directory')
-async def set_machine_start_dir(machine_id: str, form: StartDirForm, user=Depends(get_admin_user)):
-    """Change where terminal sessions start, then restart Open Terminal there."""
+@router.post('/managed/{machine_id}/configure')
+async def configure_machine(machine_id: str, form: ConfigureForm, user=Depends(get_admin_user)):
+    """Change where terminal sessions start and the Open Terminal flags, then restart Open Terminal with them."""
     try:
-        await managed.set_start_dir(machine_id, form.start_dir)
+        await managed.configure(machine_id, form.start_dir, form.flags)
     except Exception as error:
         _ssh_fail(error)
     return {'status': True}

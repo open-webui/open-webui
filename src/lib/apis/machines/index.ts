@@ -871,6 +871,7 @@ export type SSHTarget = { host: string; port: number; username: string };
 export type ManagedMachineInfo = {
 	root?: string;
 	start_dir?: string; // where terminal sessions start; empty is home
+	flags?: string; // extra flags for `open-terminal run`
 	version?: string;
 	requested_version?: string; // 'latest' or an exact version
 	deps?: string[]; // installed with the machine by `open-terminal install-deps`, by name
@@ -967,6 +968,7 @@ export const installSSHMachine = (
 		name: string;
 		version?: string;
 		start_dir?: string;
+		flags?: string;
 		deps?: string[];
 		packages?: string[];
 	}
@@ -979,7 +981,7 @@ export const getLocalMachineDefaults = (token: string) =>
 /** Install Open Terminal on the computer Open WebUI runs on (experimental). Empty start_dir: the project folder Open WebUI picks. */
 export const installLocalMachine = (
 	token: string,
-	form: { id: string; name?: string; version?: string; start_dir?: string }
+	form: { id: string; name?: string; version?: string; start_dir?: string; flags?: string }
 ) => managedMachineRequest<{ id: string; status: string }>(token, '/local', 'POST', form);
 
 /** Install the machine's Open Terminal again: `version` is 'latest' or an exact version. Omitted fields keep the current choice. */
@@ -1009,10 +1011,12 @@ export const installMachinePackages = (
 	);
 
 /** Change where terminal sessions start, then restart Open Terminal there. */
-export const setMachineStartDir = (token: string, id: string, startDir: string) =>
-	managedMachineRequest<{ status: boolean }>(token, managedPath(id, '/directory'), 'POST', {
-		start_dir: startDir
-	});
+export const configureMachine = (
+	token: string,
+	id: string,
+	form: { start_dir: string; flags: string }
+) =>
+	managedMachineRequest<{ status: boolean }>(token, managedPath(id, '/configure'), 'POST', form);
 
 export const restartMachine = (token: string, id: string) =>
 	managedMachineRequest<{ status: boolean }>(token, managedPath(id, '/restart'), 'POST');

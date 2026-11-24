@@ -85,6 +85,18 @@ def clean_start_dir(value: str | None) -> str:
     return value
 
 
+def clean_flags(value: str | None) -> str:
+    """Extra flags for `open-terminal run`, quoted for the shell. Open WebUI sets the socket and the key itself."""
+    try:
+        flags = shlex.split(value or '')
+    except ValueError as error:
+        raise MachineError(f'Could not read the flags: {error}.') from error
+    for flag in flags:
+        if flag.split('=')[0] in ('--ipc', '--api-key'):
+            raise MachineError(f'Open WebUI sets {flag.split("=")[0]} itself.')
+    return shlex.join(flags)
+
+
 def install_args(deps: list[str] | None, packages: list[str] | None) -> str:
     """Arguments for `open-terminal install-deps`: the dependency sets it knows by name, then apt packages."""
     deps, packages = list(dict.fromkeys(deps or [])), list(dict.fromkeys(packages or []))
@@ -158,6 +170,7 @@ async def run_bootstrap(
     on_step,
     version: str = 'latest',
     start_dir: str = '',
+    flags: str = '',
     install: str = '',
 ) -> tuple[str, str, str | None]:
     """Install or upgrade Open Terminal and start it. Returns (install root, installed version, warning).
@@ -165,7 +178,8 @@ async def run_bootstrap(
     `install` (see install_args) also runs `open-terminal install-deps`. When that fails the
     machine is still set up, with a warning.
     """
-    script = f'START_DIR={shlex.quote(start_dir)}\nDEPS={shlex.quote(install)}\n' + render(
+    settings = {'START_DIR': start_dir, 'FLAGS': flags, 'DEPS': install}
+    script = ''.join(f'{name}={shlex.quote(value)}\n' for name, value in settings.items()) + render(
         BOOTSTRAP,
         ID=machine_id,
         VERSION=requested_version(version),
@@ -446,13 +460,14 @@ async def provision(
     is_local: bool = False,
     version: str | None = None,
     start_dir: str | None = None,
+    flags: str | None = None,
     deps: list[str] | None = None,
     packages: list[str] | None = None,
 ):
     """Create (target given, or is_local) or upgrade/repair (neither) a machine, streaming progress to the admin.
 
     `version` is 'latest' or an exact Open Terminal version, `start_dir` is where sessions start,
-    and `deps` and `packages` are what `open-terminal install-deps` adds (see install_args).
+    `flags` are extra `open-terminal run` flags (see clean_flags), and `deps` and `packages` are what `open-terminal install-deps` adds (see install_args).
     When omitted, the machine keeps what the admin chose last time.
     """
     from open_webui.utils.machines import notify_machines_changed
@@ -474,6 +489,8 @@ async def provision(
         start_dir = current.get('start_dir') or ''
     if is_local and not start_dir:
         start_dir = local.default_start_dir()
+    if flags is None:
+        flags = current.get('flags') or ''
     if deps is None:
         deps = current.get('deps') or []
     if packages is None:
@@ -487,7 +504,7 @@ async def provision(
         machine = existing or ({'id': machine_id, 'local': {}} if is_local else {'id': machine_id, 'ssh': target})
         async with await open_host(machine) as host:
             root, installed, warning = await run_bootstrap(
-                host, machine_id, api_key, step, requested, start_dir, install_args(deps, packages)
+                host, machine_id, api_key, step, requested, start_dir, flags, install_args(deps, packages)
             )
             transport = await host.transport(root)
 
@@ -504,6 +521,7 @@ async def provision(
             **({} if is_local else {k: source[k] for k in ('host', 'port', 'username', 'host_key')}),
             'root': root,
             'start_dir': start_dir,
+            'flags': flags,
             'version': installed,
             'requested_version': requested,
             'deps': deps,
@@ -530,21 +548,34 @@ async def provision(
         await step('error', message=message)
 
 
-async def set_start_dir(machine_id: str, start_dir: str):
-    """Change where sessions start, then restart Open Terminal there."""
+async def configure(machine_id: str, start_dir: str, flags: str):
+    """Change where sessions start and the `open-terminal run` flags, then restart Open Terminal with them."""
     machine = await get_machine(machine_id)
-    root = state(machine)['root']
+    current = state(machine)
     start_dir = clean_start_dir(start_dir) or (local.default_start_dir() if kind(machine) == 'local' else '')
-    q = shlex.quote
+    flags = clean_flags(flags)
+
+    async def on_step(_):
+        pass
+
+    # The installed version, so this does not upgrade. Also brings older installs' start.sh up to date.
+    apply = partial(run_bootstrap, version=current.get('version'))
     await tunnels.drop(machine_id)
     async with await open_host(machine) as host:
-        await host.sh(
-            f'D={q(start_dir)}\n'
-            'if [ -n "$D" ] && [ ! -d "$D" ]; then echo "Start directory not found: $D" >&2; exit 1; fi\n'
-            f'printf %s "$D" > {q(root + "/start_dir")}\n'
-            f'{q(root + "/stop.sh")}\n{q(root + "/start.sh")}\n'
-        )
-    await update_state(machine_id, start_dir=start_dir)
+        try:
+            await apply(host, machine_id, machine['key'], on_step, start_dir=start_dir, flags=flags)
+        except MachineError:  # a wrong flag keeps Open Terminal from starting: go back to what worked
+            with suppress(Exception):
+                await apply(
+                    host,
+                    machine_id,
+                    machine['key'],
+                    on_step,
+                    start_dir=current.get('start_dir') or '',
+                    flags=current.get('flags') or '',
+                )
+            raise
+    await update_state(machine_id, start_dir=start_dir, flags=flags)
 
 
 async def install(request, machine_id: str, admin_id: str, deps: list[str], packages: list[str]):

@@ -1,10 +1,12 @@
 # Run by utils/machines/managed.py on stdin, over SSH or on this computer. Tokens (__OPEN_WEBUI_*__) are
-# validated before rendering; START_DIR (where sessions start, empty for home) and DEPS (arguments for
-# `open-terminal install-deps`, empty for none) are set on the lines above.
+# validated before rendering; START_DIR (where sessions start, empty for home), FLAGS (extra, shell-quoted
+# `open-terminal run` flags) and DEPS (arguments for `open-terminal install-deps`, empty for none) are set
+# on the lines above.
 # Output lines starting with OPEN_WEBUI: drive the progress UI; everything else is log.
 set -eu
 ROOT="${OPEN_WEBUI_MACHINES_DIR:-$HOME/.open-webui}/__OPEN_WEBUI_ID__"
 START_DIR="${START_DIR:-}"
+FLAGS="${FLAGS:-}"
 DEPS="${DEPS:-}"
 VERSION="__OPEN_WEBUI_VERSION__"
 
@@ -67,7 +69,8 @@ SOCK="$ROOT/run/api.sock"
 MATCH="open-terminal run --ipc $SOCK"
 ours() { ps -ww -eo pid=,args= 2>/dev/null | awk -v m="$MATCH" 'index($0, m) && $2 !~ /(^|\/)awk$/ {print $1}'; }
 ready() { [ -S "$SOCK" ] && [ -n "$(ours)" ]; }
-wait_ready() { i=0; while [ $i -lt 300 ]; do ready && return 0; sleep 0.1; i=$((i+1)); done; return 1; }
+PID=""
+wait_ready() { i=0; while [ $i -lt 300 ]; do ready && return 0; [ -z "$PID" ] || kill -0 "$PID" 2>/dev/null || return 1; sleep 0.1; i=$((i+1)); done; return 1; }
 
 ready && exit 0
 i=0
@@ -84,9 +87,11 @@ if [ -z "$(ours)" ]; then               # nothing running: launch (a running ser
   rm -f "$SOCK"
   START_DIR="$(cat "$ROOT/start_dir" 2>/dev/null || true)"
   cd "${START_DIR:-$HOME}" 2>/dev/null || cd "$HOME"
+  eval "set -- $(cat "$ROOT/flags" 2>/dev/null || true)"
   OPEN_TERMINAL_API_KEY_FILE="$ROOT/api-key" nohup "$ROOT/bin/open-terminal" run \
-    --ipc "$SOCK" >>"$ROOT/server.log" 2>&1 </dev/null &
-  echo $! > "$ROOT/pid"
+    --ipc "$SOCK" "$@" >>"$ROOT/server.log" 2>&1 </dev/null &
+  PID=$!
+  echo $PID > "$ROOT/pid"
 fi
 wait_ready || { echo "start.sh: server did not come up, see $ROOT/server.log" >&2; tail -20 "$ROOT/server.log" >&2; exit 1; }
 EOF
@@ -110,6 +115,10 @@ chmod 700 "$ROOT/start.sh" "$ROOT/stop.sh"
 if [ "$(cat "$ROOT/start_dir" 2>/dev/null || true)" != "$START_DIR" ]; then
   printf '%s' "$START_DIR" > "$ROOT/start_dir"
   "$ROOT/stop.sh"   # start.sh below brings it up in the new directory
+fi
+if [ "$(cat "$ROOT/flags" 2>/dev/null || true)" != "$FLAGS" ]; then
+  printf '%s' "$FLAGS" > "$ROOT/flags"
+  "$ROOT/stop.sh"   # start.sh below brings it up with the new flags
 fi
 
 echo "OPEN_WEBUI:step:start"

@@ -16,6 +16,7 @@
 	import ExperimentalBadge from '$lib/components/common/ExperimentalBadge.svelte';
 	import { getMachineConnections, verifyMachineConnection } from '$lib/apis/configs';
 	import {
+		configureMachine,
 		createSSHKeypair,
 		formatSSHUrl,
 		getLocalMachineDefaults,
@@ -28,7 +29,6 @@
 		probeSSHMachine,
 		removeMachine,
 		restartMachine,
-		setMachineStartDir,
 		upgradeMachine,
 		type ManagedMachineInfo,
 		type SSHMachineInfo
@@ -76,6 +76,7 @@
 	// Type when adding: Remote (a URL or ssh://) or Local (the server Open WebUI runs on).
 	let target: 'url' | 'local' = 'url';
 	let startDir = ''; // where terminal sessions start; empty is the default
+	let flags = ''; // extra flags for `open-terminal run`
 	let localDefaults: { start_dir: string; added: boolean } | null = null;
 	let passphrase = '';
 	let keyFileInput: HTMLInputElement;
@@ -131,6 +132,7 @@
 				? current.requested_version
 				: '';
 		startDir = current?.start_dir ?? '';
+		flags = current?.flags ?? '';
 		toInstall = [...(current?.deps ?? []), ...(current?.packages ?? [])].join(' ');
 		target = 'url';
 		localDefaults = null;
@@ -247,8 +249,14 @@
 		busy = true;
 		error = '';
 		try {
-			if (managed && startDir.trim() !== (managed.start_dir ?? '')) {
-				await setMachineStartDir(localStorage.token, connection.id, startDir.trim());
+			if (
+				managed &&
+				(startDir.trim() !== (managed.start_dir ?? '') || flags.trim() !== (managed.flags ?? ''))
+			) {
+				await configureMachine(localStorage.token, connection.id, {
+					start_dir: startDir.trim(),
+					flags: flags.trim()
+				});
 			}
 			const result = {
 				...(connection ?? {}),
@@ -340,6 +348,7 @@
 				name: name.trim(),
 				version: openTerminalVersion.trim() || 'latest',
 				start_dir: startDir.trim(),
+				flags: flags.trim(),
 				...installForm
 			})
 		);
@@ -352,7 +361,8 @@
 				id: machineId,
 				name: name.trim(),
 				version: openTerminalVersion.trim() || 'latest',
-				start_dir: startDir.trim()
+				start_dir: startDir.trim(),
+				flags: flags.trim()
 			})
 		);
 	}
@@ -847,6 +857,31 @@
 					placeholder="latest"
 					pattern="latest|\d+\.\d+\.\d+"
 					autocomplete="off"
+				/>
+			</div>
+			<div>
+				<div class="mb-0.5 flex text-xs text-base-500">
+					<Tooltip
+						placement="top-start"
+						content={managed
+							? $i18n.t('Added to "open-terminal run". Saving a change restarts Open Terminal.')
+							: $i18n.t('Added to "open-terminal run".')}
+					>
+						<label
+							for="open-terminal-flags"
+							class="cursor-help underline decoration-dotted decoration-base-400/70 underline-offset-4 dark:decoration-base-500"
+							>{$i18n.t('Open Terminal flags')}</label
+						>
+					</Tooltip>
+				</div>
+				<input
+					id="open-terminal-flags"
+					class="{input} font-mono"
+					bind:value={flags}
+					placeholder="--desktop-mode host"
+					autocomplete="off"
+					autocapitalize="off"
+					spellcheck="false"
 				/>
 			</div>
 			{#if installingLocal || localMachine}
