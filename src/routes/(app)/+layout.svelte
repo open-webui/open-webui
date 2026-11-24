@@ -470,19 +470,28 @@
 			show={!!$showSettings}
 			size="full"
 			containerClassName="p-3 sm:p-4 lg:p-6"
-			className="relative h-[calc(100dvh-1.5rem)] sm:h-[calc(100dvh-2rem)] lg:h-[calc(100dvh-3rem)] flex items-center justify-center bg-base-0 dark:bg-base-900 rounded-4xl overflow-hidden"
+			className="h-[calc(100dvh-1.5rem)] sm:h-[calc(100dvh-2rem)] lg:h-[calc(100dvh-3rem)] flex flex-col md:flex-row bg-base-0 dark:bg-base-900 rounded-4xl overflow-hidden"
 			ariaLabel={$i18n.t('Settings')}
 			onRequestClose={() => showSettings.set(false)}
 		>
-			<button
-				type="button"
-				class="absolute top-1 left-1 flex items-center gap-1.5 h-7 px-2 rounded-lg text-xs text-base-600 dark:text-base-500 hover:text-base-700 dark:hover:text-base-300"
-				on:click={() => showSettings.set(false)}
+			<!-- Laid out like SettingsModal so the spinner stays in place when a panel takes over. -->
+			<div
+				class="shrink-0 border-b md:border-b-0 md:border-r border-base-100/30 dark:border-base-0/[0.02] md:w-[15rem]"
 			>
-				<ChevronLeft className="size-3" strokeWidth="2" />
-				<span>{$i18n.t('Back')}</span>
-			</button>
-			<Spinner className="size-6" />
+				<div class="flex m-1 md:mb-0">
+					<button
+						type="button"
+						class="flex flex-1 items-center gap-1.5 h-7 px-2 rounded-lg text-xs text-base-600 dark:text-base-500 hover:text-base-700 dark:hover:text-base-300 transition-colors duration-75"
+						on:click={() => showSettings.set(false)}
+					>
+						<ChevronLeft className="size-3" strokeWidth="2" />
+						<span>{$i18n.t('Back')}</span>
+					</button>
+				</div>
+			</div>
+			<div class="flex flex-1 items-center justify-center pb-4 pr-1.5">
+				<Spinner className="size-6" />
+			</div>
 		</Modal>
 	{:then { default: SettingsModal }}
 		<SettingsModal bind:show={$showSettings} />
