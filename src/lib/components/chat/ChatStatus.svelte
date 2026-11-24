@@ -20,6 +20,7 @@
 	export let contextUsage: any = null;
 	export let queuedCount = 0;
 	export let taskCount = 0;
+	export let onCompact: (() => void) | undefined = undefined;
 
 	let show = false;
 	let children: ChatChild[] = [];
@@ -133,7 +134,17 @@
 		class="app-dropdown-menu z-50 w-80 max-w-[calc(100vw-1rem)] rounded-xl border border-base-100 bg-base-0 px-3 py-2 text-xs text-base-600 shadow-lg dark:border-base-800 dark:bg-base-850 dark:text-base-400"
 	>
 		<div class="mb-0.5 text-base-400 dark:text-base-500">{$i18n.t('Status')}</div>
-		<StatusDetails {contextUsage} {queuedCount} {taskCount} {chatId} />
+		<StatusDetails
+			{contextUsage}
+			{queuedCount}
+			{taskCount}
+			{chatId}
+			onCompact={onCompact &&
+				(() => {
+					show = false;
+					onCompact();
+				})}
+		/>
 
 		{#if children.length}
 			<div

@@ -8,6 +8,7 @@
 	export let queuedCount = 0;
 	export let taskCount = 0;
 	export let chatId = '';
+	export let onCompact: (() => void) | undefined = undefined;
 
 	let copied = false;
 
@@ -34,16 +35,30 @@
 	$: tokens = formatTokenCount(contextUsage?.estimated_tokens || contextUsage?.tokens || 0);
 	$: contextValue = contextUsage
 		? hasThreshold
-			? `${percent}% ${tokens}/${formatTokenCount(contextUsage.threshold)}`
+			? `${tokens}/${formatTokenCount(contextUsage.threshold)}`
 			: `${tokens} ${$i18n.t('tokens')}`
 		: $i18n.t('unknown');
 </script>
 
 <div class="space-y-0.5 text-xs">
 	<div class="rounded-xl py-0.5 text-base-600 dark:text-base-400">
-		<div class="flex min-h-4 items-center gap-3">
-			<span class="min-w-0 flex-1 truncate">{$i18n.t('Context usage')}</span>
-			<span class="shrink-0 font-mono text-[0.625rem] text-base-400 dark:text-base-600">
+		<div class="flex min-h-4 items-baseline gap-1.5">
+			<span class="min-w-0 flex-1 truncate">
+				{$i18n.t('Context')}
+				{#if hasThreshold}
+					<span class="text-base-500">{$i18n.t('{{percent}}% used', { percent })}</span>
+				{/if}
+			</span>
+			{#if onCompact}
+				<button
+					type="button"
+					class="shrink-0 text-[0.625rem] text-base-400 transition-colors duration-75 hover:text-base-500 dark:text-base-600 dark:hover:text-base-500"
+					on:click={onCompact}
+				>
+					{$i18n.t('Compact')}
+				</button>
+			{/if}
+			<span class="shrink-0 text-base-500">
 				{contextValue}
 			</span>
 		</div>
@@ -80,7 +95,7 @@
 		{#if chatId}
 			<button
 				type="button"
-				class="min-w-0 max-w-[18rem] truncate font-mono text-[0.625rem] text-base-400 underline-offset-2 transition-colors duration-75 hover:text-base-700 hover:underline dark:text-base-600 dark:hover:text-base-200"
+				class="min-w-0 max-w-[18rem] truncate font-mono text-[0.625rem] text-base-500 underline-offset-2 transition-colors duration-75 hover:text-base-700 hover:underline dark:hover:text-base-200"
 				on:click={copyChatId}
 			>
 				{copied ? $i18n.t('Copied') : chatId}

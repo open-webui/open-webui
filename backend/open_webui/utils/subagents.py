@@ -734,7 +734,7 @@ async def delegate(
                 form_data['machine_id'] = machine_id_of(run)
             await request.app.state.CHAT_COMPLETION_HANDLER(child_request, form_data, user=user)
             message = await Chats.get_message_by_id_and_message_id(chat_id, assistant_message_id)
-            # A question or tool approval pauses the reply. The user's answer continues it in its own chat.
+            # A tool approval pauses the reply. The user's decision continues it in its own chat.
             if not metadata.get('automation_id') and message and has_pending_tool_approval(message.get('output')):
                 while message and message.get('done') is False:
                     await asyncio.sleep(1)
@@ -766,21 +766,16 @@ async def delegate(
             error = message.get('error')
             if isinstance(error, dict):
                 error = error.get('content') or 'Sub-agent failed.'
-            # Still paused: an automation has no one to answer.
+            # Still paused: an automation has no one to approve it.
             pending = next(
                 (item for item in message.get('output') or [] if item.get('status') == 'pending'),
                 None,
             )
             if not error and pending and message.get('done') is False:
-                waiting_for = (
-                    f'answer these questions: {pending.get("arguments")}'
-                    if pending.get('name') == 'ask_user'
-                    else f'approve {pending.get("name")}'
-                )
                 return {
                     'status': 'waiting',
                     'summary': summary,
-                    'error': f'Sub-agent has not finished. It is waiting for the user to {waiting_for}',
+                    'error': f'Sub-agent has not finished. It is waiting for the user to approve {pending.get("name")}',
                 }
             return {
                 'status': 'error' if error else 'completed',

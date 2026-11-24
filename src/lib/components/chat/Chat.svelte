@@ -6065,6 +6065,7 @@
 		{contextUsage}
 		queuedCount={messageQueue.length}
 		taskCount={chatTasks.length}
+		onCompact={contextCompactionEnabled ? handleManualCompact : undefined}
 	/>
 {/snippet}
 
