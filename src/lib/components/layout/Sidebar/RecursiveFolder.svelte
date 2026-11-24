@@ -839,9 +839,7 @@
 					{/if}
 				</button>
 
-				<div
-					class="translate-y-[0.5px] flex min-w-0 flex-1 self-stretch items-center gap-1.5 text-start"
-				>
+				<div class="flex min-w-0 flex-1 self-stretch items-center gap-1.5 text-start">
 					{#if edit}
 						<input
 							aria-label={$i18n.t('Rename')}
