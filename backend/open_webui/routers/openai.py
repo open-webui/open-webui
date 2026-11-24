@@ -1240,11 +1240,10 @@ def convert_to_responses_payload(payload: dict) -> dict:
     Convert Chat Completions payload to Responses API format.
 
     Chat Completions: { messages: [{role, content}], ... }
-    Responses API: { input: [{type: "message", role, content: [...]}], instructions: "system" }
+    Responses API: { input: [{type: "message", role, content: [...]}] }
     """
     messages = payload.pop('messages', [])
 
-    system_content = ''
     input_items = []
 
     for msg in messages:
@@ -1257,12 +1256,9 @@ def convert_to_responses_payload(payload: dict) -> dict:
             input_items.extend(_normalize_stored_item(item) for item in merge_tool_call_batches(stored_output))
             continue
 
+        # Newer OpenAI models never prompt-cache top-level instructions.
         if role == 'system':
-            if isinstance(content, str):
-                system_content = content
-            elif isinstance(content, list):
-                system_content = '\n'.join(p.get('text', '') for p in content if p.get('type') == 'text')
-            continue
+            role = 'developer'
 
         # Reasoning items go back in front of the message or tool calls they led to.
         if role == 'assistant':
@@ -1348,9 +1344,6 @@ def convert_to_responses_payload(payload: dict) -> dict:
     previous_response_id = responses_payload.pop('previous_response_id', None)
     if previous_response_id:
         responses_payload['previous_response_id'] = previous_response_id
-
-    if system_content:
-        responses_payload['instructions'] = system_content
 
     if 'max_tokens' in responses_payload:
         responses_payload['max_output_tokens'] = responses_payload.pop('max_tokens')
