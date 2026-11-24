@@ -28,81 +28,79 @@
 	export const showSourceModal = (sourceId) => {
 		// "2#page" and 2 both name citation number 2
 		const number = typeof sourceId === 'string' ? parseInt(sourceId.split('#')[0]) : sourceId;
-		const index = citations.findIndex((citation) => citation.number === number);
+		const citation = citations.find((citation) => citation.number === number);
+		if (citation) openCitation(citation, sourceId);
+	};
 
-		if (citations[index]) {
-			console.log('Showing citation modal for:', citations[index]);
+	const openCitation = (citation, sourceId) => {
+		console.log('Showing citation modal for:', citation);
 
-			// A cited file opens beside the chat, at the cited page when one is known. Web pages,
-			// and files that cannot be previewed, show their retrieved text in the popup.
-			const metadata = citations[index].metadata?.[0];
-			const fileName = String(metadata?.name ?? citations[index].source?.name ?? '');
-			if (
-				!readOnly &&
-				metadata?.file_id &&
-				!metadata.external &&
-				!['note', 'chat'].includes(citations[index].source?.type) &&
-				!isValidHttpUrl(fileName) &&
-				!/\.(doc|ppt|odt|ods|odp|rtf|epub|msg)$/i.test(fileName)
-			) {
-				showTabs.set(true);
-				showEmbeds.set(true);
-				embed.set({
-					file: {
-						id: metadata.file_id,
-						page: Number.isInteger(metadata.page) ? metadata.page + 1 : null,
-						// The cited passages of this file, each with its page and relevance
-						passages: (citations[index].document ?? [])
-							.map((text, i) => ({
-								text,
-								metadata: citations[index].metadata?.[i],
-								distance: showRelevance ? citations[index].distances?.[i] : undefined
-							}))
-							.filter((passage) => passage.metadata?.file_id === metadata.file_id)
-							.map(({ text, metadata, distance }) => ({
-								text,
-								page: Number.isInteger(metadata?.page) ? metadata.page + 1 : null,
-								distance
-							})),
-						showPercentage
-					},
-					title: fileName,
-					chatId: chatId
-				});
-				return;
-			}
+		// A cited file opens beside the chat, at the cited page when one is known. Web pages,
+		// and files that cannot be previewed, show their retrieved text in the popup.
+		const metadata = citation.metadata?.[0];
+		const fileName = String(metadata?.name ?? citation.source?.name ?? '');
+		if (
+			!readOnly &&
+			metadata?.file_id &&
+			!metadata.external &&
+			!['note', 'chat'].includes(citation.source?.type) &&
+			!isValidHttpUrl(fileName) &&
+			!/\.(doc|ppt|odt|ods|odp|rtf|epub|msg)$/i.test(fileName)
+		) {
+			showTabs.set(true);
+			showEmbeds.set(true);
+			embed.set({
+				file: {
+					id: metadata.file_id,
+					page: Number.isInteger(metadata.page) ? metadata.page + 1 : null,
+					// The cited passages of this file, each with its page and relevance
+					passages: (citation.document ?? [])
+						.map((text, i) => ({
+							text,
+							metadata: citation.metadata?.[i],
+							distance: showRelevance ? citation.distances?.[i] : undefined
+						}))
+						.filter((passage) => passage.metadata?.file_id === metadata.file_id)
+						.map(({ text, metadata, distance }) => ({
+							text,
+							page: Number.isInteger(metadata?.page) ? metadata.page + 1 : null,
+							distance
+						})),
+					showPercentage
+				},
+				title: fileName,
+				chatId: chatId
+			});
+			return;
+		}
 
-			if (citations[index]?.source?.embed_url) {
-				const embedUrl = citations[index].source.embed_url;
-				// The embed panel renders anything it cannot read as a URL as raw HTML
-				if (
-					typeof embedUrl === 'string' &&
-					(isValidHttpUrl(embedUrl) || embedUrl.startsWith('//'))
-				) {
-					if (readOnly) {
-						// Open in new tab if readOnly
-						window.open(embedUrl, '_blank');
-						return;
-					} else {
-						showTabs.set(true);
-						showEmbeds.set(true);
-						embed.set({
-							url: embedUrl,
-							title: citations[index]?.source?.name || 'Embedded Content',
-							source: citations[index],
-							chatId: chatId,
-							messageId: id,
-							sourceId: sourceId
-						});
-					}
+		if (citation.source?.embed_url) {
+			const embedUrl = citation.source.embed_url;
+			// The embed panel renders anything it cannot read as a URL as raw HTML
+			if (typeof embedUrl === 'string' && (isValidHttpUrl(embedUrl) || embedUrl.startsWith('//'))) {
+				if (readOnly) {
+					// Open in new tab if readOnly
+					window.open(embedUrl, '_blank');
+					return;
 				} else {
-					selectedCitation = citations[index];
-					showCitationModal = true;
+					showTabs.set(true);
+					showEmbeds.set(true);
+					embed.set({
+						url: embedUrl,
+						title: citation.source?.name || 'Embedded Content',
+						source: citation,
+						chatId: chatId,
+						messageId: id,
+						sourceId: sourceId
+					});
 				}
 			} else {
-				selectedCitation = citations[index];
+				selectedCitation = citation;
 				showCitationModal = true;
 			}
+		} else {
+			selectedCitation = citation;
+			showCitationModal = true;
 		}
 	};
 
@@ -225,7 +223,7 @@
 						name: `${idx + 1} ${decodeString(citation.source.name)}`
 					})}
 					class="no-toggle outline-hidden flex dark:text-base-300 bg-transparent text-base-600 rounded-xl gap-1.5 items-center"
-					on:click={() => showSourceModal(citation.number)}
+					on:click={() => openCitation(citation, citation.number)}
 				>
 					<div class=" font-normal bg-base-50 dark:bg-base-850 rounded-md px-1">
 						{idx + 1}
