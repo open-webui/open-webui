@@ -4,7 +4,7 @@ import time
 
 from open_webui.internal.db import Base
 from open_webui.models.chat_views import ChatViewData, ViewModel
-from sqlalchemy import JSON, BigInteger, Column, Text, delete, update
+from sqlalchemy import JSON, BigInteger, Column, Text, delete, select, update
 from sqlalchemy.exc import IntegrityError
 
 
@@ -26,6 +26,14 @@ class FolderViewStatesTable:
     async def get(self, user_id, folder_id, db):
         row = await db.get(FolderViewState, (user_id, folder_id), populate_existing=True)
         return {'state': row.state, 'revision': row.revision} if row else {'state': None, 'revision': 0}
+
+    async def get_by_folder_ids(self, user_id, folder_ids, db):
+        result = await db.execute(
+            select(FolderViewState).where(
+                FolderViewState.user_id == user_id, FolderViewState.folder_id.in_(folder_ids)
+            )
+        )
+        return {row.folder_id: row for row in result.scalars().all()}
 
     async def save(self, user_id, folder_id, state, revision, db):
         """Save over the given revision; None when another window saved first."""

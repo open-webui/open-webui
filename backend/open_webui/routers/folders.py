@@ -1,6 +1,7 @@
 import logging
 import mimetypes
 import os
+import re
 import shutil
 import uuid
 from pathlib import Path
@@ -148,6 +149,86 @@ async def get_folders(
         FolderNameIdResponse(**folder.model_dump(), unread_count=unread_counts.get(folder.id, 0))
         for folder in folder_list
     ]
+
+
+# Folders to continue in: a chat running or waiting, or tabs left open.
+
+
+class ActiveFolderResponse(BaseModel):
+    id: str
+    name: str
+    directory: str | None = None
+    waiting: bool = False
+    running: bool = False
+    terminals: int = 0
+    ports: list[int] = []
+    tabs: list[str] = []
+    updated_at: int = 0
+
+
+@router.get('/active', response_model=list[ActiveFolderResponse])
+async def get_active_folders(
+    request: Request,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    await check_folders_permission(request, user, db=db)
+
+    folders = await Folders.get_folders_by_user_id(user.id, db=db)
+    folder_ids = [folder.id for folder in folders]
+    active_chats = await Chats.get_active_chats(user.id, folder_ids, db=db)
+    views = await FolderViewStates.get_by_folder_ids(user.id, folder_ids, db)
+
+    active = {
+        folder.id: ActiveFolderResponse(
+            id=folder.id, name=folder.name, directory=(folder.data or {}).get('working_directory')
+        )
+        for folder in folders
+    }
+    for chat_id, (folder_id, waiting, updated_at) in active_chats.items():
+        if waiting:
+            active[folder_id].waiting = True
+        elif await has_active_tasks(request.app.state.redis, chat_id):
+            active[folder_id].running = True
+        else:
+            continue
+        active[folder_id].updated_at = max(active[folder_id].updated_at, updated_at)
+    for folder_id, view in views.items():
+        # These are tabs left open; whether the machine still runs them is not asked.
+        tabs = ((view.state or {}).get('panels') or {}).get('tabs') or []
+        # The main chat tab is the folder page itself.
+        if not any(
+            tab.get('id') != 'main-chat' and tab.get('kind') in ('chat', 'file', 'terminal', 'browser', 'desktop')
+            for tab in tabs
+        ):
+            continue
+        active[folder_id].tabs = [
+            tab['label']
+            for tab in tabs
+            if tab.get('id') != 'main-chat' and tab.get('kind') in ('chat', 'file') and tab.get('label')
+        ][:2]
+        active[folder_id].terminals = sum(tab.get('kind') == 'terminal' for tab in tabs)
+        active[folder_id].ports = sorted(
+            {
+                int(match[1])
+                for tab in tabs
+                if tab.get('kind') == 'browser'
+                # The label becomes the page's title, so the port is read from the address.
+                and (match := re.match(r'https?://(?:localhost|127\.0\.0\.1):(\d{1,5})(?:[/?#]|$)', tab.get('path') or ''))
+            }
+        )
+        active[folder_id].updated_at = max(active[folder_id].updated_at, view.updated_at)
+
+    results = [folder for folder in active.values() if folder.updated_at]
+    results.sort(
+        key=lambda folder: (
+            folder.waiting,
+            folder.running,
+            folder.updated_at,
+        ),
+        reverse=True,
+    )
+    return results[:3]
 
 
 # Create Folder

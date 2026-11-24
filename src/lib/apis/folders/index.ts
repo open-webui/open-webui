@@ -35,6 +35,29 @@ export const createNewFolder = async (token: string, folderForm: FolderForm) => 
 	return res;
 };
 
+export type ActiveFolder = {
+	id: string;
+	name: string;
+	directory?: string | null;
+	waiting: boolean;
+	running: boolean;
+	terminals: number;
+	ports: number[];
+	tabs: string[];
+	updated_at: number;
+};
+
+export const getActiveFolders = async (token: string = ''): Promise<ActiveFolder[]> => {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/folders/active`, {
+		headers: {
+			Accept: 'application/json',
+			authorization: `Bearer ${token}`
+		}
+	});
+	if (!res.ok) throw await res.json();
+	return res.json();
+};
+
 export const getFolders = async (token: string = '') => {
 	let error = null;
 

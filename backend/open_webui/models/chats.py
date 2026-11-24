@@ -2214,6 +2214,31 @@ class ChatTable:
                 counts[folder_id] = counts.get(folder_id, 0) + 1
             return counts
 
+    async def get_active_chats(
+        self, user_id: str, folder_ids: list[str], db: AsyncSession | None = None
+    ) -> dict[str, tuple[str, bool, int]]:
+        """Chats with an unfinished reply: their folder, whether it waits for an approval or answer, and when they changed."""
+        if not folder_ids:
+            return {}
+        async with get_async_db_context(db) as session:
+            result = await session.execute(
+                select(Chat.id, Chat.folder_id, Chat.updated_at, ChatMessage.output)
+                .join(ChatMessage, ChatMessage.chat_id == Chat.id)
+                .where(
+                    Chat.user_id == user_id,
+                    Chat.folder_id.in_(folder_ids),
+                    Chat.archived == False,
+                    Chat.meta['internal'].as_boolean().is_not(True),
+                    ChatMessage.role == 'assistant',
+                    ChatMessage.done.is_(False),
+                )
+            )
+            active_chats: dict[str, tuple[str, bool, int]] = {}
+            for chat_id, folder_id, updated_at, output in result.all():
+                waiting = active_chats.get(chat_id, (folder_id, False, 0))[1]
+                active_chats[chat_id] = (folder_id, waiting or has_pending_tool_approval(output), updated_at)
+            return active_chats
+
     async def get_chats(self, skip: int = 0, limit: int = 50, db: AsyncSession | None = None) -> list[ChatModel]:
         async with get_async_db_context(db) as session:
             stmt = select(Chat).where(Chat.meta['internal'].as_boolean().is_not(True))

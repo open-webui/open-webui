@@ -24,6 +24,7 @@
 	import { firstNameOf, getGreeting } from '$lib/utils/greeting';
 
 	import Suggestions from './Suggestions.svelte';
+	import ContinueFolders from './ContinueFolders.svelte';
 	import RecentChats from './RecentChats.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import EyeSlash from '$lib/components/icons/EyeSlash.svelte';
@@ -388,6 +389,9 @@
 		<div class="mx-auto max-w-2xl mt-3" in:fade={{ duration: 200, delay: 200 }}>
 			<!-- Held at the height of either list, so the centred composer doesn't jump when it arrives. -->
 			<div class="mx-5 min-h-[10.5rem]">
+				{#if !$temporary}
+					<ContinueFolders />
+				{/if}
 				{#if showRecentChats}
 					<div in:fade={{ duration: 150 }}>
 						<RecentChats chats={$recentChats} showIdentifier={!selectedSuggestionPrompts?.length} />

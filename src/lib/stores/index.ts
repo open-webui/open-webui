@@ -84,7 +84,14 @@ type ChannelListItem = {
 export const channels = writable<ChannelListItem[]>([]);
 export const channelId = writable(null);
 
-export { chats, pinnedChats, recentChats, refreshRecentChats } from './chatList';
+export {
+	chats,
+	pinnedChats,
+	recentChats,
+	refreshRecentChats,
+	activeFolders,
+	refreshActiveFolders
+} from './chatList';
 export const pinnedNotes = writable([]);
 export const tags = writable([]);
 export const folders = writable([]);

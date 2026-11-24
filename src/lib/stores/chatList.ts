@@ -1,5 +1,6 @@
 import { get, readonly, writable } from 'svelte/store';
 import { getChatList, getPinnedChatList } from '$lib/apis/chats';
+import { getActiveFolders, type ActiveFolder } from '$lib/apis/folders';
 import { markFolderChatsDirty, updateFolderChatLists } from './folderStates';
 import { renameChatTabs } from './chatViewStates';
 
@@ -29,6 +30,14 @@ export const refreshRecentChats = async (token: string = '') => {
 		limit: RECENT_CHATS_LIMIT
 	}).catch(() => [])) as ChatListItem[];
 	recentChatsStore.set((list ?? []).slice(0, RECENT_CHATS_LIMIT));
+};
+
+// Folders with something running, waiting or left open, for the same landing.
+const activeFoldersStore = writable<ActiveFolder[]>([]);
+export const activeFolders = readonly(activeFoldersStore);
+
+export const refreshActiveFolders = async (token: string = '') => {
+	activeFoldersStore.set(await getActiveFolders(token).catch(() => []));
 };
 
 // How the sidebar's chat list is filtered and sorted; remembered per browser.

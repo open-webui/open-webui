@@ -45,7 +45,8 @@
 		chatId,
 		chats,
 		folders,
-		refreshRecentChats
+		refreshRecentChats,
+		refreshActiveFolders
 	} from '$lib/stores';
 
 	import Sidebar from '$lib/components/layout/Sidebar.svelte';
@@ -261,6 +262,7 @@
 		void setBanners().catch((e) => console.error('Failed to load banners:', e));
 		// The new-chat page lists these under the composer; started now so they're in before it draws.
 		void refreshRecentChats(localStorage.token);
+		void refreshActiveFolders(localStorage.token);
 		const lists = Promise.all([
 			setTools().catch((e) => console.error('Failed to load tools:', e)),
 			refreshMachines().catch((e) => console.error('Failed to load machines:', e)),
