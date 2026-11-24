@@ -767,6 +767,30 @@
 			</div>
 		{/if}
 		{#if (installing && sshPhase === 'form') || managed}
+			<div class="flex items-center gap-2 text-xs">
+				<Tooltip
+					className="shrink-0"
+					placement="top-start"
+					content={managed
+						? $i18n.t('Added to "open-terminal run". Saving a change restarts Open Terminal.')
+						: $i18n.t('Added to "open-terminal run".')}
+				>
+					<label
+						for="open-terminal-flags"
+						class="cursor-help text-base-500 underline decoration-dotted decoration-base-400/70 underline-offset-4 dark:decoration-base-500"
+						>{$i18n.t('Flags')}</label
+					>
+				</Tooltip>
+				<input
+					id="open-terminal-flags"
+					class="w-full min-w-0 bg-transparent py-0.5 font-mono text-xs text-base-900 outline-hidden placeholder:text-base-300 dark:text-base-100 dark:placeholder:text-base-700"
+					bind:value={flags}
+					placeholder="--desktop-mode host"
+					autocomplete="off"
+					autocapitalize="off"
+					spellcheck="false"
+				/>
+			</div>
 			{#if installingSSH || sshMachine}
 				<div class="flex items-center gap-2 text-xs">
 					<Tooltip
@@ -814,6 +838,29 @@
 							managed?.warning}</pre>
 				{/if}
 			{/if}
+			<div class="flex items-center gap-2 text-xs">
+				<Tooltip
+					className="shrink-0"
+					placement="top-start"
+					content={managed
+						? $i18n.t('Leave empty for the latest release. Upgrade installs this version.')
+						: $i18n.t('Leave empty for the latest release.')}
+				>
+					<label
+						for="open-terminal-version"
+						class="cursor-help text-base-500 underline decoration-dotted decoration-base-400/70 underline-offset-4 dark:decoration-base-500"
+						>{$i18n.t('Version')}</label
+					>
+				</Tooltip>
+				<input
+					id="open-terminal-version"
+					class="w-full min-w-0 bg-transparent py-0.5 font-mono text-xs text-base-900 outline-hidden placeholder:text-base-300 dark:text-base-100 dark:placeholder:text-base-700"
+					bind:value={openTerminalVersion}
+					placeholder="latest"
+					pattern="latest|\d+\.\d+\.\d+"
+					autocomplete="off"
+				/>
+			</div>
 			<div>
 				<div class="mb-0.5 flex text-xs text-base-500">
 					<Tooltip placement="top-start" content={$i18n.t('Where terminal sessions start.')}>
@@ -832,55 +879,6 @@
 						? (localDefaults?.start_dir ?? $i18n.t('Project folder'))
 						: $i18n.t('Home folder')}
 					autocomplete="off"
-					spellcheck="false"
-				/>
-			</div>
-			<div>
-				<div class="mb-0.5 flex text-xs text-base-500">
-					<Tooltip
-						placement="top-start"
-						content={managed
-							? $i18n.t('Leave empty for the latest release. Upgrade installs this version.')
-							: $i18n.t('Leave empty for the latest release.')}
-					>
-						<label
-							for="open-terminal-version"
-							class="cursor-help underline decoration-dotted decoration-base-400/70 underline-offset-4 dark:decoration-base-500"
-							>{$i18n.t('Open Terminal version')}</label
-						>
-					</Tooltip>
-				</div>
-				<input
-					id="open-terminal-version"
-					class="{input} font-mono"
-					bind:value={openTerminalVersion}
-					placeholder="latest"
-					pattern="latest|\d+\.\d+\.\d+"
-					autocomplete="off"
-				/>
-			</div>
-			<div>
-				<div class="mb-0.5 flex text-xs text-base-500">
-					<Tooltip
-						placement="top-start"
-						content={managed
-							? $i18n.t('Added to "open-terminal run". Saving a change restarts Open Terminal.')
-							: $i18n.t('Added to "open-terminal run".')}
-					>
-						<label
-							for="open-terminal-flags"
-							class="cursor-help underline decoration-dotted decoration-base-400/70 underline-offset-4 dark:decoration-base-500"
-							>{$i18n.t('Open Terminal flags')}</label
-						>
-					</Tooltip>
-				</div>
-				<input
-					id="open-terminal-flags"
-					class="{input} font-mono"
-					bind:value={flags}
-					placeholder="--desktop-mode host"
-					autocomplete="off"
-					autocapitalize="off"
 					spellcheck="false"
 				/>
 			</div>
