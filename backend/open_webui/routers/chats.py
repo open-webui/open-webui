@@ -1690,13 +1690,20 @@ async def update_chat_message_by_id(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
+    message = await Chats.get_message_by_id_and_message_id(id, message_id)
+    if message and (message.get('user_id') or chat.user_id) != chat.user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
     updates = {}
     if form_data.content is not None:
         updates['content'] = form_data.content
     if form_data.voice is not None:
         if len(JSONCodec.dumps(form_data.voice)) > 100000:
             raise HTTPException(400, 'Voice metadata is too large')
-        if not await Chats.get_message_by_id_and_message_id(id, message_id):
+        if not message:
             raise HTTPException(404, ERROR_MESSAGES.NOT_FOUND)
         updates['meta'] = {'voice': form_data.voice}
     if not updates:
@@ -1797,6 +1804,13 @@ async def send_chat_message_event_by_id(
         )
 
     if chat.user_id != user.id and not (user.role == 'admin' and ENABLE_ADMIN_CHAT_ACCESS):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+    message = await Chats.get_message_by_id_and_message_id(id, message_id)
+    if message and (message.get('user_id') or chat.user_id) != chat.user_id:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
