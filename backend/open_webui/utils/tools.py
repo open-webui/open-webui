@@ -923,8 +923,10 @@ async def get_builtin_tools(
         builtin_functions.append(execute_code)
 
     # Notes tools - search, view, create, and update user's notes
-    if is_note_chat or (
-        is_builtin_tool_enabled('notes') and config.get('notes.enable') and await has_user_permission('notes')
+    if (
+        (is_note_chat or is_builtin_tool_enabled('notes'))
+        and config.get('notes.enable')
+        and await has_user_permission('notes')
     ):
         builtin_functions.extend([search_notes, view_note, write_note, replace_note_content])
 
