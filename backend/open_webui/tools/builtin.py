@@ -30,7 +30,7 @@ from open_webui.models.groups import Groups
 from open_webui.models.memories import Memories
 from open_webui.models.messages import Message, Messages
 from open_webui.models.notes import NotePageConflict, Notes, get_content_files, get_page, matching_page
-from open_webui.models.users import UserModel, Users
+from open_webui.models.users import UserModel, Users, UserSettings
 from open_webui.retrieval.utils import filter_source_metadata, get_content_from_url
 from open_webui.retrieval.vector.async_client import ASYNC_VECTOR_DB_CLIENT
 from open_webui.routers.images import (
@@ -1963,7 +1963,8 @@ async def send_message(
 ) -> str:
     """
     Send a message to another of the user's chats, a sub-agent or the lead agent. It reads the message between tool
-    calls if it is working and wakes up if it is idle. It replies, if needed, with a message to this chat.
+    calls if it is working and wakes up if it is idle. A message you receive shows the chat it is from. Answer it only
+    if it asks for something; never send thanks or acknowledgements.
 
     :param chat_id: The ID of the chat
     :param message: The message. The other chat cannot see this one, so include what it needs
@@ -1983,12 +1984,15 @@ async def send_message(
     try:
         settings = await build_tool_approval_resume_payload(chat_id, chat.current_message_id, chat=chat)
         defaults = await _resolve_model_defaults(__request__.app, settings['model'])
+        ui = ((await Users.get_user_by_id(user.id)).settings or UserSettings()).ui or {}
+        settings['params'] = {**(ui.get('params') or {}), **(chat.chat.get('params') or {})}
+        title = (await Chats.get_chat_title_by_id(__chat_id__) or '').replace('"', "'")
         await insert_internal_message(
             __request__,
             user,
             chat_id,
             chat.current_message_id,
-            f'[Message from chat {__chat_id__}. Reply to it with send_message.]\n\n{message}',
+            f'<message from="{__chat_id__}" title="{title}">\n{message.strip()}\n</message>',
             {'type': 'message'},
             {
                 **settings,

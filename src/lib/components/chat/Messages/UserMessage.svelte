@@ -29,7 +29,8 @@
 	import Image from '$lib/components/common/Image.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import SubagentResultRow from './SubagentResultRow.svelte';
-	import InternalMessageRow from './InternalMessageRow.svelte';
+	import ChatMessageRow from './ChatMessageRow.svelte';
+	import TimerRow from './TimerRow.svelte';
 	import { getChatContext } from '$lib/components/chat/context';
 
 	const { models } = getChatContext();
@@ -376,13 +377,12 @@
 						</div>
 					</div>
 				</div>
-			{:else if isInternalMessage(message) && message.meta.type === 'subagent'}
-				<SubagentResultRow content={message.content} />
+			{:else if isInternalMessage(message) && message.meta.type === 'timer'}
+				<TimerRow content={message.content} />
+			{:else if isInternalMessage(message) && message.meta.type === 'message'}
+				<ChatMessageRow content={message.content} />
 			{:else if isInternalMessage(message)}
-				<InternalMessageRow
-					label={message.meta.type === 'timer' ? $i18n.t('Timer') : $i18n.t('Message')}
-					content={message.content}
-				/>
+				<SubagentResultRow content={message.content} />
 			{:else if message.content !== ''}
 				<div class="w-full">
 					<div

@@ -1613,7 +1613,8 @@ async def get_event_emitter(request_info, update_db=True):
                 {
                     'chat_id': chat_id,
                     'message_id': message_id,
-                    **({'internal': True} if internal else {}),
+                    # The page shows no notifications for these.
+                    **({'internal': True} if internal or request_info.get('subagent') else {}),
                     'data': event_data,
                 },
                 room=room,

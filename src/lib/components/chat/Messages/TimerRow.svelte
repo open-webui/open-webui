@@ -1,7 +1,9 @@
 <script lang="ts">
+	import { getContext } from 'svelte';
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 
-	export let label: string;
+	const i18n = getContext<any>('i18n');
+
 	export let content: string;
 
 	let expanded = false;
@@ -14,7 +16,7 @@
 		aria-expanded={expanded}
 		on:click={() => (expanded = !expanded)}
 	>
-		<span dir="auto" class="min-w-0 truncate">{label} · {content}</span>
+		<span dir="auto" class="min-w-0 truncate">{$i18n.t('Timer')} · {content}</span>
 		<ChevronDown
 			strokeWidth="3.5"
 			className="size-3 shrink-0 transition {expanded
