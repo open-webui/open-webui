@@ -230,8 +230,8 @@ class AuditLoggingMiddleware:
         async with self._audit_context(request) as context:
 
             async def send_wrapper(message: ASGISendEvent) -> None:
-                if self.audit_level == AuditLevel.REQUEST_RESPONSE and (
-                    capture_body or message['type'] == 'http.response.start'
+                if message['type'] == 'http.response.start' or (
+                    self.audit_level == AuditLevel.REQUEST_RESPONSE and capture_body
                 ):
                     await self._capture_response(message, context)
 
