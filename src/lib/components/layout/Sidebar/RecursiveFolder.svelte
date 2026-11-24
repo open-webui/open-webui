@@ -637,7 +637,8 @@
 			!($pendingChatRequest && $pendingChatRequest.id === $page.params.id);
 
 	const openFolderHandler = async () => {
-		await goto(`/folders/${folderId}`);
+		// Keeps a double click's rename box open.
+		await goto(`/folders/${folderId}`, { keepFocus: true });
 		if ($mobile) showSidebar.set(false);
 	};
 
