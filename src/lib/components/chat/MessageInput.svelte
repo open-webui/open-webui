@@ -174,6 +174,7 @@
 	export let onTemporaryChange: ((value: boolean) => void) | null = null;
 	export let machineContext: MachineContext | null = null;
 	export let machineSelectionEnabled = true;
+	export let disabled = false;
 	export let contextUsage = null;
 	export let contextCompactionEnabled = false;
 	export let embedded = false;
@@ -2231,12 +2232,15 @@
 						<div
 							id={inputId === 'chat-input' ? 'message-input-container' : `${inputId}-wrapper`}
 							data-composer-id={inputId}
+							inert={disabled && !isActive}
 							class="flex-1 flex flex-col relative w-full shadow-[0_6px_24px_-4px_rgba(0,0,0,0.1)] rounded-3xl border {$temporary
 								? 'border-dashed border-base-300/70 dark:border-base-700/70'
 								: ' border-base-200/60 dark:border-base-800/40'} {($settings?.highContrastMode ??
 							false)
 								? 'focus-within:outline focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-blue-500 [&_.ProseMirror:focus-visible]:outline-none!'
-								: ''}  transition px-0.5 bg-base-0/80 dark:bg-[color-mix(in_oklab,var(--color-base-850)_55%,var(--color-base-900))]/90 backdrop-blur-md dark:text-base-100"
+								: ''} {disabled && !isActive
+								? 'opacity-60'
+								: ''} transition px-0.5 bg-base-0/80 dark:bg-[color-mix(in_oklab,var(--color-base-850)_55%,var(--color-base-900))]/90 backdrop-blur-md dark:text-base-100"
 							dir={$settings?.chatDirection ?? 'auto'}
 						>
 							{#if atSelectedModel !== undefined}

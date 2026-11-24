@@ -59,6 +59,8 @@
 	export let files = [];
 	export let machineContext: MachineContext | null = null;
 	export let machineSelectionEnabled = true;
+	export let disabled = false;
+	export let placeholder = '';
 	export let selectedMachineId: Pick<Writable<string | null>, 'subscribe' | 'set'>;
 	export let machineSkills: Writable<any[]>;
 	export let messageInput = null;
@@ -152,10 +154,11 @@
 		!$selectedFolder.write_access;
 </script>
 
-{#snippet composer(placeholder = '')}
+{#snippet composer(defaultPlaceholder = '')}
 	<MessageInput
 		{selectedMachineId}
 		{machineSelectionEnabled}
+		{disabled}
 		{machineSkills}
 		{chatId}
 		{onTemporaryChange}
@@ -190,7 +193,7 @@
 		{onToolApprovalModeChange}
 		{stopResponse}
 		{createMessagePair}
-		{placeholder}
+		placeholder={placeholder || defaultPlaceholder}
 		{onChange}
 		{onUpload}
 		{onUpdate}

@@ -596,6 +596,14 @@
 	$: canOpenChatTab =
 		$user?.role === 'admin' ||
 		($user?.role === 'user' && ($user.permissions?.chat?.side_chat ?? false));
+	// A fixed machine has to be reachable. Replies in someone else's chat may run on its owner's access.
+	$: canUseMachine =
+		!$config?.features?.enable_tool_servers ||
+		!machineFixed ||
+		isShared ||
+		!$selectedMachineId ||
+		$machines === null ||
+		$machines.some((machine) => machine.id === $selectedMachineId);
 	let cloning = false;
 
 	const cloneSharedChat = async () => {
@@ -4837,6 +4845,10 @@
 			return { status: 'rejected' };
 		}
 
+		if (!canUseMachine) {
+			toast.error($i18n.t('This machine is offline or not shared with you'));
+			return { status: 'rejected' };
+		}
 		if (pendingOAuthTools.some((tool) => !isSystemOAuthTool(tool.id))) {
 			toast.warning($i18n.t('Please connect all required integrations before sending a message'));
 			return { status: 'rejected' };
@@ -6554,6 +6566,10 @@
 									<MessageInput
 										{selectedMachineId}
 										machineSelectionEnabled={!machineFixed}
+										disabled={!canUseMachine}
+										placeholder={canUseMachine
+											? ''
+											: $i18n.t('This machine is offline or not shared with you')}
 										{machineSkills}
 										{messagesContainerId}
 										{inputId}
@@ -6688,6 +6704,10 @@
 									<MessageInput
 										{selectedMachineId}
 										machineSelectionEnabled={!machineFixed}
+										disabled={!canUseMachine}
+										placeholder={canUseMachine
+											? ''
+											: $i18n.t('This machine is offline or not shared with you')}
 										{machineSkills}
 										{messagesContainerId}
 										{inputId}
@@ -6775,6 +6795,10 @@
 									bind:folderTabActions
 									{selectedMachineId}
 									machineSelectionEnabled={!machineFixed}
+									disabled={!canUseMachine}
+									placeholder={canUseMachine
+										? ''
+										: $i18n.t('This machine is offline or not shared with you')}
 									{machineSkills}
 									chatId={$chatId}
 									{onTemporaryChange}
