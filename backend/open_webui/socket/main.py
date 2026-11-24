@@ -845,7 +845,7 @@ async def leave_note(sid, data):
                 'note_ids': [id for id in session.get('note_ids', []) if id != note_id],
                 'note_locations': locations,
             }
-        await publish_note_presence(note_id)
+            await publish_note_presence(note_id)
 
 
 @sio.on('events:channel')
