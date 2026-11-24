@@ -284,6 +284,13 @@ class UpdateProfileForm(BaseModel):
     gender: str | None = None
     date_of_birth: datetime.date | None = None
 
+    @field_validator('date_of_birth')
+    @classmethod
+    def check_date_of_birth(cls, v: datetime.date | None) -> datetime.date | None:
+        if v is not None and v > datetime.datetime.now(datetime.timezone.utc).date():
+            raise ValueError('Birth date cannot be in the future')
+        return v
+
     @field_validator('profile_image_url')
     @classmethod
     def check_profile_image_url(cls, v: str) -> str:

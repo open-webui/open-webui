@@ -332,6 +332,7 @@
 				<input
 					class="{inputClass} dark:scheme-dark"
 					type="date"
+					max={new Date().toISOString().slice(0, 10)}
 					aria-label={$i18n.t('settings.personal.account.birthDate.label')}
 					bind:value={dateOfBirth}
 				/>
