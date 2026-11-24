@@ -9,6 +9,7 @@
 	import { isValidHttpUrl } from '$lib/utils';
 
 	import XMark from '$lib/components/icons/XMark.svelte';
+	import RelevanceBadge from './RelevanceBadge.svelte';
 	import Textarea from '$lib/components/common/Textarea.svelte';
 
 	const i18n = getContext('i18n');
@@ -22,23 +23,6 @@
 	export let showRelevance = true;
 
 	let mergedDocuments = [];
-
-	function calculatePercentage(distance: number) {
-		if (typeof distance !== 'number') return null;
-		if (distance < 0) return 0;
-		if (distance > 1) return 100;
-		return Math.round(distance * 10000) / 100;
-	}
-
-	function getRelevanceColor(percentage: number) {
-		if (percentage >= 80)
-			return 'bg-green-200 dark:bg-green-800 text-green-800 dark:text-green-200';
-		if (percentage >= 60)
-			return 'bg-yellow-200 dark:bg-yellow-800 text-yellow-800 dark:text-yellow-200';
-		if (percentage >= 40)
-			return 'bg-orange-200 dark:bg-orange-800 text-orange-800 dark:text-orange-200';
-		return 'bg-red-200 dark:bg-red-800 text-red-800 dark:text-red-200';
-	}
 
 	$: if (citation) {
 		expandedDocs = new Set();
@@ -186,21 +170,7 @@
 										tippyOptions={{ duration: [500, 0] }}
 									>
 										<div class="text-sm my-1 dark:text-base-400 flex items-center gap-2 w-fit">
-											{#if showPercentage}
-												{@const percentage = calculatePercentage(document.distance)}
-
-												{#if typeof percentage === 'number'}
-													<span
-														class={`px-1 rounded-sm font-normal ${getRelevanceColor(percentage)}`}
-													>
-														{percentage.toFixed(2)}%
-													</span>
-												{/if}
-											{:else if typeof document?.distance === 'number'}
-												<span class="text-base-500 dark:text-base-500">
-													({(document?.distance ?? 0).toFixed(4)})
-												</span>
-											{/if}
+											<RelevanceBadge distance={document.distance} {showPercentage} />
 										</div>
 									</Tooltip>
 								{/if}

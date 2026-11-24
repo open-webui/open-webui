@@ -31,7 +31,8 @@ export const getCitations = (sources: any[] | null | undefined) => {
 			if (existing) {
 				existing.document.push(document);
 				existing.metadata.push(metadata);
-				if (distance !== undefined) existing.distances.push(distance);
+				// Kept in step with the documents, as not every document has one
+				existing.distances.push(distance);
 				return;
 			}
 
@@ -51,7 +52,7 @@ export const getCitations = (sources: any[] | null | undefined) => {
 				source: _source,
 				document: [document],
 				metadata: metadata ? [metadata] : [],
-				distances: distance !== undefined ? [distance] : []
+				distances: [distance]
 			});
 		});
 	}

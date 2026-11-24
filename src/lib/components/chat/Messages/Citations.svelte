@@ -51,14 +51,20 @@
 					file: {
 						id: metadata.file_id,
 						page: Number.isInteger(metadata.page) ? metadata.page + 1 : null,
-						// The cited passages of this file, each with its page
+						// The cited passages of this file, each with its page and relevance
 						passages: (citations[index].document ?? [])
-							.map((text, i) => ({ text, metadata: citations[index].metadata?.[i] }))
-							.filter((passage) => passage.metadata?.file_id === metadata.file_id)
-							.map(({ text, metadata }) => ({
+							.map((text, i) => ({
 								text,
-								page: Number.isInteger(metadata?.page) ? metadata.page + 1 : null
+								metadata: citations[index].metadata?.[i],
+								distance: showRelevance ? citations[index].distances?.[i] : undefined
 							}))
+							.filter((passage) => passage.metadata?.file_id === metadata.file_id)
+							.map(({ text, metadata, distance }) => ({
+								text,
+								page: Number.isInteger(metadata?.page) ? metadata.page + 1 : null,
+								distance
+							})),
+						showPercentage
 					},
 					title: fileName,
 					chatId: chatId
@@ -100,10 +106,16 @@
 		}
 	};
 
+	// Passages read rather than searched for have no distance
+	const getDistances = (sources: any[]): number[] =>
+		sources
+			.flatMap((citation) => citation.distances ?? [])
+			.filter((distance) => typeof distance === 'number');
+
 	function calculateShowRelevance(sources: any[]) {
-		const distances = sources.flatMap((citation) => citation.distances ?? []);
-		const inRange = distances.filter((d) => d !== undefined && d >= -1 && d <= 1).length;
-		const outOfRange = distances.filter((d) => d !== undefined && (d < -1 || d > 1)).length;
+		const distances = getDistances(sources);
+		const inRange = distances.filter((d) => d >= -1 && d <= 1).length;
+		const outOfRange = distances.length - inRange;
 
 		if (distances.length === 0) {
 			return false;
@@ -125,8 +137,7 @@
 	}
 
 	function shouldShowPercentage(sources: any[]) {
-		const distances = sources.flatMap((citation) => citation.distances ?? []);
-		return distances.every((d) => d !== undefined && d >= -1 && d <= 1);
+		return getDistances(sources).every((d) => d >= -1 && d <= 1);
 	}
 
 	$: {
