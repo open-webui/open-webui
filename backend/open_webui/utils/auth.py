@@ -722,6 +722,8 @@ async def create_session_response(
         raise HTTPException(409, 'Authentication changed. Please sign in again.')
     if is_mfa_required(source, await get_mfa_config()) and not mfa_verified:
         raise HTTPException(401, 'Authenticator verification is required.')
+    # Scope-backed, so outer middleware (audit) can reuse the resolved user
+    request.state.user = user
     expires_delta = parse_duration(await Config.get('auth.jwt_expiry'))
     expires_at = int(time.time()) + int(expires_delta.total_seconds()) if expires_delta else None
     token = create_token(
