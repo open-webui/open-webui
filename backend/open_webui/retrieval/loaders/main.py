@@ -555,7 +555,12 @@ class Loader:
             if max_file_size_bytes > 0:
                 try:
                     with zipfile.ZipFile(file_path) as archive:
-                        uncompressed_size = sum(entry.file_size for entry in archive.infolist())
+                        # Pivot caches duplicate sheet data and are never read by the xlsx loaders.
+                        uncompressed_size = sum(
+                            entry.file_size
+                            for entry in archive.infolist()
+                            if not (file_ext == 'xlsx' and entry.filename.startswith('xl/pivotCache/'))
+                        )
                 except (zipfile.BadZipFile, OSError):
                     pass
                 else:
