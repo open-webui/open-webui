@@ -93,6 +93,7 @@ known_source_ext = [
     'yml',
     'toml',
     'svg',
+    'mdx',
 ]
 
 
