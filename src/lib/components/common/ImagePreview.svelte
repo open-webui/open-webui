@@ -74,7 +74,9 @@
 		tabindex="-1"
 		class="modal fixed top-0 right-0 left-0 bottom-0 bg-base-1000 text-base-0 w-full min-h-screen h-screen flex justify-center z-9999 overflow-hidden overscroll-contain"
 	>
-		<div class=" absolute left-0 w-full flex justify-between select-none z-20">
+		<div
+			class=" absolute left-0 w-full flex justify-between select-none z-20 drop-shadow-[0_0_1px_black,0_0_2px_black]"
+		>
 			<div>
 				<button
 					aria-label={$i18n.t('Close')}
