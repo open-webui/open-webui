@@ -12,10 +12,11 @@ import ntpath
 import time
 from typing import Literal, Optional
 from urllib.parse import unquote
+from uuid import uuid4
 
 from fastapi import HTTPException, Request
 
-from open_webui.utils.machines import automation_machine_of, is_machine_ref, strip_machine_prefix
+from open_webui.utils.machines import automation_machine_of, is_machine_ref, machine_id_of, strip_machine_prefix
 from open_webui.env import (
     KNOWLEDGE_GREP_MAX_MATCHES,
     VIEW_FILE_DEFAULT_MAX_CHARS,
@@ -23,6 +24,7 @@ from open_webui.env import (
 )
 from open_webui.events import EVENTS, publish_event
 from open_webui.models.channels import Channel, ChannelMember, Channels
+from open_webui.models.chat_messages import ChatMessages
 from open_webui.models.chats import Chats, chat_search_content_query, chat_search_terms
 from open_webui.models.config import Config
 from open_webui.models.groups import Groups
@@ -1913,7 +1915,7 @@ async def delegate_task(
     title: str = '',
     context: str = '',
     file_ids: list[str] | None = None,
-    background: bool = False,
+    background: bool = True,
     model_id: str | None = None,
     __request__: Request = None,
     __user__: dict = None,
@@ -1929,7 +1931,8 @@ async def delegate_task(
     :param context: Relevant context, decisions, or file paths for the task
     :param file_ids: Attached file IDs the sub-agent needs. Use this for images or files;
         do not put file IDs only in context.
-    :param background: Return immediately and continue this chat when the sub-agent finishes
+    :param background: Return immediately; the result comes back to this chat by itself, so do not wait or poll for it.
+        Set to false only when this reply cannot go on without the result
     :param model_id: ID of an available sub-agent model. Omit to use the current model
     :return: Foreground result text, or a JSON dispatch handle for background work
     """
@@ -1953,6 +1956,66 @@ async def delegate_task(
         parent_chat_id=__chat_id__ or '',
         parent_message_id=__message_id__,
     )
+
+
+async def send_message(
+    chat_id: str,
+    message: str,
+    __request__: Request = None,
+    __user__: dict = None,
+    __chat_id__: str = None,
+) -> str:
+    """
+    Send a message to another of the user's chats, a sub-agent or the lead agent. It reads the message between tool
+    calls if it is working and wakes up if it is idle. It replies, if needed, with a message to this chat.
+
+    :param chat_id: The ID of the chat
+    :param message: The message. The other chat cannot see this one, so include what it needs
+    :return: Whether the message was sent
+    """
+    from open_webui.utils.automations import _resolve_model_defaults
+    from open_webui.utils.subagents import _build_request, queue_user_message
+    from open_webui.utils.tool_approval import build_tool_approval_resume_payload
+
+    user = UserModel(**__user__)
+    chat = await Chats.get_chat_by_id_and_user_id(chat_id, user.id)
+    if not chat or chat_id == __chat_id__:
+        return 'Error: chat not found.'
+    if await ChatMessages.get_chat_ids_with_pending_approval([chat_id]):
+        return 'Error: that chat is waiting for the user.'
+
+    user_message = {
+        'id': str(uuid4()),
+        'parentId': chat.current_message_id,
+        'role': 'user',
+        'content': f'[Message from chat {__chat_id__}, not from the user. Reply to it with send_message.]\n\n{message}',
+    }
+    try:
+        if await queue_user_message(__request__, chat_id, user, user_message, chat.current_message_id):
+            event = {'chat_id': chat_id, 'data': {'type': 'chat:reload'}}
+            await sio.emit('events', event, room=f'user:{user.id}')
+            return 'Sent.'
+
+        form_data = await build_tool_approval_resume_payload(chat_id, chat.current_message_id, chat=chat)
+        form_data.pop('assistant_message_id')
+        defaults = await _resolve_model_defaults(__request__.app, form_data['model'])
+        await __request__.app.state.CHAT_COMPLETION_HANDLER(
+            await _build_request(__request__, user.id, internal=False),
+            {
+                **form_data,
+                **defaults,
+                'machine_id': machine_id_of(chat.chat) or defaults.get('machine_id'),
+                'id': str(uuid4()),
+                'parent_id': chat.current_message_id,
+                'user_message': user_message,
+                'session_id': f'message:{chat_id}',
+                'background_tasks': {},
+            },
+            user=user,
+        )
+    except HTTPException as exc:
+        return f'Error: {exc.detail}'
+    return 'Sent.'
 
 
 async def timer(

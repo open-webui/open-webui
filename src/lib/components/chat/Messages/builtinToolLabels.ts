@@ -57,6 +57,8 @@ const labels = (t: Translate, name: string): Labels | null => {
 			return [t('Searching chats'), t('Searched chats'), t('Failed to search chats')];
 		case 'view_chat':
 			return [t('Reading chat'), t('Read chat'), t('Failed to read chat')];
+		case 'send_message':
+			return [t('Sending message'), t('Sent message'), t('Failed to send message')];
 		case 'search_users':
 			return [t('Searching users'), t('Searched users'), t('Failed to search users')];
 

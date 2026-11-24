@@ -71,7 +71,6 @@ MODELS_CONFIG_KEYS = {
 }
 SUBAGENTS_CONFIG_KEYS = {
     'ENABLE_SUBAGENTS': 'subagents.enable',
-    'SUBAGENTS_BACKGROUND_ENABLED': 'subagents.background_enabled',
     'SUBAGENTS_MAX_CONCURRENT': 'subagents.max_concurrent',
     'SUBAGENTS_MAX_ASYNC': 'subagents.max_async',
     'SUBAGENTS_MAX_ITERATIONS': 'subagents.max_iterations',
@@ -676,7 +675,6 @@ async def set_models_config(request: Request, form_data: ModelsConfigForm, user=
 
 class SubagentsConfigForm(BaseModel):
     ENABLE_SUBAGENTS: bool
-    SUBAGENTS_BACKGROUND_ENABLED: bool
     SUBAGENTS_MAX_CONCURRENT: int | None = Field(default=None, gt=0)
     SUBAGENTS_MAX_ASYNC: int | None = Field(default=None, gt=0)
     SUBAGENTS_MAX_ITERATIONS: int | None = Field(default=None, gt=0)

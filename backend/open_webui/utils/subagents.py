@@ -17,6 +17,7 @@ from open_webui.models.auths import Auths
 from open_webui.models.users import UserModel, Users
 from open_webui.tasks import create_task, has_active_tasks
 from open_webui.utils.auth import VERIFIED_USER_ROLES, create_token
+from open_webui.utils.chat_id import is_saved_chat_id
 from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.misc import (
     add_or_update_system_message,
@@ -510,7 +511,6 @@ async def delegate(
         return 'Error: chat and user context are required.'
 
     config = await Config.get_many(
-        'subagents.background_enabled',
         'subagents.max_concurrent',
         'subagents.max_async',
         'subagents.max_iterations',
@@ -534,8 +534,8 @@ async def delegate(
     elif max_async is not None:
         max_async = max(1, max_async)
 
-    if background and not config.get('subagents.background_enabled'):
-        return 'Error: background sub-agents are disabled in settings.'
+    # A channel can't be continued later, and an automation's run ends with its reply.
+    background = background and is_saved_chat_id(parent_chat_id) and not metadata.get('automation_id')
 
     features = copy.deepcopy(metadata.get('features') or {})
     if (
@@ -627,7 +627,8 @@ async def delegate(
         prompt_files = delegated_files
         chat_context = copy.deepcopy(run.get('chat_context') or {})
         system_messages = add_or_update_system_message(
-            str(config.get('subagents.system_prompt') or '').strip() or DEFAULT_SUBAGENT_SYSTEM_PROMPT,
+            f'{str(config.get("subagents.system_prompt") or "").strip() or DEFAULT_SUBAGENT_SYSTEM_PROMPT}\n\n'
+            f'The lead agent is chat {parent_chat_id}.',
             [*chat_context.get('messages', [])],
             append=True,
         )
@@ -652,7 +653,8 @@ async def delegate(
                     'machine_id': machine_id_of(run),
                     # Read when the user's answer or message continues this chat.
                     'params': {
-                        'system': '\n\n'.join(get_content_from_message(message) or '' for message in system_messages)
+                        **(chat_context.get('params') or {}),
+                        'system': '\n\n'.join(get_content_from_message(message) or '' for message in system_messages),
                     },
                     'history': {
                         'currentId': assistant_message_id,
@@ -703,6 +705,7 @@ async def delegate(
     async def run_reserved() -> dict:
         from open_webui.socket.main import sio
 
+        reply_id = assistant_message_id
         try:
             await sio.emit(
                 'events', {'chat_id': parent_chat_id, 'data': {'type': 'chat:children'}}, room=f'user:{user.id}'
@@ -733,12 +736,17 @@ async def delegate(
             if machine_id_of(run):
                 form_data['machine_id'] = machine_id_of(run)
             await request.app.state.CHAT_COMPLETION_HANDLER(child_request, form_data, user=user)
-            message = await Chats.get_message_by_id_and_message_id(chat_id, assistant_message_id)
-            # A tool approval pauses the reply. The user's decision continues it in its own chat.
-            if not metadata.get('automation_id') and message and has_pending_tool_approval(message.get('output')):
-                while message and message.get('done') is False:
-                    await asyncio.sleep(1)
-                    message = await Chats.get_message_by_id_and_message_id(chat_id, assistant_message_id)
+            # Messages sent to it meanwhile are answered in a later reply, and the user's decision on a tool approval
+            # continues a paused one.
+            while True:
+                child = await Chats.get_chat_by_id(chat_id)
+                reply_id = child.current_message_id if child else reply_id
+                message = await Chats.get_message_by_id_and_message_id(chat_id, reply_id)
+                if not message or message.get('done') is not False:
+                    break
+                if metadata.get('automation_id') and has_pending_tool_approval(message.get('output')):
+                    break
+                await asyncio.sleep(1)
             if not message:
                 return {
                     'status': 'error',
@@ -785,14 +793,14 @@ async def delegate(
         except asyncio.CancelledError:
             await Chats.upsert_message_to_chat_by_id_and_message_id(
                 chat_id,
-                assistant_message_id,
+                reply_id,
                 {'done': True, 'error': {'content': 'Sub-agent cancelled.'}},
             )
             raise
         except Exception as exc:
             await Chats.upsert_message_to_chat_by_id_and_message_id(
                 chat_id,
-                assistant_message_id,
+                reply_id,
                 {'done': True, 'error': {'content': str(exc)}},
             )
             raise
@@ -976,8 +984,8 @@ async def delegate(
         return f'Error: {exc}'
 
     if result.get('status') != 'completed':
-        error_text = f'Error: {result.get("error") or "sub-agent failed."}'
+        error_text = f'Error: {result.get("error") or "sub-agent failed."}\nSubagent chat: {chat_id}'
         if result.get('summary'):
             return f'{error_text}\nPartial output:\n{result["summary"]}'
         return error_text
-    return result.get('summary') or 'Sub-agent produced no output.'
+    return f'Subagent chat: {chat_id}\n\n{result.get("summary") or "Sub-agent produced no output."}'

@@ -15,7 +15,6 @@
 	let loading = true;
 	let saving = false;
 	let enabled = false;
-	let backgroundEnabled = false;
 	let maxConcurrent: number | null = null;
 	let maxAsync: number | null = null;
 	let maxIterations: number | null = null;
@@ -25,7 +24,6 @@
 	let savedConfig: Record<string, any> | null = null;
 	$: settings = {
 		ENABLE_SUBAGENTS: enabled,
-		SUBAGENTS_BACKGROUND_ENABLED: backgroundEnabled,
 		SUBAGENTS_MAX_CONCURRENT: maxConcurrent,
 		SUBAGENTS_MAX_ASYNC: maxAsync,
 		SUBAGENTS_MAX_ITERATIONS: maxIterations,
@@ -34,9 +32,6 @@
 	};
 	$: settingLabels = {
 		ENABLE_SUBAGENTS: $i18n.t('settings.admin.subagents.enableSubAgents.label'),
-		SUBAGENTS_BACKGROUND_ENABLED: $i18n.t(
-			'settings.admin.subagents.enableBackgroundSubAgents.label'
-		),
 		SUBAGENTS_MAX_CONCURRENT: $i18n.t('settings.admin.subagents.maxConcurrent.label'),
 		SUBAGENTS_MAX_ASYNC: $i18n.t('settings.admin.subagents.maxBackground.label'),
 		SUBAGENTS_MAX_ITERATIONS: $i18n.t('settings.admin.subagents.maxIterations.label'),
@@ -48,7 +43,6 @@
 		try {
 			const config = await getSubagentsConfig(localStorage.token);
 			enabled = config?.ENABLE_SUBAGENTS ?? false;
-			backgroundEnabled = config?.SUBAGENTS_BACKGROUND_ENABLED ?? false;
 			maxConcurrent = config?.SUBAGENTS_MAX_CONCURRENT ?? null;
 			maxAsync = config?.SUBAGENTS_MAX_ASYNC ?? null;
 			maxIterations = config?.SUBAGENTS_MAX_ITERATIONS ?? null;
@@ -69,7 +63,6 @@
 		try {
 			await setSubagentsConfig(localStorage.token, {
 				ENABLE_SUBAGENTS: enabled,
-				SUBAGENTS_BACKGROUND_ENABLED: backgroundEnabled,
 				SUBAGENTS_MAX_CONCURRENT: maxConcurrent ?? null,
 				SUBAGENTS_MAX_ASYNC: maxAsync ?? null,
 				SUBAGENTS_MAX_ITERATIONS: maxIterations ?? null,
@@ -137,41 +130,27 @@
 					</div>
 
 					<div>
-						<AdminSettingRow let:labelId>
-							<span slot="label">
-								{$i18n.t('settings.admin.subagents.enableBackgroundSubAgents.label')}
+						<label class="text-xs text-base-600 dark:text-base-400" for="sa-async">
+							{$i18n.t('settings.admin.subagents.maxBackground.label')}
+						</label>
+						<div class="mt-1 flex items-center gap-1.5">
+							<input
+								id="sa-async"
+								type="number"
+								bind:value={maxAsync}
+								min="1"
+								step="1"
+								aria-describedby="sa-async-help"
+								class="h-7 w-16 rounded-lg border border-base-100/50 bg-base-50/40 px-2 text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-300 dark:focus:border-blue-500"
+							/>
+							<span class="text-[0.6875rem] text-base-400 dark:text-base-600">
+								{$i18n.t('background sub-agents')}
 							</span>
-							<Switch ariaLabelledbyId={labelId} bind:state={backgroundEnabled} />
-						</AdminSettingRow>
-						<p class="mt-1 text-[0.6875rem] text-base-400 dark:text-base-600">
-							{$i18n.t('settings.admin.subagents.enableBackgroundSubAgents.description')}
+						</div>
+						<p id="sa-async-help" class="mt-1 text-[0.6875rem] text-base-400 dark:text-base-600">
+							{$i18n.t('Leave empty for unlimited')}
 						</p>
 					</div>
-
-					{#if backgroundEnabled}
-						<div>
-							<label class="text-xs text-base-600 dark:text-base-400" for="sa-async">
-								{$i18n.t('settings.admin.subagents.maxBackground.label')}
-							</label>
-							<div class="mt-1 flex items-center gap-1.5">
-								<input
-									id="sa-async"
-									type="number"
-									bind:value={maxAsync}
-									min="1"
-									step="1"
-									aria-describedby="sa-async-help"
-									class="h-7 w-16 rounded-lg border border-base-100/50 bg-base-50/40 px-2 text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-300 dark:focus:border-blue-500"
-								/>
-								<span class="text-[0.6875rem] text-base-400 dark:text-base-600">
-									{$i18n.t('background sub-agents')}
-								</span>
-							</div>
-							<p id="sa-async-help" class="mt-1 text-[0.6875rem] text-base-400 dark:text-base-600">
-								{$i18n.t('Leave empty for unlimited')}
-							</p>
-						</div>
-					{/if}
 
 					<div>
 						<label class="text-xs text-base-600 dark:text-base-400" for="sa-iterations">

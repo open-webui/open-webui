@@ -252,7 +252,11 @@ async def publish_chat_finished_event(
     request: Request, user: UserModel, metadata: dict, title: str, content: str, output: list | None = None
 ):
     chat_id = metadata.get('chat_id')
-    if getattr(request.state, 'internal', False) is True or not is_saved_chat_id(chat_id):
+    if (
+        getattr(request.state, 'internal', False) is True
+        or getattr(request.state, 'subagent', False) is True
+        or not is_saved_chat_id(chat_id)
+    ):
         return
 
     content = content or get_output_text(output)
@@ -3667,10 +3671,8 @@ async def background_tasks_handler(ctx):
         return
 
     # Messages the user sent while this reply ran are answered now; follow-ups for it would go unused.
-    if (
-        is_saved_chat_id(metadata.get('chat_id'))
-        and not metadata.get('internal')
-        and await ChatMessages.has_queued_message(metadata['chat_id'], metadata['message_id'])
+    if is_saved_chat_id(metadata.get('chat_id')) and await ChatMessages.has_queued_message(
+        metadata['chat_id'], metadata['message_id']
     ):
         from open_webui.utils.subagents import get_pending_run, process_pending_internal_messages
 

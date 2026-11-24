@@ -92,6 +92,7 @@ from open_webui.tools.builtin import (
     search_notes,
     search_users,
     search_web,
+    send_message,
     timer,
     toggle_automation,
     update_automation,
@@ -702,7 +703,6 @@ async def get_builtin_tools(
         'calendar.enable',
         'ui.enable_user_webhooks',
         'subagents.enable',
-        'subagents.background_enabled',
         'chat.visualizations.prompt_template',
     )
 
@@ -842,12 +842,13 @@ async def get_builtin_tools(
     if (
         is_builtin_tool_enabled('subagents')
         and config.get('subagents.enable')
-        and getattr(request.state, 'internal', False) is not True
-        and getattr(request.state, 'subagent', False) is not True
         and not is_temporary_chat_id(metadata.get('chat_id'))
         and await has_user_permission('subagents')
     ):
-        builtin_functions.extend([delegate_task, timer])
+        if is_saved_chat_id(metadata.get('chat_id')):
+            builtin_functions.append(send_message)
+        if not getattr(request.state, 'subagent', False):
+            builtin_functions.extend([delegate_task, timer])
 
     # Add memory tools when memory is enabled and the model allows this builtin category.
     if (
@@ -1016,11 +1017,6 @@ async def get_builtin_tools(
 
             parameters = spec.get('parameters', {})
             properties = parameters.get('properties', {})
-            if not config.get('subagents.background_enabled'):
-                properties.pop('background', None)
-                if isinstance(parameters.get('required'), list):
-                    parameters['required'] = [name for name in parameters['required'] if name != 'background']
-
             subagent_models = await get_subagent_models(request, UserModel(**user), model) if user else []
             if subagent_models:
                 properties['model_id']['enum'] = [model['id'] for model in subagent_models]
