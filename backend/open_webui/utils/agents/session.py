@@ -4,7 +4,7 @@ import hashlib
 import re
 from urllib.parse import quote
 
-from open_webui.utils.machines import machine_id_of, normalize_machine_id
+from open_webui.utils.machines import normalize_machine_id
 from open_webui.models.chat_messages import ChatMessages
 from open_webui.models.chats import ChatModel, Chats
 from open_webui.utils.auth import decode_token
@@ -19,8 +19,8 @@ def model_id(state):
 
 
 async def ensure_chat_selections(chat):
-    data = chat.chat or {}
-    if all(key in data for key in ('models', 'working_directory')) and machine_id_of(data) is not None:
+    data = normalize_machine_id(dict(chat.chat or {}))
+    if all(key in data for key in ('models', 'machine_id', 'working_directory')):
         return chat
     state = await get_session(chat)
     if not state:
