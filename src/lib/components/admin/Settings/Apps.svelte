@@ -7,13 +7,15 @@
 	import AppModal from './Apps/AppModal.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
-	import Spinner from '$lib/components/common/Spinner.svelte';
 	import ExperimentalBadge from '$lib/components/common/ExperimentalBadge.svelte';
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import Cog6 from '$lib/components/icons/Cog6.svelte';
 	import Grid from '$lib/components/icons/Grid.svelte';
 	const i18n = getContext<any>('i18n');
-	let apps: App[] | null = null;
+	// The page shows its own spinner until the first load finishes.
+	export let loaded = false;
+
+	let apps: App[] = [];
 	let selected: App | null = null;
 	let show = false;
 	let busy = '';
@@ -23,9 +25,9 @@
 		} catch (error) {
 			if (!silent) {
 				toast.error(String(error));
-				apps = [];
 			}
 		}
+		loaded = true;
 	}
 	function configure(app: App | null) {
 		selected = app;
@@ -81,70 +83,65 @@
 				></Tooltip
 			>
 		</div>
-		{#if apps === null}<div class="flex justify-center py-4">
-				<Spinner className="size-5" />
-			</div>
-		{:else}<div class="flex flex-col gap-1.5">
-				{#each apps as app (app.id)}
-					<div
-						class="group/setting-row flex w-full items-center gap-3 text-xs text-base-600 dark:text-base-400"
-					>
-						<div
-							class="flex min-w-0 flex-1 items-center gap-1.5 {app.is_active ? '' : 'opacity-50'}"
+		<div class="flex flex-col gap-1.5">
+			{#each apps as app (app.id)}
+				<div
+					class="group/setting-row flex w-full items-center gap-3 text-xs text-base-600 dark:text-base-400"
+				>
+					<div class="flex min-w-0 flex-1 items-center gap-1.5 {app.is_active ? '' : 'opacity-50'}">
+						{#if app.data.manifest.profile_image_url}
+							<ProfileImage
+								src={app.data.manifest.profile_image_url}
+								allowExternal
+								className="size-4 shrink-0 rounded!"
+							/>
+						{:else}<Grid className="size-4 shrink-0" strokeWidth="1.5" />{/if}
+						<button
+							type="button"
+							on:click={() => configure(app)}
+							class="min-w-0 truncate text-left cursor-pointer text-base-600 dark:text-base-400 transition-colors duration-150 group-hover/setting-row:text-base-900 group-focus-within/setting-row:text-base-900 dark:group-hover/setting-row:text-white dark:group-focus-within/setting-row:text-white"
+							>{app.name}
+							<span class="text-base-400 dark:text-base-600">{app.slug}</span></button
 						>
-							{#if app.data.manifest.profile_image_url}
-								<ProfileImage
-									src={app.data.manifest.profile_image_url}
-									allowExternal
-									className="size-4 shrink-0 rounded!"
-								/>
-							{:else}<Grid className="size-4 shrink-0" strokeWidth="1.5" />{/if}
-							<button
-								type="button"
-								on:click={() => configure(app)}
-								class="min-w-0 truncate text-left cursor-pointer text-base-600 dark:text-base-400 transition-colors duration-150 group-hover/setting-row:text-base-900 group-focus-within/setting-row:text-base-900 dark:group-hover/setting-row:text-white dark:group-focus-within/setting-row:text-white"
-								>{app.name}
-								<span class="text-base-400 dark:text-base-600">{app.slug}</span></button
-							>
-						</div>
-						{#if app.is_active}
-							<span class="text-base-400 dark:text-base-500"
-								>{app.connection_status === 'connected'
-									? $i18n.t('Connected')
-									: app.connection_status === 'connecting'
-										? $i18n.t('Connecting')
-										: $i18n.t('Disconnected')}</span
-							>
-						{/if}
-						<div class="flex shrink-0 items-center gap-1">
-							<Tooltip content={$i18n.t('Configure')}
-								><button
-									type="button"
-									aria-label={`${$i18n.t('Configure')} ${app.name}`}
-									class="flex size-6 items-center justify-center rounded-lg text-base-400 transition-colors hover:text-base-700 dark:text-base-600 dark:hover:text-base-300"
-									on:click={() => configure(app)}><Cog6 /></button
-								></Tooltip
-							>
-							<Tooltip
-								content={app.is_active
-									? $i18n.t('Enabled')
-									: app.configured
-										? $i18n.t('Disabled')
-										: $i18n.t('Uninstalled')}
-							>
-								{#key `${app.is_active}-${show}-${busy}`}<Switch
-										id={`app-${app.id}-control`}
-										state={app.is_active}
-										disabled={busy === app.id}
-										ariaLabel={`${$i18n.t('Enable')} ${app.name}`}
-										on:change={() => toggle(app)}
-									/>{/key}
-							</Tooltip>
-						</div>
 					</div>
-				{:else}<p class="text-[0.6875rem] text-base-400 dark:text-base-600">
-						{$i18n.t('No apps connected.')}
-					</p>{/each}
-			</div>{/if}
+					{#if app.is_active}
+						<span class="text-base-400 dark:text-base-500"
+							>{app.connection_status === 'connected'
+								? $i18n.t('Connected')
+								: app.connection_status === 'connecting'
+									? $i18n.t('Connecting')
+									: $i18n.t('Disconnected')}</span
+						>
+					{/if}
+					<div class="flex shrink-0 items-center gap-1">
+						<Tooltip content={$i18n.t('Configure')}
+							><button
+								type="button"
+								aria-label={`${$i18n.t('Configure')} ${app.name}`}
+								class="flex size-6 items-center justify-center rounded-lg text-base-400 transition-colors hover:text-base-700 dark:text-base-600 dark:hover:text-base-300"
+								on:click={() => configure(app)}><Cog6 /></button
+							></Tooltip
+						>
+						<Tooltip
+							content={app.is_active
+								? $i18n.t('Enabled')
+								: app.configured
+									? $i18n.t('Disabled')
+									: $i18n.t('Uninstalled')}
+						>
+							{#key `${app.is_active}-${show}-${busy}`}<Switch
+									id={`app-${app.id}-control`}
+									state={app.is_active}
+									disabled={busy === app.id}
+									ariaLabel={`${$i18n.t('Enable')} ${app.name}`}
+									on:change={() => toggle(app)}
+								/>{/key}
+						</Tooltip>
+					</div>
+				</div>
+			{:else}<p class="text-[0.6875rem] text-base-400 dark:text-base-600">
+					{$i18n.t('No apps connected.')}
+				</p>{/each}
+		</div>
 	</div>
 </AdminSettingSection>

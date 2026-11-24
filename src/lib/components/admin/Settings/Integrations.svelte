@@ -52,9 +52,17 @@
 	let showConnectionModal = false;
 
 	// Machine admin connections
-	let machineConnections: MachineConnection[] = [];
+	let machineConnections: MachineConnection[] | null = null;
 	let showAddMachineModal = false;
 	let editMachineIdx: number | null = null;
+
+	// Every section loads in parallel behind one spinner.
+	let connectionsLoaded = false;
+	let knowledgeLoaded = false;
+	let appsLoaded = false;
+
+	$: loaded =
+		connectionsLoaded && knowledgeLoaded && (appsLoaded || !$config?.features?.enable_apps);
 
 	const addConnectionHandler = async (server: ToolServerConnection) => {
 		servers = [...(servers ?? []), server];
@@ -105,7 +113,7 @@
 			// Reload the list, then apply the rest of the form (name, access, options) to it.
 			const res = await getMachineConnections(localStorage.token).catch(() => null);
 			machineConnections = (res?.MACHINE_CONNECTIONS ?? machineConnections) as MachineConnection[];
-			machineConnections = machineConnections.map((c) =>
+			machineConnections = (machineConnections ?? []).map((c) =>
 				c.id === server.id
 					? {
 							...c,
@@ -121,35 +129,42 @@
 			await saveMachines();
 			return;
 		}
-		machineConnections = [...machineConnections, { ...server, id: server.id ?? uuidv4() }];
+		machineConnections = [...(machineConnections ?? []), { ...server, id: server.id ?? uuidv4() }];
 		saveMachines();
 	};
 
 	const updateMachineConnection = (idx: number, updated: MachineConnection) => {
-		machineConnections = machineConnections.map((c, i) =>
+		machineConnections = (machineConnections ?? []).map((c, i) =>
 			i === idx ? { ...c, ...updated, id: updated.id ?? c.id } : c
 		);
 		saveMachines();
 	};
 
 	const removeMachineConnection = (idx: number) => {
-		machineConnections = machineConnections.filter((_, i) => i !== idx);
+		machineConnections = (machineConnections ?? []).filter((_, i) => i !== idx);
 		saveMachines();
 	};
 
 	onMount(async () => {
-		const res = await getToolServerConnections(localStorage.token);
-		servers = res.TOOL_SERVER_CONNECTIONS as ToolServerConnection[];
-
-		try {
-			const machineRes = await getMachineConnections(localStorage.token);
-			if (machineRes?.MACHINE_CONNECTIONS) {
-				machineConnections = machineRes.MACHINE_CONNECTIONS as MachineConnection[];
-			}
-		} catch {
-			// Not configured yet
-		}
 		$socket?.on('events', machinesChanged);
+
+		const [serverRes, machineRes] = await Promise.all([
+			getToolServerConnections(localStorage.token).catch(() => null),
+			getMachineConnections(localStorage.token).catch(() => null)
+		]);
+
+		// A list that failed to load stays null, so saving can't overwrite what is stored.
+		if (serverRes) {
+			servers = (serverRes.TOOL_SERVER_CONNECTIONS ?? []) as ToolServerConnection[];
+		} else {
+			toast.error($i18n.t('Failed to load connections'));
+		}
+		if (machineRes) {
+			machineConnections = (machineRes.MACHINE_CONNECTIONS ?? []) as MachineConnection[];
+		} else {
+			toast.error($i18n.t('Failed to load machines'));
+		}
+		connectionsLoaded = true;
 	});
 
 	// An SSH install or upgrade finished (here or in another tab): show the machine's new state.
@@ -169,8 +184,8 @@
 <AddMachineModal
 	bind:show={showAddMachineModal}
 	edit={editMachineIdx !== null}
-	connection={editMachineIdx !== null ? machineConnections[editMachineIdx] : null}
-	allowLocal={!machineConnections.some((c) => c.local)}
+	connection={editMachineIdx !== null ? (machineConnections?.[editMachineIdx] ?? null) : null}
+	allowLocal={!(machineConnections ?? []).some((c) => c.local)}
 	onSubmit={(c: MachineConnection) => {
 		if (editMachineIdx !== null) {
 			updateMachineConnection(editMachineIdx, c);
@@ -198,7 +213,16 @@
 	</h2>
 
 	<div class="flex-1 min-h-0 overflow-y-auto scrollbar-hover pr-1.5">
-		{#if servers !== null}
+		{#if !loaded}
+			<div class="flex h-full justify-center">
+				<div class="my-auto">
+					<Spinner className="size-6" />
+				</div>
+			</div>
+		{/if}
+
+		<!-- Mounted while hidden so the sections inside can load. -->
+		<div class={loaded ? '' : 'hidden'}>
 			<fieldset
 				disabled={!$config?.features?.enable_tool_servers}
 				class="min-w-0 disabled:opacity-50"
@@ -224,7 +248,8 @@
 							<Tooltip content={$i18n.t('settings.admin.integrations.addConnection.label')}>
 								<button
 									aria-label={$i18n.t('settings.admin.integrations.addConnection.label')}
-									class="flex size-6 items-center justify-center rounded-lg text-base-400 transition-colors hover:bg-base-1000/5 hover:text-base-900 dark:text-base-600 dark:hover:bg-base-0/5 dark:hover:text-base-0"
+									disabled={servers === null}
+									class="flex size-6 items-center justify-center rounded-lg text-base-400 transition-colors hover:bg-base-1000/5 hover:text-base-900 disabled:opacity-50 disabled:pointer-events-none dark:text-base-600 dark:hover:bg-base-0/5 dark:hover:text-base-0"
 									on:click={() => {
 										showConnectionModal = true;
 									}}
@@ -252,7 +277,9 @@
 
 						{#if (servers ?? []).length === 0}
 							<div class="text-[0.6875rem] text-base-400 dark:text-base-600">
-								{$i18n.t('No tool server connections configured.')}
+								{servers === null
+									? $i18n.t('Failed to load connections')
+									: $i18n.t('No tool server connections configured.')}
 							</div>
 						{/if}
 					</div>
@@ -289,7 +316,8 @@
 							<Tooltip content={$i18n.t('Add Machine')}>
 								<button
 									aria-label={$i18n.t('Add Machine')}
-									class="flex size-6 items-center justify-center rounded-lg text-base-400 transition-colors hover:bg-base-1000/5 hover:text-base-900 dark:text-base-600 dark:hover:bg-base-0/5 dark:hover:text-base-0"
+									disabled={machineConnections === null}
+									class="flex size-6 items-center justify-center rounded-lg text-base-400 transition-colors hover:bg-base-1000/5 hover:text-base-900 disabled:opacity-50 disabled:pointer-events-none dark:text-base-600 dark:hover:bg-base-0/5 dark:hover:text-base-0"
 									on:click={() => {
 										editMachineIdx = null;
 										showAddMachineModal = true;
@@ -302,7 +330,7 @@
 						</div>
 
 						<div class="flex flex-col gap-1.5">
-							{#each machineConnections as connection, idx}
+							{#each machineConnections ?? [] as connection, idx}
 								<div class="group/setting-row flex w-full gap-2 items-center">
 									<Tooltip className="w-full relative" content={''} placement="top-start">
 										<div class="flex w-full">
@@ -359,7 +387,7 @@
 												state={connection?.enabled !== false}
 												ariaLabel={`${$i18n.t('Enabled')}: ${connection.name || (connection.local ? $i18n.t('Local') : connection.url) || $i18n.t('New Machine')}`}
 												on:change={() => {
-													machineConnections = machineConnections.map((c, i) =>
+													machineConnections = (machineConnections ?? []).map((c, i) =>
 														i === idx ? { ...c, enabled: !(c?.enabled !== false) } : c
 													);
 													saveMachines();
@@ -371,9 +399,11 @@
 							{/each}
 						</div>
 
-						{#if machineConnections.length === 0}
+						{#if (machineConnections ?? []).length === 0}
 							<div class="text-[0.6875rem] text-base-400 dark:text-base-600">
-								{$i18n.t('No machines configured.')}
+								{machineConnections === null
+									? $i18n.t('Failed to load machines')
+									: $i18n.t('No machines configured.')}
 							</div>
 						{/if}
 					</div>
@@ -381,25 +411,20 @@
 			</fieldset>
 
 			<AdminSettingSection title={$i18n.t('settings.admin.integrations.sections.knowledge.title')}>
-				<ExternalKnowledge />
+				<ExternalKnowledge bind:loaded={knowledgeLoaded} />
 			</AdminSettingSection>
 
 			{#if $config?.features?.enable_apps}
-				<Apps />
+				<Apps bind:loaded={appsLoaded} />
 			{/if}
-		{:else}
-			<div class="flex h-full justify-center">
-				<div class="my-auto">
-					<Spinner className="size-6" />
-				</div>
-			</div>
-		{/if}
+		</div>
 	</div>
 
 	<div class="flex justify-end pt-6 text-sm font-normal">
 		<button
 			class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-base-0 transition hover:bg-base-1000 disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-base-0"
 			type="submit"
+			disabled={!loaded || servers === null}
 		>
 			{$i18n.t('Save')}
 		</button>

@@ -62,7 +62,9 @@
 	const TEXT_SEARCH_PROVIDERS = ['openai'];
 	const DEFAULT_PROVIDER = 'openai';
 
-	let loading = false;
+	// The page shows its own spinner until the first load finishes.
+	export let loaded = false;
+
 	let testing = false;
 	let verifying = false;
 	// Stores the connection can search, offered as suggestions for the Vector Store ID.
@@ -231,7 +233,6 @@
 	};
 
 	const refresh = async () => {
-		loading = true;
 		const [connectionRes, knowledgeRes] = await Promise.all([
 			getExternalKnowledgeConnections(localStorage.token).catch((error) => {
 				toast.error(`${error}`);
@@ -242,12 +243,17 @@
 				return null;
 			})
 		]);
-		connections = connectionRes?.items ?? [];
-		// Stores a connection lists are managed through that connection's row.
-		items = (knowledgeRes?.items ?? []).filter(
-			(item: ExternalKnowledgeItem) => !hasStoreIds(connectionForItem(item))
-		);
-		loading = false;
+		// A failed refresh keeps the rows already shown.
+		if (connectionRes) {
+			connections = connectionRes.items ?? [];
+		}
+		if (knowledgeRes) {
+			// Stores a connection lists are managed through that connection's row.
+			items = (knowledgeRes.items ?? []).filter(
+				(item: ExternalKnowledgeItem) => !hasStoreIds(connectionForItem(item))
+			);
+		}
+		loaded = true;
 	};
 
 	const endpointPlaceholder = () => {
@@ -1263,11 +1269,7 @@
 		{/each}
 	</div>
 
-	{#if loading}
-		<div class="py-2">
-			<Spinner />
-		</div>
-	{:else if items.length === 0 && !connections.some(hasStoreIds)}
+	{#if items.length === 0 && !connections.some(hasStoreIds)}
 		<div class="text-[0.6875rem] text-base-400 dark:text-base-600">
 			{$i18n.t('No external knowledge sources configured.')}
 		</div>
