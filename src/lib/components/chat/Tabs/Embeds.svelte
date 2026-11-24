@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { getContext, onDestroy } from 'svelte';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
-	import { getFileContentById } from '$lib/apis/files';
+	import { getFileById, getFileContentById } from '$lib/apis/files';
 	import { quoteLines, quoteMarks } from '$lib/utils/comments/highlights';
 
 	import FullHeightIframe from '$lib/components/common/FullHeightIframe.svelte';
@@ -12,7 +12,7 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import RelevanceBadge from '$lib/components/chat/Messages/Citations/RelevanceBadge.svelte';
 
-	// A cited upload, shown at its cited page. PDFs also mark the cited text.
+	// A cited or attached upload, shown at its cited page. PDFs also mark the cited text.
 	let fileId = '';
 	let fileLoading = false;
 	let fileData: ArrayBuffer | null = null;
@@ -23,6 +23,8 @@
 	let fileVideoUrl: string | null = null;
 	let fileAudioUrl: string | null = null;
 	let fileContent: string | null = null;
+	// What was extracted from a file that cannot be drawn
+	let fileText = '';
 	let fileOfficeSlides: string[] | null = null;
 	let excelWorkbook: import('xlsx').WorkBook | null = null;
 	let selectedExcelSheet = '';
@@ -46,7 +48,7 @@
 		fileData = fileDocxData = fileSqliteData = fileModelData = null;
 		fileImageUrl = fileVideoUrl = fileAudioUrl = null;
 		fileContent = fileOfficeSlides = excelWorkbook = null;
-		selectedExcelSheet = '';
+		selectedExcelSheet = fileText = '';
 		fileLoading = !!id;
 		if (!id) return;
 		try {
@@ -76,10 +78,13 @@
 			} else {
 				// Anything that is not readable as text fails here
 				const text = new TextDecoder('utf-8', { fatal: true }).decode(data);
-				if (!text.includes('\0')) fileContent = text;
+				if (text.includes('\0')) throw new Error('The file is not text');
+				if (fileId === id) fileContent = text;
 			}
 		} catch (e) {
 			console.error(e);
+			const file = await getFileById(localStorage.token, id).catch(() => null);
+			if (fileId === id) fileText = file?.data?.content ?? '';
 		} finally {
 			if (fileId === id) fileLoading = false;
 		}
@@ -378,14 +383,29 @@
 						wrapLines={true}
 						readOnly={true}
 					/>
+				{:else if !fileLoading && (fileText || fileSource?.content)}
+					<FilePreview
+						selectedFile={`${fileName}.md`}
+						fileContent={fileText || fileSource.content}
+						wrapLines={true}
+						readOnly={true}
+					/>
 				{:else}
 					<div
-						class="flex h-full items-center justify-center text-xs text-base-500 dark:text-base-400"
+						class="flex h-full flex-col items-center justify-center gap-1 text-xs text-base-500 dark:text-base-400"
 					>
 						{#if fileLoading}
 							<Spinner className="size-3.5 text-base-400 dark:text-base-500" />
 						{:else}
 							{$i18n.t('Preview failed')}
+							{#if fileId}
+								<a
+									class="underline"
+									href={`${WEBUI_API_BASE_URL}/files/${fileId}/content`}
+									target="_blank"
+									rel="noopener noreferrer">{$i18n.t('Open file')}</a
+								>
+							{/if}
 						{/if}
 					</div>
 				{/if}

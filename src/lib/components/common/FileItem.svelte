@@ -23,6 +23,8 @@
 
 	export let dismissible = false;
 	export let modal = false;
+	/** Opens the file somewhere other than the modal. */
+	export let onOpen: (() => void) | null = null;
 	export let loading = false;
 
 	export let item: any = null;
@@ -79,7 +81,8 @@
 					inSplit: true
 				});
 			} else if (item?.file?.data?.content || item?.type === 'file' || item?.content || modal) {
-				showModal = !showModal;
+				if (onOpen) onOpen();
+				else showModal = !showModal;
 			} else {
 				if (url) {
 					if (type === 'file') {
