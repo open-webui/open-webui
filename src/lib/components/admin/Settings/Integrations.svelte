@@ -10,7 +10,7 @@
 	const i18n = getContext<Writable<i18nType>>('i18n');
 
 	import { config, models, settings, user, machines, socket } from '$lib/stores';
-	import { getMachines } from '$lib/apis/machines';
+	import { getMachines, templatesApi } from '$lib/apis/machines';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 	import Switch from '$lib/components/common/Switch.svelte';
@@ -24,6 +24,7 @@
 
 	import AddToolServerModal from '$lib/components/AddToolServerModal.svelte';
 	import AddMachineModal from '$lib/components/AddMachineModal.svelte';
+	import UserMachinesModal from '$lib/components/chat/UserMachinesModal.svelte';
 	import ExternalKnowledge from './ExternalKnowledge.svelte';
 	import Apps from './Apps.svelte';
 	import AdminSettingSection from './AdminSettingSection.svelte';
@@ -55,6 +56,25 @@
 	let machineConnections: MachineConnection[] | null = null;
 	let showAddMachineModal = false;
 	let editMachineIdx: number | null = null;
+
+	// Terminals connections and their machines: the same dialog the machine menu opens.
+	let writable: { id: string; name: string }[] = [];
+	$: if ($machines)
+		templatesApi('/connections')
+			.then((rows) => (writable = rows))
+			.catch(() => (writable = []));
+	let showMachine = false;
+	let machineId: string | null = null;
+	let machineConnection: { id: string; name: string } | null = null;
+	const openMachine = (connection: { id: string; name: string }, id: string | null = null) => {
+		machineConnection = connection;
+		machineId = id;
+		showMachine = true;
+	};
+	const machinesOf = (items: any[] | null, connectionId: string) =>
+		(items ?? []).filter(
+			(m) => m.template_id && m.id.slice(0, m.id.lastIndexOf(':')) === `template:${connectionId}`
+		);
 
 	// Every section loads in parallel behind one spinner.
 	let connectionsLoaded = false;
@@ -202,6 +222,10 @@
 	}}
 />
 
+{#if showMachine && machineConnection}
+	<UserMachinesModal bind:show={showMachine} {machineId} connections={[machineConnection]} />
+{/if}
+
 <form
 	class="flex h-full flex-col justify-between text-sm"
 	on:submit|preventDefault={() => {
@@ -331,6 +355,7 @@
 
 						<div class="flex flex-col gap-1.5">
 							{#each machineConnections ?? [] as connection, idx}
+								{@const server = writable.find((c) => c.id === connection.id)}
 								<div class="group/setting-row flex w-full gap-2 items-center">
 									<Tooltip className="w-full relative" content={''} placement="top-start">
 										<div class="flex w-full">
@@ -363,6 +388,19 @@
 									</Tooltip>
 
 									<div class="flex gap-1 items-center">
+										{#if server}
+											<Tooltip content={$i18n.t('New machine')}>
+												<button
+													aria-label={`${$i18n.t('New machine')}: ${server.name}`}
+													class="flex size-6 items-center justify-center rounded-lg text-base-400 transition-colors hover:bg-base-1000/5 hover:text-base-900 dark:text-base-600 dark:hover:bg-base-0/5 dark:hover:text-base-0"
+													on:click={() => openMachine(server)}
+													type="button"
+												>
+													<Plus />
+												</button>
+											</Tooltip>
+										{/if}
+
 										<Tooltip content={$i18n.t('Configure')}>
 											<button
 												aria-label={$i18n.t('Configure')}
@@ -396,6 +434,33 @@
 										</Tooltip>
 									</div>
 								</div>
+								{#if server}
+									{#each machinesOf($machines, server.id) as machine (machine.id)}
+										<!-- The name lines up with the connection's name, the gear with its gear. -->
+										<div
+											class="group/setting-row flex w-full gap-2 items-center pl-[1.375rem] pr-[2.125rem]"
+										>
+											<button
+												type="button"
+												on:click={() => openMachine(server, machine.id)}
+												class="flex-1 outline-hidden min-w-0 truncate text-left cursor-pointer bg-transparent text-xs text-base-600 dark:text-base-400 transition-colors duration-150 group-hover/setting-row:text-base-900 group-focus-within/setting-row:text-base-900 dark:group-hover/setting-row:text-white dark:group-focus-within/setting-row:text-white"
+											>
+												{machine.name}
+											</button>
+
+											<Tooltip content={$i18n.t('Configure')}>
+												<button
+													aria-label={`${$i18n.t('Configure')}: ${machine.name}`}
+													class="self-center p-1 bg-transparent hover:bg-base-1000/5 dark:hover:bg-base-0/5 rounded-lg transition"
+													on:click={() => openMachine(server, machine.id)}
+													type="button"
+												>
+													<Cog6 />
+												</button>
+											</Tooltip>
+										</div>
+									{/each}
+								{/if}
 							{/each}
 						</div>
 

@@ -1,14 +1,16 @@
 """Run native agent turns with terminal attachments and saved conversation state."""
 
+import base64
 import copy
 import logging
+import mimetypes
 
 from open_webui.utils.machines import machine_id_of
 from open_webui.models.chats import Chats
 from open_webui.utils.chat_id import is_saved_chat_id
 from open_webui.utils.middleware import convert_url_images_to_base64, publish_chat_finished_event
 from open_webui.utils.misc import get_message_list
-from open_webui.utils.machines import get_machine_json, upload_files_to_machine
+from open_webui.utils.machines import get_machine_file, get_machine_json, upload_files_to_machine
 
 from .session import get_resume_point
 from .output import Output
@@ -36,6 +38,11 @@ PROVIDERS = {
 
 # Providers that can continue their native conversation from an earlier turn.
 RESUMABLE_AT = {'codex', 'claude-code'}
+
+# Images sent to the agent along with their path, as T3 Code does; other types are sent as a path only.
+IMAGE_TYPES = {'image/gif', 'image/jpeg', 'image/png', 'image/webp'}
+# Per message: base64 adds a third, and the machine takes 16 MiB at a time. The rest are sent as a path only.
+MAX_IMAGE_BYTES = 10 * 1024 * 1024
 
 
 def provider_runner(provider):
@@ -98,13 +105,13 @@ async def run(request, form_data, user, metadata, model):
     if not cwd:
         raise ValueError('Agent working directory is unavailable')
     output.state['cwd'] = cwd
-    files = copy.deepcopy(form_data.get('files') or [])
+    files = copy.deepcopy((metadata.get('user_message') or {}).get('files') or form_data.get('files') or [])
     uploads = [f for f in files if f.get('type') != 'filesystem' and f.get('id')]
     await upload_files_to_machine(request, user, uploads, metadata, {})
     if any(f.get('machine_error') for f in uploads):
         raise ValueError('An attachment could not be uploaded to the agent environment')
     paths = [f['machine_path'] for f in uploads]
-    for file in (metadata.get('user_message') or {}).get('files') or files:
+    for file in files:
         if file.get('type') == 'filesystem':
             if machine_id_of(file) != agent['machine_id']:
                 raise ValueError('Attachment belongs to another machine')
@@ -147,6 +154,14 @@ async def run(request, form_data, user, metadata, model):
         for p in (m.get('content') if isinstance(m.get('content'), list) else [])
         if p.get('type') == 'image_url' and p.get('image_url', {}).get('url', '').startswith('data:image/')
     ]
+    remaining = MAX_IMAGE_BYTES
+    for path in paths:
+        image_type = mimetypes.guess_type(path)[0]
+        if image_type in IMAGE_TYPES:
+            data = await get_machine_file(request, user, metadata, path, max_bytes=MAX_IMAGE_BYTES)
+            if len(data) <= remaining:
+                remaining -= len(data)
+                images.append(f'data:{image_type};base64,{base64.b64encode(data).decode()}')
     images = list(dict.fromkeys(images))
     instructions = '\n\n'.join(text(m.get('content')) for m in messages if m.get('role') == 'system')
     options = {
