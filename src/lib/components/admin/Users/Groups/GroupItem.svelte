@@ -9,6 +9,8 @@
 
 	/** @type {import('../Groups.svelte').GroupListItem[]} */
 	export let groups = [];
+	/** @type {() => Promise<void>} */
+	export let onDeleted;
 	export let draggable = false;
 	/** @type {(event: DragEvent) => void} */
 	export let onDragStart = () => {};
@@ -55,7 +57,7 @@
 
 		if (res) {
 			toast.success($i18n.t('Group deleted successfully'));
-			await setGroups();
+			await onDeleted();
 		}
 		return !!res;
 	};
@@ -81,6 +83,7 @@
 />
 
 <button
+	data-focus-row={group.id}
 	class="group flex cursor-pointer text-left w-full px-1.5 py-1.5"
 	{draggable}
 	on:dragstart={onDragStart}

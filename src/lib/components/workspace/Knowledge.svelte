@@ -1,10 +1,12 @@
 <script lang="ts">
+	import { withListFocus } from '$lib/utils/listFocus';
 	import type { WorkspaceContext } from '$lib/types';
 	import { getPageContext } from '$lib/utils/page';
 	const { goto } = getPageContext();
 
 	import CommentsDropdown from '$lib/components/comments/CommentsDropdown.svelte';
 	import type { CommentsRequest } from '$lib/components/comments/CommentsPanel.svelte';
+	let listElement: HTMLElement;
 	let comments: CommentsRequest | null = null;
 	import WorkspaceAccessModal from './common/WorkspaceAccessModal.svelte';
 	let accessModal: WorkspaceAccessModal;
@@ -207,7 +209,7 @@
 
 		if (res) {
 			toast.success($i18n.t('Knowledge deleted successfully.'));
-			init();
+			await init();
 		}
 	};
 
@@ -320,9 +322,7 @@
 {#if loaded && items !== null && total !== null}
 	<DeleteConfirmDialog
 		bind:show={showDeleteConfirm}
-		on:confirm={() => {
-			deleteHandler(selectedItem);
-		}}
+		on:confirm={() => selectedItem && withListFocus(listElement, selectedItem, deleteHandler)}
 	/>
 
 	<Modal bind:show={showCreateModal} size="md" ariaLabel={$i18n.t('Create a knowledge base')}>
@@ -334,7 +334,7 @@
 		/>
 	</Modal>
 
-	<div class="space-y-0">
+	<div bind:this={listElement} class="space-y-0">
 		<div class="flex h-8 w-full items-center gap-2">
 			<div class="flex min-w-0 flex-1">
 				<div class=" self-center ml-1 mr-3">
@@ -342,6 +342,7 @@
 				</div>
 				<input
 					class=" w-full text-sm py-1 rounded-r-xl outline-hidden bg-transparent"
+					data-focus-fallback
 					bind:value={query}
 					on:input={handleSearchInput}
 					aria-label={$i18n.t('Search Knowledge')}

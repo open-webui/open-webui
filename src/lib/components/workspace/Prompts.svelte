@@ -1,10 +1,12 @@
 <script lang="ts">
+	import { withListFocus } from '$lib/utils/listFocus';
 	import type { WorkspaceContext } from '$lib/types';
 	import { getPageContext } from '$lib/utils/page';
 	const { goto } = getPageContext();
 
 	import CommentsDropdown from '$lib/components/comments/CommentsDropdown.svelte';
 	import type { CommentsRequest } from '$lib/components/comments/CommentsPanel.svelte';
+	let listElement: HTMLElement;
 	let comments: CommentsRequest | null = null;
 	import WorkspaceAccessModal from './common/WorkspaceAccessModal.svelte';
 	let accessModal: WorkspaceAccessModal;
@@ -320,7 +322,7 @@
 		}
 
 		page = 1;
-		getPromptList();
+		await getPromptList();
 	};
 
 	onMount(async () => {
@@ -408,9 +410,7 @@
 	<DeleteConfirmDialog
 		bind:show={showDeleteConfirm}
 		title={$i18n.t('Delete prompt?')}
-		on:confirm={() => {
-			deleteHandler(deletePrompt);
-		}}
+		on:confirm={() => withListFocus(listElement, deletePrompt, deleteHandler)}
 	>
 		<div class=" text-sm text-base-500 truncate">
 			{$i18n.t('This will delete')} <span class="  font-normal">{deletePrompt.command}</span>.
@@ -476,7 +476,7 @@
 		}}
 	/>
 
-	<div class="space-y-0">
+	<div bind:this={listElement} class="space-y-0">
 		<div class="flex h-8 w-full items-center gap-2">
 			<div class="flex min-w-0 flex-1">
 				<div class=" self-center ml-1 mr-3">
@@ -484,6 +484,7 @@
 				</div>
 				<input
 					class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
+					data-focus-fallback
 					bind:value={query}
 					on:input={handleSearchInput}
 					aria-label={$i18n.t('Search Prompts')}
@@ -736,6 +737,7 @@
 												<button
 													class="flex size-6 items-center justify-center rounded-lg text-base-400 transition dark:text-base-500"
 													type="button"
+													data-focus-row={prompt.id}
 													aria-label={$i18n.t('Prompt Menu')}
 													on:click={(e) => {
 														e.preventDefault();

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { withListFocus } from '$lib/utils/listFocus';
 	import { getPageContext } from '$lib/utils/page';
 	const { goto, tab: pageTab, active } = getPageContext();
 
@@ -584,10 +585,7 @@
 		<DeleteConfirmDialog
 			bind:show={showDeleteConfirm}
 			title={$i18n.t('Delete note?')}
-			on:confirm={() => {
-				deleteNoteHandler(selectedNote.id);
-				showDeleteConfirm = false;
-			}}
+			on:confirm={() => withListFocus(containerElement, selectedNote.id, deleteNoteHandler, searchInputElement)}
 		>
 			<div class=" text-sm text-base-500 truncate">
 				{$i18n.t('This will delete')} <span class="  font-normal">{selectedNote.title}</span>.
@@ -1139,6 +1137,7 @@
 																? 'opacity-100'
 																: 'opacity-0'}"
 															type="button"
+															data-focus-row={note.id}
 															aria-label={$i18n.t('Note Menu')}
 														>
 															<FileNavIcon name="three-dots" size={12} strokeWidth={1.4} />

@@ -1,10 +1,12 @@
 <script lang="ts">
+	import { withListFocus } from '$lib/utils/listFocus';
 	import { getContext } from 'svelte';
 	import { settings } from '$lib/stores';
 	import type { CalendarModel } from '$lib/apis/calendar';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import Pencil from '$lib/components/icons/Pencil.svelte';
 
+	let listElement: HTMLElement;
 	const i18n = getContext('i18n');
 
 	export let calendars: CalendarModel[] = [];
@@ -32,7 +34,8 @@
 
 	function confirmDelete() {
 		if (deleteTargetCalendar) {
-			onDeleteCalendar(deleteTargetCalendar.id);
+			const { id } = deleteTargetCalendar;
+			withListFocus(listElement, id, onDeleteCalendar);
 		}
 		deleteTargetCalendar = null;
 	}
@@ -105,7 +108,7 @@
 	onConfirm={confirmDelete}
 />
 
-<div class="flex flex-col gap-4">
+<div bind:this={listElement} class="flex flex-col gap-4">
 	<!-- Mini Month Calendar -->
 	<div>
 		<div class="flex items-center justify-between px-1 mb-1.5 mt-1.5">
@@ -197,6 +200,7 @@
 			<button
 				class="p-0.5 rounded hover:bg-base-100 dark:hover:bg-base-800 transition"
 				title={$i18n.t('New calendar')}
+				data-focus-fallback
 				on:click={onCreateCalendar}
 			>
 				<svg
@@ -218,6 +222,7 @@
 			>
 				<button
 					class="flex items-center gap-2 px-2 py-1 flex-1 text-left min-w-0"
+					data-focus-row={cal.id}
 					on:click={() => onToggle(cal.id)}
 				>
 					<span

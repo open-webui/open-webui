@@ -42,6 +42,7 @@
 			><button
 				class="flex size-6 items-center justify-center rounded-lg text-base-400 transition dark:text-base-500"
 				type="button"
+				data-focus-row={resourceId}
 				aria-label={$i18n.t('More Options')}
 				on:click={(e) => {
 					e.preventDefault();

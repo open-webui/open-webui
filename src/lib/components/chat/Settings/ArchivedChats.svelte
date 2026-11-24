@@ -6,7 +6,8 @@
 	import dayjs from 'dayjs';
 	import calendar from 'dayjs/plugin/calendar';
 	import localizedFormat from 'dayjs/plugin/localizedFormat';
-	import { getContext, onMount, onDestroy, tick } from 'svelte';
+	import { withListFocus } from '$lib/utils/listFocus';
+	import { getContext, onMount, onDestroy } from 'svelte';
 	import type { Writable } from 'svelte/store';
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
@@ -135,7 +136,6 @@
 	};
 
 	const unarchiveHandler = async (id: string) => {
-		const index = chatList?.findIndex((chat) => chat.id === id) ?? -1;
 		const restored = await archiveChatById(localStorage.token, id).catch((error) => {
 			toast.error(`${error}`);
 		});
@@ -145,9 +145,6 @@
 		chatList = chatList?.filter((chat) => chat.id !== id) ?? null;
 		if (chatCount !== null) chatCount -= 1;
 
-		await tick();
-		const rows = chatListElement?.children ?? [];
-		(rows[Math.min(index, rows.length - 1)]?.querySelector('button') ?? searchInput)?.focus();
 
 		await refreshChatList(localStorage.token, { refreshPinned: true });
 	};
@@ -200,7 +197,7 @@
 <ConfirmDialog
 	bind:show={showDeleteConfirmDialog}
 	on:confirm={() => {
-		deleteHandler();
+		if (selectedChatId) withListFocus(chatListElement, selectedChatId, deleteHandler, searchInput);
 	}}
 />
 
@@ -213,7 +210,7 @@
 	}}
 />
 
-<div id="tab-archived-chats" class="flex flex-col h-full overflow-y-auto text-sm">
+<div bind:this={chatListElement} id="tab-archived-chats" class="flex flex-col h-full overflow-y-auto text-sm">
 	<div class="mb-3 flex items-center justify-between">
 		<h2 class="text-sm font-medium text-base-900 dark:text-base-0">
 			{$i18n.t('settings.personal.archivedChats.title')}
@@ -383,7 +380,7 @@
 					<div role="columnheader" aria-label={$i18n.t('Actions')}></div>
 				</div>
 
-				<div bind:this={chatListElement} role="rowgroup">
+				<div role="rowgroup">
 					{#each chatList as chat (chat.id)}
 						<div class="flex w-full justify-between gap-2 px-1 py-1 text-xs" role="row">
 							<div class="mr-auto min-w-0 max-w-xl flex-1 self-center" role="cell">
@@ -426,9 +423,10 @@
 										<button
 											class="rounded-lg p-1 text-base-400 transition-colors hover:text-base-700 dark:text-base-600 dark:hover:text-base-300"
 											type="button"
+											data-focus-row={chat.id}
 											aria-label={$i18n.t('Unarchive Chat')}
 											on:click={() => {
-												unarchiveHandler(chat.id);
+												withListFocus(chatListElement, chat.id, unarchiveHandler, searchInput);
 											}}
 										>
 											<UndoAction className="size-3.5" strokeWidth="1.5" />
@@ -440,6 +438,7 @@
 										<button
 											class="rounded-lg p-1 text-base-400 transition-colors hover:text-base-700 dark:text-base-600 dark:hover:text-base-300"
 											type="button"
+											data-focus-row={$visibleControls['chat.archive'] ? undefined : chat.id}
 											aria-label={$i18n.t('Delete Chat')}
 											on:click={() => {
 												selectedChatId = chat.id;

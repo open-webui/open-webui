@@ -1,10 +1,12 @@
 <script lang="ts">
+	import { withListFocus } from '$lib/utils/listFocus';
 	import type { WorkspaceContext } from '$lib/types';
 	import { getPageContext } from '$lib/utils/page';
 	const { goto } = getPageContext();
 
 	import CommentsDropdown from '$lib/components/comments/CommentsDropdown.svelte';
 	import type { CommentsRequest } from '$lib/components/comments/CommentsPanel.svelte';
+	let listElement: HTMLElement;
 	let comments: CommentsRequest | null = null;
 	import WorkspaceAccessModal from './common/WorkspaceAccessModal.svelte';
 	let accessModal: WorkspaceAccessModal;
@@ -250,7 +252,7 @@
 			toast.success($i18n.t(`Deleted {{name}}`, { name: model.id }));
 
 			page = 1;
-			getModelList();
+			await getModelList();
 		}
 
 		await _models.set(await getModels(localStorage.token));
@@ -518,9 +520,7 @@
 {#if loaded && models !== null && total !== null}
 	<ModelDeleteConfirmDialog
 		bind:show={showModelDeleteConfirm}
-		on:confirm={() => {
-			deleteModelHandler(selectedModel);
-		}}
+		on:confirm={() => withListFocus(listElement, selectedModel, deleteModelHandler)}
 	/>
 
 	<input
@@ -568,7 +568,7 @@
 		}}
 	/>
 
-	<div class="space-y-0">
+	<div bind:this={listElement} class="space-y-0">
 		<div class="flex h-8 flex-1 items-center w-full gap-2">
 			<div class="flex min-w-0 flex-1 items-center">
 				<div class=" self-center ml-1 mr-3">
@@ -576,6 +576,7 @@
 				</div>
 				<input
 					class=" w-full text-sm py-1 rounded-r-xl outline-hidden bg-transparent"
+					data-focus-fallback
 					bind:value={query}
 					aria-label={$i18n.t('Search Models')}
 					placeholder={$i18n.t('Search Models')}

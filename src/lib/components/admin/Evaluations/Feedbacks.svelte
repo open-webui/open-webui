@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { withListFocus } from '$lib/utils/listFocus';
 	import { toast } from 'svelte-sonner';
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
@@ -8,6 +9,7 @@
 	dayjs.extend(relativeTime);
 
 	import { onMount, getContext } from 'svelte';
+	let listElement: HTMLElement;
 	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
 	import {
@@ -120,7 +122,7 @@
 				selectedModelId = '';
 			}
 			page = 1;
-			getFeedbacks();
+			await getFeedbacks();
 		}
 	};
 
@@ -220,7 +222,7 @@
 		<Spinner className="size-5" />
 	</div>
 {:else}
-	<div>
+	<div bind:this={listElement}>
 		{#if modelIds.length > 0 || total > 0}
 			<div class="flex h-8 flex-1 items-center w-full gap-2">
 				<div
@@ -306,7 +308,7 @@
 			{#if (items ?? []).length === 0}
 				<div class="flex w-full flex-col items-center justify-center py-16 pb-24">
 					<div class="max-w-sm text-center text-base-900 dark:text-base-100">
-						<div class="mb-1.5 text-sm">{$i18n.t('No feedback found')}</div>
+						<div tabindex="-1" data-focus-fallback class="mb-1.5 text-sm">{$i18n.t('No feedback found')}</div>
 						<div class="text-center text-xs leading-5 text-base-500">
 							{$i18n.t('Try adjusting your search or filter to find what you are looking for.')}
 						</div>
@@ -537,11 +539,12 @@
 								<td class=" px-3 py-1 text-right font-normal" on:click={(e) => e.stopPropagation()}>
 									<FeedbackMenu
 										on:delete={(e) => {
-											deleteFeedbackHandler(feedback.id);
+											withListFocus(listElement, feedback.id, deleteFeedbackHandler);
 										}}
 									>
 										<button
 											class="self-center w-fit text-sm p-1.5 dark:text-base-300 dark:hover:text-base-0 hover:bg-base-1000/5 dark:hover:bg-base-0/5 rounded-xl"
+											data-focus-row={feedback.id}
 											aria-label={$i18n.t('More')}
 										>
 											<EllipsisHorizontal />

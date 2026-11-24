@@ -264,6 +264,7 @@
 								? 'size-6'
 								: 'size-5'} shrink-0 items-center justify-center rounded-lg text-base-400 transition hover:text-base-700 dark:text-base-500 dark:hover:text-base-200"
 							type="button"
+							data-focus-row={note.id}
 							aria-label={$i18n.t('Note Menu')}
 							on:click={(e) => {
 								e.preventDefault();

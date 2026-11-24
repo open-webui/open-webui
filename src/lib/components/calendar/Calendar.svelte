@@ -35,6 +35,8 @@
 	let view: 'month' | 'week' | 'day' = 'month';
 	let currentDate = new Date();
 
+	let calendarView: CalendarView;
+	let occurrenceStart: number;
 	let showEventModal = false;
 	let editEvent: CalendarEventModel | null = null;
 	let defaultStartAt: number | null = null;
@@ -149,6 +151,7 @@
 			}
 			return;
 		}
+		occurrenceStart = evt.start_at;
 		editEvent = evt.instance_id
 			? ((await getCalendarEventById(localStorage.token, evt.id)) ?? evt)
 			: evt;
@@ -220,6 +223,7 @@
 			const event = await getCalendarEventById(localStorage.token, id);
 			if ($pageUrl.searchParams.get('event') !== id) return;
 			currentDate = new Date(event.start_at / 1e6);
+			occurrenceStart = event.start_at;
 			editEvent = event;
 			defaultStartAt = null;
 			showEventModal = true;
@@ -269,7 +273,11 @@
 	{defaultStartAt}
 	on:close={closeLinkedEvent}
 	on:save={() => refresh()}
-	on:delete={() => refresh()}
+	on:delete={async () => {
+		const date = new Date(occurrenceStart / 1e6);
+		await refresh();
+		await calendarView?.focusSlot(date);
+	}}
 />
 
 <CreateCalendarModal
@@ -417,6 +425,7 @@
 			<!-- Calendar -->
 			<div class="flex-1 flex flex-col min-h-0">
 				<CalendarView
+					bind:this={calendarView}
 					{events}
 					{calendars}
 					{visibleCalendarIds}

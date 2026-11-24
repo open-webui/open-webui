@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { withListFocus } from '$lib/utils/listFocus';
 	import { getPageContext } from '$lib/utils/page';
 	const { goto, active, tab: pageTab } = getPageContext();
 
@@ -54,6 +55,7 @@
 
 	const { saveAs } = fileSaver;
 
+	let listElement: HTMLElement;
 	const i18n: typeof i18nType = getContext('i18n');
 
 	let loaded = false;
@@ -227,7 +229,7 @@
 		}
 
 		page = 1;
-		getAutomationList();
+		await getAutomationList();
 	};
 
 	const cloneHandler = (automation: AutomationResponse) => {
@@ -398,9 +400,7 @@
 <DeleteConfirmDialog
 	bind:show={showDeleteConfirm}
 	title={$i18n.t('Delete automation?')}
-	on:confirm={() => {
-		if (deleteTarget) deleteHandler(deleteTarget);
-	}}
+	on:confirm={() => deleteTarget && withListFocus(listElement, deleteTarget, deleteHandler)}
 >
 	<div class="text-sm text-base-500 truncate">
 		{$i18n.t('This will delete')} <span class="font-normal">{deleteTarget?.name}</span>.
@@ -448,7 +448,7 @@
 	}}
 />
 
-<div class="h-full overflow-y-auto px-2.5 pb-1">
+<div bind:this={listElement} class="h-full overflow-y-auto px-2.5 pb-1">
 	{#if loaded}
 		<div class="space-y-1">
 			<div class="flex h-8 items-center gap-1">
@@ -476,6 +476,7 @@
 					<Icon name="search" size={14} class="shrink-0" />
 					<input
 						class="min-w-0 flex-1 bg-transparent text-[0.8125rem] text-base-800 outline-hidden placeholder:text-base-400 dark:text-base-100 dark:placeholder:text-base-500"
+						data-focus-fallback
 						bind:value={query}
 						on:input={handleSearchInput}
 						on:keydown={(event) => {
@@ -731,6 +732,7 @@
 											<button
 												class="flex size-6 items-center justify-center rounded-lg text-base-400 transition dark:text-base-500"
 												type="button"
+												data-focus-row={automation.id}
 												aria-label={$i18n.t('Automation Menu')}
 												on:click={(e) => {
 													e.preventDefault();

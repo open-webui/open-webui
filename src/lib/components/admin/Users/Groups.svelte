@@ -3,6 +3,7 @@
 </script>
 
 <script>
+	import { withListFocus } from '$lib/utils/listFocus';
 	import { toast } from 'svelte-sonner';
 	import { onMount, getContext } from 'svelte';
 	import { goto } from '$app/navigation';
@@ -43,6 +44,8 @@
 
 	/** @type {any[]} */
 	let filteredGroups = [];
+	/** @type {HTMLElement} */
+	let listElement;
 	/** @type {Map<string | null, any[]>} */
 	let children = new Map();
 	$: {
@@ -210,7 +213,7 @@
 		/>
 	{/if}
 
-	<div>
+	<div bind:this={listElement}>
 		<div class="sticky top-0 z-10 bg-base-0 dark:bg-base-900">
 			<div class="flex h-8 flex-1 items-center w-full gap-2">
 				<div class="flex min-w-0 flex-1 items-center">
@@ -219,6 +222,7 @@
 					</div>
 					<input
 						class="w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
+						data-focus-fallback
 						bind:value={query}
 						aria-label={$i18n.t('Search Groups')}
 						placeholder={$i18n.t('Search Groups')}
@@ -334,6 +338,7 @@
 							<GroupItem
 								{group}
 								{groups}
+								onDeleted={() => withListFocus(listElement, group.id, setGroups)}
 								{setGroups}
 								{updateGroup}
 								{defaultPermissions}

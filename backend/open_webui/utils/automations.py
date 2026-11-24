@@ -458,6 +458,9 @@ async def _execute_automation(app, automation: AutomationModel, variables: Optio
         user_msg_id = str(uuid4())
         assistant_msg_id = str(uuid4())
         parent_id = None
+        defaults = await _resolve_model_defaults(app, model_id)
+        machine = automation_machine_of(automation.data)
+        machine_id = machine.get('server_id') or defaults.get('machine_id')
 
         # An ongoing chat gets this run at its end; the first run, or a run after the chat was deleted, starts it.
         ongoing = target.get('new_chat', True) is False
@@ -472,7 +475,7 @@ async def _execute_automation(app, automation: AutomationModel, variables: Optio
             ):
                 return
             parent_id = await _append_run_to_chat(
-                app, target['chat_id'], automation, prompt, model_id, user_msg_id, assistant_msg_id
+                app, target['chat_id'], automation, prompt, model_id, machine_id, user_msg_id, assistant_msg_id
             )
             if parent_id is not False:
                 chat = await Chats.get_chat_by_id(target['chat_id'])
@@ -480,7 +483,9 @@ async def _execute_automation(app, automation: AutomationModel, variables: Optio
 
         if chat is None:
             parent_id = None
-            chat = await _insert_run_chat(automation, folder_id, prompt, model_id, user_msg_id, assistant_msg_id)
+            chat = await _insert_run_chat(
+                automation, folder_id, prompt, model_id, machine_id, user_msg_id, assistant_msg_id
+            )
             if chat and ongoing:
                 await Automations.set_target_ref(automation.id, 'chat_id', chat.id)
 
@@ -501,7 +506,7 @@ async def _execute_automation(app, automation: AutomationModel, variables: Optio
 
         # Build the same payload the frontend sends to /api/chat/completions
         form_data = {
-            **await _resolve_model_defaults(app, model_id),
+            **defaults,
             'model': model_id,
             'messages': [{'role': 'user', 'content': prompt}],
             'stream': True,
@@ -533,7 +538,6 @@ async def _execute_automation(app, automation: AutomationModel, variables: Optio
         # Call the full chat completion pipeline (same as POST /api/chat/completions).
         # The handler reference is stored on app.state to avoid circular imports.
         request = _build_request(app, token=token)
-        machine = automation_machine_of(automation.data)
         if machine.get('server_id'):
             form_data['machine_id'] = machine['server_id']
             await initialize_machine_directory(
@@ -585,7 +589,15 @@ async def _execute_automation(app, automation: AutomationModel, variables: Optio
 # Internals
 
 
-async def _insert_run_chat(automation, folder_id, prompt: str, model_id: str, user_msg_id: str, assistant_msg_id: str):
+async def _insert_run_chat(
+    automation,
+    folder_id,
+    prompt: str,
+    model_id: str,
+    machine_id: str | None,
+    user_msg_id: str,
+    assistant_msg_id: str,
+):
     """A new chat holding this run's prompt and its pending reply."""
     return await Chats.insert_new_chat(
         str(uuid4()),
@@ -595,6 +607,7 @@ async def _insert_run_chat(automation, folder_id, prompt: str, model_id: str, us
             chat={
                 'title': automation.name,
                 'models': [model_id],
+                'machine_id': machine_id,
                 'history': {
                     'currentId': assistant_msg_id,
                     'messages': {
@@ -630,7 +643,14 @@ async def _insert_run_chat(automation, folder_id, prompt: str, model_id: str, us
 
 
 async def _append_run_to_chat(
-    app, chat_id: str, automation, prompt: str, model_id: str, user_msg_id: str, assistant_msg_id: str
+    app,
+    chat_id: str,
+    automation,
+    prompt: str,
+    model_id: str,
+    machine_id: str | None,
+    user_msg_id: str,
+    assistant_msg_id: str,
 ):
     """Add this run's prompt and its pending reply at the end of the ongoing chat.
 
@@ -644,6 +664,11 @@ async def _append_run_to_chat(
             if not chat or chat.user_id != automation.user_id:
                 return False
             chat_data = copy.deepcopy(chat.chat or {})
+            # The chat must name the machine the run uses; a directory belongs to the machine it was set on.
+            if machine_id and machine_id_of(chat_data) != machine_id:
+                chat_data.pop('terminal_id', None)  # former name
+                chat_data.pop('working_directory', None)
+                chat_data['machine_id'] = machine_id
             history = chat_data.setdefault('history', {})
             messages = history.setdefault('messages', {})
             current_id = history.get('currentId')

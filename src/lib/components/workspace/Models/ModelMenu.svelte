@@ -68,6 +68,7 @@
 		<button
 			type="button"
 			class="focus-ring rounded-lg"
+			data-focus-row={model.id}
 			aria-label={`${$i18n.t('More')}: ${resolveLocalizedModelName(model, $i18n.language)}`}
 			aria-haspopup="menu"
 			aria-expanded={show}

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { withListFocus } from '$lib/utils/listFocus';
 	import { resolveLocalizedResource } from '$lib/utils/localizedContent';
 	import dayjs from 'dayjs';
 	import relativeTime from 'dayjs/plugin/relativeTime';
@@ -49,6 +50,7 @@
 	import ChevronDown from '../icons/ChevronDown.svelte';
 	import ChevronUp from '../icons/ChevronUp.svelte';
 
+	let listElement: HTMLElement;
 	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
 	let shiftKey = false;
@@ -379,7 +381,7 @@
 			</div>
 		</div>
 
-		<div class="space-y-1">
+		<div bind:this={listElement} class="space-y-1">
 			<div class="flex h-8 flex-1 items-center w-full gap-2">
 				<div class="flex min-w-0 flex-1">
 					<div class=" self-center ml-1 mr-3">
@@ -387,6 +389,7 @@
 					</div>
 					<input
 						class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
+						data-focus-fallback
 						bind:value={query}
 						on:input={handleSearchInput}
 						placeholder={$i18n.t('Search Functions')}
@@ -672,6 +675,7 @@
 											<button
 												class="flex size-6 items-center justify-center rounded-lg text-base-400 transition dark:text-base-500"
 												type="button"
+												data-focus-row={func.id}
 												aria-label={$i18n.t('Function Menu')}
 												on:click={(e) => {
 													e.preventDefault();
@@ -738,9 +742,7 @@
 	<DeleteConfirmDialog
 		bind:show={showDeleteConfirm}
 		title={$i18n.t('Delete function?')}
-		on:confirm={() => {
-			deleteHandler(selectedFunction);
-		}}
+		on:confirm={() => withListFocus(listElement, selectedFunction, deleteHandler)}
 	>
 		<div class=" text-sm text-base-500 truncate">
 			{$i18n.t('This will delete')}
