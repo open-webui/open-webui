@@ -1980,7 +1980,7 @@ class ChatTable:
             if (
                 folder
                 and (permission == 'read' or (folder.data or {}).get('share_mode') == 'continue')
-                and await has_folder_access(user.id, folder, 'read', db)
+                and await has_folder_access(user.id, folder, permission, db)
             ):
                 return True
         # A run chat is readable by anyone the automation is shared with.
