@@ -19,6 +19,7 @@ from open_webui.routers.images import (
     upload_image,
 )
 from open_webui.utils.access_control import has_permission
+from open_webui.utils.audit import set_audit_model
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.headers import get_headers_and_cookies
 from open_webui.utils.images.comfyui import (
@@ -27,6 +28,7 @@ from open_webui.utils.images.comfyui import (
     comfyui_create_video,
     comfyui_upload_image,
 )
+from open_webui.utils.images.connections import get_image_model_ref
 from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.session_pool import get_session
 from open_webui.utils.videos.connections import (
@@ -225,6 +227,7 @@ async def video_generations(
     ComfyUI connections run the admin's workflow instead (see ``comfyui_video_generations``).
     """
     connection, model = await resolve_video_model(request, user, form_data.model, strict=strict)
+    set_audit_model(get_image_model_ref(connection['id'], model))
     connection_config = connection.get('config') or {}
     seconds = form_data.seconds or connection_config.get('seconds')
     size = form_data.size or connection_config.get('size')

@@ -668,6 +668,17 @@
 				uploadedId = uploaded.id;
 				info.meta.background_image_url = `/api/v1/files/${uploaded.id}/content`;
 			}
+			if (info.meta.profile_image_url?.startsWith('data:')) {
+				const blob = await (await fetch(info.meta.profile_image_url)).blob();
+				const uploaded = await uploadFile(
+					localStorage.token,
+					new File([blob], `profile.${blob.type.split('/')[1]}`, { type: blob.type }),
+					null,
+					false,
+					false
+				);
+				info.meta.profile_image_url = `/api/v1/files/${uploaded.id}/content`;
+			}
 			if (avatarFile && info.meta.voice_avatar) {
 				const uploaded = await uploadFile(localStorage.token, avatarFile, null, false, false);
 				if (!uploaded?.id) throw new Error($i18n.t('Failed to upload avatar.'));

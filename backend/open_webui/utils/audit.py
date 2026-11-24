@@ -1,6 +1,7 @@
 import re
 import uuid
 from contextlib import asynccontextmanager
+from contextvars import ContextVar
 from dataclasses import asdict, dataclass
 from enum import Enum
 from typing import (
@@ -114,6 +115,15 @@ class AuditContext:
     def add_response_chunk(self, chunk: bytes):
         if len(self.response_body) < self.max_body_size:
             self.response_body.extend(chunk[: self.max_body_size - len(self.response_body)])
+
+
+audit_context: ContextVar[Optional[AuditContext]] = ContextVar('audit_context', default=None)
+
+
+def set_audit_model(model_id: Optional[str]):
+    """Set the model on the request's audit entry. The first call wins, so models run along the way don't replace it."""
+    if context := audit_context.get():
+        context.metadata.setdefault('model_id', model_id)
 
 
 def log_model_usage(
@@ -259,6 +269,7 @@ class AuditLoggingMiddleware:
         async context manager that ensures that an audit log entry is recorded after the request is processed.
         """
         context = AuditContext()
+        audit_context.set(context)
         try:
             yield context
         finally:
@@ -354,7 +365,7 @@ class AuditLoggingMiddleware:
                 response_status_code=context.metadata.get('response_status_code', None),
                 source_ip=request.client.host if request.client else None,
                 user_agent=request.headers.get('user-agent'),
-                model_id=getattr(request.state, 'model_id', None),
+                model_id=context.metadata.get('model_id'),
                 request_object=request_body,
                 response_object=response_body,
             )

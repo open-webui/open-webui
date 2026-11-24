@@ -23,6 +23,7 @@
 		outcomeTone,
 		checksSummary,
 		checkPrompt,
+		noteLocation,
 		notePrompt,
 		feedbackPrompt,
 		conflictPrompt,
@@ -59,6 +60,14 @@
 		author?: { login: string };
 		comments?: { id: string; body: string; author?: { login: string } }[];
 		reviews?: { id: string; body: string; state: string; author?: { login: string } }[];
+		reviewComments?: {
+			id: string;
+			body: string;
+			author?: { login: string };
+			path: string;
+			line: number | null;
+			startLine: number | null;
+		}[];
 		statusCheckRollup?: Check[];
 		updatedAt?: string;
 	};
@@ -127,9 +136,11 @@
 	$: failingChecks = (selected?.statusCheckRollup ?? []).filter(
 		(check) => checkOutcome(check) === 'fail'
 	);
-	$: feedback = [...(selected?.comments ?? []), ...(selected?.reviews ?? [])].filter((item) =>
-		item.body?.trim()
-	);
+	$: feedback = [
+		...(selected?.comments ?? []),
+		...(selected?.reviews ?? []),
+		...(selected?.reviewComments ?? [])
+	].filter((item) => item.body?.trim());
 
 	const label = (value = '') =>
 		({
@@ -691,8 +702,9 @@
 				</div>
 			{:else}
 				{@const activity = [
-					...(selected.comments ?? []).map((item) => ({ ...item, state: '' })),
-					...(selected.reviews ?? [])
+					...(selected.comments ?? []).map((item) => ({ ...item, state: '', path: '' })),
+					...(selected.reviews ?? []).map((item) => ({ ...item, path: '' })),
+					...(selected.reviewComments ?? []).map((item) => ({ ...item, state: '' }))
 				]}
 				<div class="min-h-0 flex-1 overflow-y-auto scrollbar-hidden">
 					{#each activity as item, index}<div
@@ -703,7 +715,7 @@
 									class="min-w-0 flex-1 truncate font-mono text-[0.625rem] text-base-400 dark:text-base-600"
 									>{item.author?.login ?? $i18n.t('Unknown')}{item.state
 										? ` · ${label(item.state)}`
-										: ''}</span
+										: ''}{item.path ? ` · ${noteLocation(item)}` : ''}</span
 								>{#if onDraft && item.body?.trim()}<button
 										class="opacity-0 group-hover:opacity-100 focus:opacity-100 flex shrink-0 items-center gap-1 h-5 px-1.5 rounded-md font-sans text-[0.625rem] text-base-500 dark:text-base-400 hover:bg-base-100/50 hover:text-base-800 dark:hover:bg-base-0/5 dark:hover:text-base-200 transition-colors duration-75"
 										on:click={() => selected && sendToChat(notePrompt($i18n.t, selected, item))}

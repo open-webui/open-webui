@@ -41,6 +41,7 @@ from open_webui.utils.tether import RelayClient, get_tether_connections
 from open_webui.models.users import UserModel
 from open_webui.utils.access_control import check_model_access, has_connection_access, has_permission
 from open_webui.utils.anthropic import ANTHROPIC_VERSION, get_anthropic_models, is_anthropic_url
+from open_webui.utils.audit import set_audit_model
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.headers import bearer_auth_header, get_headers_and_cookies, include_user_info_headers
 from open_webui.utils.json_codec import JSONCodec
@@ -1473,9 +1474,7 @@ async def generate_chat_completion(
     metadata = payload.pop('metadata', None)
 
     model_id = form_data.get('model')
-    # keep the model the client asked for when reached from /api/chat/completions
-    if not hasattr(request.state, 'model_id'):
-        request.state.model_id = model_id
+    set_audit_model(model_id)
     model_info = await Models.get_model_by_id(model_id)
     # The user's own connection, reached through their Tether. Only they can resolve it.
     tether_model = None if model_info else await get_tether_model(request, user, model_id)
@@ -1882,7 +1881,7 @@ async def responses(
 
     idx = 0
     model_id = form_data.model
-    request.state.model_id = model_id
+    set_audit_model(model_id)
 
     # Enforce per-model access control
     await check_model_access(user, await Models.get_model_by_id(model_id), BYPASS_MODEL_ACCESS_CONTROL)
@@ -2006,7 +2005,7 @@ async def proxy(path: str, request: Request, user=Depends(get_verified_user)):
 
     idx = 0
     model_id = payload.get('model') if isinstance(payload, dict) else None
-    request.state.model_id = model_id
+    set_audit_model(model_id)
     if model_id:
         models = request.app.state.OPENAI_MODELS
         if not models or model_id not in models:

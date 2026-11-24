@@ -224,7 +224,7 @@ from open_webui.utils.access_control import has_permission
 from open_webui.utils.access_control.folders import has_folder_write_access
 from open_webui.utils.actions import chat_action as chat_action_handler
 from open_webui.utils.asgi_middleware import AppHTTPMiddleware, BrowserCORSMiddleware
-from open_webui.utils.audit import AuditLevel, AuditLoggingMiddleware
+from open_webui.utils.audit import AuditLevel, AuditLoggingMiddleware, set_audit_model
 from open_webui.utils.auth import (
     create_admin_user,
     decode_token,
@@ -1099,6 +1099,7 @@ async def embeddings(request: Request, form_data: dict, user=Depends(get_verifie
     # Make sure models are loaded in app state
     if not request.app.state.MODELS:
         await get_all_models(request, user=user)
+    set_audit_model(form_data.get('model'))
     # Use generic dispatcher in utils.embeddings
     return await generate_embeddings(request, form_data, user)
 
@@ -1114,7 +1115,7 @@ async def chat_completion(
         await get_all_models(request, user=user)
 
     model_id = form_data.get('model', None)
-    request.state.model_id = model_id
+    set_audit_model(model_id)
     tasks = form_data.pop('background_tasks', None)
     normalize_machine_id(form_data)
 
@@ -2154,7 +2155,7 @@ async def generate_messages(
     Anthropic's x-api-key header (via middleware translation).
     """
     requested_model = form_data.get('model', '')
-    request.state.model_id = requested_model
+    set_audit_model(requested_model)
     input_tokens = None
     try:
         input_tokens = await openai.count_anthropic_tokens(request, form_data, user)

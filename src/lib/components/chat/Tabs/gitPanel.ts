@@ -75,7 +75,18 @@ export const checksSummary = (checks?: Check[]) => {
 // Prompts the Git panel drafts into the chat composer. The user reviews them before sending.
 type Translate = (key: string, vars?: Record<string, unknown>) => string;
 type Author = { login?: string } | undefined;
-type Note = { body: string; author?: Author; state?: string };
+type Note = {
+	body: string;
+	author?: Author;
+	state?: string;
+	path?: string;
+	line?: number | null;
+	startLine?: number | null;
+};
+
+// Where a review comment was left. An outdated one has no line.
+export const noteLocation = ({ path = '', line, startLine }: Note) =>
+	line ? `${path}:${startLine && startLine !== line ? `${startLine}-${line}` : line}` : path;
 
 const quote = (text: string) =>
 	text
@@ -86,7 +97,10 @@ const quote = (text: string) =>
 const notes = (items: Note[]) =>
 	items
 		.filter((item) => item.body?.trim())
-		.map((item) => `@${item.author?.login ?? 'unknown'}:\n${quote(item.body)}`);
+		.map(
+			(item) =>
+				`@${item.author?.login ?? 'unknown'}${item.path ? ` (${noteLocation(item)})` : ''}:\n${quote(item.body)}`
+		);
 
 export const issuePrompt = (
 	t: Translate,
@@ -129,8 +143,11 @@ export const notePrompt = (t: Translate, pr: PullRequestRef, item: Note) =>
 			number: pr.number,
 			title: pr.title
 		}),
+		noteLocation(item),
 		quote(item.body)
-	].join('\n\n');
+	]
+		.filter(Boolean)
+		.join('\n\n');
 
 export const feedbackPrompt = (
 	t: Translate,
