@@ -177,7 +177,9 @@ class MessageTable:
         db: Optional[AsyncSession] = None,
     ) -> Optional[MessageModel]:
         async with get_async_db_context(db) as db:
-            channel_member = await Channels.join_channel(channel_id, user_id)
+            channel = await Channels.get_channel_by_id(channel_id, db=db)
+            if channel.type not in ['group', 'dm']:
+                channel_member = await Channels.join_channel(channel_id, user_id)
 
             id = str(uuid.uuid4())
             ts = int(time.time_ns())
