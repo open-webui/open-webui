@@ -12,6 +12,7 @@ from open_webui.utils.machines import (
     machine_id_of,
     normalize_machine_id,
     require_chat_folder_machine,
+    template_connection,
 )
 from open_webui.config import (
     CONTEXT_COMPACTION_RETENTION_PERCENTAGE,
@@ -1579,6 +1580,9 @@ async def update_chat_by_id(
     if chat:
         if machine_id_of(form_data.chat) != machine_id_of(chat.chat):
             await require_chat_folder_machine(chat.folder_id, machine_id_of(form_data.chat))
+            machine_id = machine_id_of(form_data.chat)
+            if chat.user_id != user.id and machine_id and machine_id.startswith('template:'):
+                await template_connection(user, machine_id)
         directory = form_data.chat.get('working_directory')
         if directory and directory != (chat.chat or {}).get('working_directory'):
             folder_directory = await get_folder_directory(chat.folder_id)
