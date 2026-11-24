@@ -1,0 +1,57 @@
+# (c) IMT - Information Management Technology AG, CH-9470 Buchs, www.imt.ch.
+#
+# Stage routes (Traefik):
+#   https://<CHAT_SERVER_HOST>/chat          -> redirect to /chat/stage (shorthand)
+#   https://<CHAT_SERVER_HOST>/chat/prod     -> redirect to CHAT_PROD_URL (https://chat.intranet.imt.ch)
+#   https://<CHAT_SERVER_HOST>/chat/stage    -> this container (prefix stripped)
+#
+# Note: Open WebUI has no base-path support; under /chat/stage the backend is reachable
+# but the frontend loads its assets and API from absolute paths (/_app, /api, /ws).
+
+services:
+  open-webui:
+    extends:
+      file: docker-compose-imt-prod.yaml
+      service: open-webui
+    environment:
+      WEBUI_URL: ${WEBUI_URL:-https://imtbu-vs-ai-1/chat/stage}
+    labels: !override
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik-public"
+      - "traefik.http.services.${SERVICE_ID}.loadbalancer.server.port=8080"
+      # /chat/stage -> this container
+      - >-
+        traefik.http.routers.${SERVICE_ID}.rule=(Host(`${CHAT_SERVER_HOST}`) || Host(`${CHAT_SERVER_HOST}.intranet.imt.ch`))
+        && (Path(`/chat/stage`) || PathPrefix(`/chat/stage/`))
+      - "traefik.http.routers.${SERVICE_ID}.priority=300"
+      - "traefik.http.routers.${SERVICE_ID}.entrypoints=websecure"
+      - "traefik.http.routers.${SERVICE_ID}.tls=true"
+      - "traefik.http.routers.${SERVICE_ID}.service=${SERVICE_ID}"
+      - "traefik.http.routers.${SERVICE_ID}.middlewares=${SERVICE_ID}-strip"
+      - "traefik.http.middlewares.${SERVICE_ID}-strip.stripprefix.prefixes=/chat/stage"
+      # /chat/prod -> prod (proper DNS)
+      - >-
+        traefik.http.routers.${SERVICE_ID}-prod.rule=(Host(`${CHAT_SERVER_HOST}`) || Host(`${CHAT_SERVER_HOST}.intranet.imt.ch`))
+        && (Path(`/chat/prod`) || PathPrefix(`/chat/prod/`))
+      - "traefik.http.routers.${SERVICE_ID}-prod.priority=300"
+      - "traefik.http.routers.${SERVICE_ID}-prod.entrypoints=websecure"
+      - "traefik.http.routers.${SERVICE_ID}-prod.tls=true"
+      - "traefik.http.routers.${SERVICE_ID}-prod.service=noop@internal"
+      - "traefik.http.routers.${SERVICE_ID}-prod.middlewares=${SERVICE_ID}-to-prod"
+      - "traefik.http.middlewares.${SERVICE_ID}-to-prod.redirectregex.regex=^https?://[^/]+/chat/prod(.*)$$"
+      - "traefik.http.middlewares.${SERVICE_ID}-to-prod.redirectregex.replacement=${CHAT_PROD_URL:-https://chat.intranet.imt.ch}$${1}"
+      # /chat -> stage (shorthand)
+      - >-
+        traefik.http.routers.${SERVICE_ID}-shorthand.rule=(Host(`${CHAT_SERVER_HOST}`) || Host(`${CHAT_SERVER_HOST}.intranet.imt.ch`))
+        && (Path(`/chat`) || PathPrefix(`/chat/`))
+      - "traefik.http.routers.${SERVICE_ID}-shorthand.priority=200"
+      - "traefik.http.routers.${SERVICE_ID}-shorthand.entrypoints=websecure"
+      - "traefik.http.routers.${SERVICE_ID}-shorthand.tls=true"
+      - "traefik.http.routers.${SERVICE_ID}-shorthand.service=noop@internal"
+      - "traefik.http.routers.${SERVICE_ID}-shorthand.middlewares=${SERVICE_ID}-to-stage"
+      - "traefik.http.middlewares.${SERVICE_ID}-to-stage.redirectregex.regex=^(https?://[^/]+)/chat(.*)$$"
+      - "traefik.http.middlewares.${SERVICE_ID}-to-stage.redirectregex.replacement=$${1}/chat/stage$${2}"
+
+networks:
+  traefik-public:
+    external: true
