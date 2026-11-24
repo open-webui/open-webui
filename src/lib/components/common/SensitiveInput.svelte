@@ -6,7 +6,7 @@
 	export let value: string = '';
 	export let placeholder = '';
 	export let type = 'text';
-	export let required = true;
+	export let required = false;
 	export let readOnly = false;
 	export let variant: 'plain' | 'settings' = 'plain';
 	export let outerClassName = 'flex flex-1';

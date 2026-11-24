@@ -195,7 +195,7 @@
 				return;
 			}
 
-			if (!key && !['azure_ad', 'microsoft_entra_id'].includes(auth_type)) {
+			if (!key && auth_type === 'bearer') {
 				loading = false;
 
 				toast.error($i18n.t('Key is required'));

@@ -614,6 +614,7 @@
 									id="ssh-password"
 									bind:value={password}
 									placeholder={$i18n.t('SSH password')}
+									required
 								/>
 							{:else if signIn === 'key'}
 								<textarea

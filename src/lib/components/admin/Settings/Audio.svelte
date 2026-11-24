@@ -468,6 +468,7 @@
 								variant="settings"
 								placeholder={$i18n.t('API Key')}
 								bind:value={realtime.OPENAI_API_KEY}
+								required
 							/>
 						</AdminSettingField>
 					{/if}
@@ -625,6 +626,7 @@
 						variant="settings"
 						placeholder={$i18n.t('settings.admin.audio.sttDeepgramApiKey.label')}
 						bind:value={STT_DEEPGRAM_API_KEY}
+						required
 					/>
 				</AdminSettingField>
 
@@ -720,6 +722,7 @@
 							variant="settings"
 							placeholder={$i18n.t('settings.admin.audio.sttMistralApiKey.label')}
 							bind:value={STT_MISTRAL_API_KEY}
+							required
 						/>
 					</AdminSettingField>
 				</div>
@@ -932,6 +935,7 @@
 							variant="settings"
 							placeholder={$i18n.t('settings.admin.audio.ttsMistralApiKey.label')}
 							bind:value={TTS_MISTRAL_API_KEY}
+							required
 						/>
 					</AdminSettingField>
 				</div>
