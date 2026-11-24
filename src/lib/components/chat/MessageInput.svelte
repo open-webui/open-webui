@@ -2686,14 +2686,19 @@
 										}}
 										uploadGoogleDriveHandler={async () => {
 											try {
-												const fileData = await createPicker();
-												if (fileData) {
-													const file = new File([fileData.blob], fileData.name, {
-														type: fileData.blob.type
-													});
-													await uploadFileHandler(file);
+												const maxCount = $config?.file?.max_count ?? null;
+												const filesData = await createPicker(
+													maxCount !== null ? Math.max(1, maxCount - files.length) : undefined
+												);
+												if (filesData) {
+													await inputFilesHandler(filesData.files);
+													for (const error of filesData.errors) {
+														toast.error(
+															$i18n.t('Error accessing Google Drive: {{error}}', { error })
+														);
+													}
 												} else {
-													console.log('No file was selected from Google Drive');
+													console.log('No files were selected from Google Drive');
 												}
 											} catch (error) {
 												console.error('Google Drive Error:', error);
