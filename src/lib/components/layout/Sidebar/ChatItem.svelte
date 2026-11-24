@@ -22,7 +22,7 @@
 	import relativeTime from 'dayjs/plugin/relativeTime';
 	import type { ChatParticipant } from '$lib/apis/folders';
 	import { goto, invalidate, invalidateAll } from '$app/navigation';
-	import { navigating } from '$app/stores';
+	import { navigating, page } from '$app/stores';
 	import { onMount, getContext, createEventDispatcher, tick } from 'svelte';
 	import { LinkPreview } from 'bits-ui';
 	import { readable, type Readable } from 'svelte/store';
@@ -40,7 +40,6 @@
 	} from '$lib/apis/chats';
 	import {
 		activeChatTabId,
-		openingChatId,
 		openEmbeddedChatIds,
 		selectedFolder,
 		chatId,
@@ -55,7 +54,7 @@
 	} from '$lib/stores';
 	import { refreshSidebar, setChatTitle } from '$lib/stores/chatList';
 	import { updateFolderChatLists } from '$lib/stores/folderStates';
-	import { getCachedChat, requestChat } from '$lib/stores/chatCache';
+	import { getCachedChat, pendingChatRequest, requestChat } from '$lib/stores/chatCache';
 	import { closeChatTabs } from '$lib/stores/chatViewStates';
 
 	import ChatMenu from './ChatMenu.svelte';
@@ -186,8 +185,8 @@
 	// The row clicked shows at once; the chat being left does not stay beside it.
 	$: current =
 		!$navigating?.to?.params?.folderId &&
-		($openingChatId
-			? id === $openingChatId
+		($pendingChatRequest && $pendingChatRequest.id === $page.params.id
+			? id === $page.params.id
 			: (id === $chatId && !$selectedFolder) || id === $activeChatTabId);
 	$: chatItemClass = ` w-full flex justify-between rounded-xl px-2 py-1.5 ${
 		current || confirmEdit

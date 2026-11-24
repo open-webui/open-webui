@@ -23,7 +23,6 @@
 
 	import {
 		activeChatTabId,
-		openingChatId,
 		chatId,
 		chatTabRequest,
 		config,
@@ -45,6 +44,7 @@
 		removeFolderState,
 		isCancelledFolderRequest
 	} from '$lib/stores/folderStates';
+	import { pendingChatRequest } from '$lib/stores/chatCache';
 	import { refreshFolderChatLists } from '$lib/stores/chatList';
 	import { sortFolders } from '$lib/utils/folders';
 	import { updateNoteFolderIdById } from '$lib/apis/notes';
@@ -632,7 +632,9 @@
 
 	$: current = $navigating?.to
 		? $navigating.to.params?.folderId === folderId
-		: $selectedFolder?.id === folderId && !$activeChatTabId && !$openingChatId;
+		: $selectedFolder?.id === folderId &&
+			!$activeChatTabId &&
+			!($pendingChatRequest && $pendingChatRequest.id === $page.params.id);
 
 	const openFolderHandler = async () => {
 		await goto(`/folders/${folderId}`);

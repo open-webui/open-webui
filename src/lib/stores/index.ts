@@ -236,8 +236,6 @@ export const temporaryChat = writable(false);
 export const openEmbeddedChatIds = writable<Set<string>>(new Set());
 /** The saved chat whose tab is in front, when it is not the main chat. */
 export const activeChatTabId = writable<string | null>(null);
-// The chat being opened, until it is on screen.
-export const openingChatId = writable<string | null>(null);
 export const chatTabRequest = writable<
 	{ parentChatId: string; prompt: string } | { folderId: string } | null
 >(null);
