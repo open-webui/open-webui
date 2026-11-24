@@ -1069,6 +1069,12 @@ class KnowledgeTable:
                 # Cycle detection: walk up from new_parent_id to ensure
                 # we don't encounter directory_id
                 if new_parent_id:
+                    # Lock the knowledge base so concurrent moves cannot both pass the cycle check
+                    knowledge_id = await db.scalar(select(KnowledgeDirectory.knowledge_id).filter_by(id=directory_id))
+                    await db.execute(
+                        update(Knowledge).where(Knowledge.id == knowledge_id).values(updated_at=Knowledge.updated_at)
+                    )
+
                     current = new_parent_id
                     seen = set()
                     while current and current not in seen:
