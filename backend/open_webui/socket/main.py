@@ -1158,6 +1158,8 @@ async def document_save_handler(document_id, data, user):
         page = document_page(note.data, document_id)
         if not isinstance(data.get('content'), dict):
             return None
+        if data['content'] == page['content']:
+            return note
         editor = await Users.get_user_by_id(user['id'])
         if not editor or not await has_access_to_note_files(note, get_content_files(data['content']), editor):
             raise ValueError('Cannot attach files you cannot access')
