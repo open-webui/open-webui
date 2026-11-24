@@ -1268,12 +1268,10 @@
 		);
 	};
 
-	$: if (
-		$temporaryChat &&
-		($machines ?? []).some(
-			(t) => !!$selectedMachineId && t.id === $selectedMachineId && t.scope === 'chat'
-		)
-	) {
+	const isPerChatMachine = (id: string | null | undefined) =>
+		($machines ?? []).find((machine) => machine.id === id)?.scope === 'chat';
+
+	$: if ($temporaryChat && $machines && isPerChatMachine($selectedMachineId)) {
 		selectedMachineId.set(null);
 	}
 
@@ -1290,9 +1288,7 @@
 			? JSON.stringify([
 					machineId,
 					directory,
-					($machines ?? []).find((server) => server.id === machineId)?.scope === 'chat'
-						? $chatId
-						: null,
+					isPerChatMachine(machineId) ? $chatId : null,
 					$config,
 					$settings,
 					$machines
@@ -1342,10 +1338,11 @@
 				loadedAgentEnvironment = environment ? { key: environment, models: available } : null;
 				// Folder refreshes update the catalog without overwriting a draft's model choice.
 				if (folder) return;
+				// A per-chat machine lists no agents until its chat is saved.
 				const remaining = selectedModels.filter(
 					(id) =>
 						!id.startsWith('agent:') ||
-						(chat?.chat?.models?.includes(id) &&
+						((chat?.chat?.models?.includes(id) || (!$chatId && isPerChatMachine(machineId))) &&
 							decodeURIComponent(id.split(':')[1]) === $selectedMachineId) ||
 						available.some((model: Model) => model.id === id)
 				);
@@ -4651,10 +4648,17 @@
 				_chatId = createTemporaryChatId($socket?.id);
 				await chatId.set(_chatId);
 			}
-			if (!_chatId && (tabbed || context?.currentDirectory || tabs?.hasTerminalTabs())) {
+			if (
+				!_chatId &&
+				(tabbed ||
+					context?.currentDirectory ||
+					tabs?.hasTerminalTabs() ||
+					isPerChatMachine(machineId))
+			) {
 				_chatId = await initChatHandler(_history);
 			}
 			await tick();
+			if (isPerChatMachine($selectedMachineId)) void refreshAgentModels();
 		}
 		if (history !== _history) return null;
 		if (_chatId) await tabs?.attachChatViewTo(_chatId);
@@ -4871,6 +4875,11 @@
 		);
 	};
 
+	// Agent ids are checked by the backend, so an unlisted one can still be sent.
+	const getModel = (id: string) =>
+		($models ?? []).find((model) => model.id === id) ??
+		(id.startsWith('agent:') ? { id, name: id.split(':').slice(2).join('/') } : undefined);
+
 	const sendMessage = async (
 		_history,
 		parentId: string,
@@ -4927,7 +4936,7 @@
 		// Use a message_ids array with modelIdx to preserve separate columns for duplicate models.
 		const messageIdsList: Array<{ model_id: string; message_id: string; modelIdx: number }> = [];
 		for (const [_modelIdx, modelId] of selectedModelIds.entries()) {
-			const model = ($models ?? []).filter((m) => m.id === modelId).at(0);
+			const model = getModel(modelId);
 
 			if (model) {
 				let responseMessageId = uuidv4();
@@ -4999,7 +5008,7 @@
 
 		// Single request — backend fans out to all models
 		const primaryModelId = selectedModelIds[0];
-		const primaryModel = ($models ?? []).filter((m) => m.id === primaryModelId).at(0);
+		const primaryModel = getModel(primaryModelId);
 		const primaryResponseMessageId = messageIdsList[0]?.message_id;
 		let submittedTaskIds: string[] = [];
 
