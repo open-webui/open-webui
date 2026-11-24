@@ -1,4 +1,5 @@
-import { get } from 'svelte/store';
+import { get, writable } from 'svelte/store';
+import { getChatById } from '$lib/apis/chats';
 import { user } from '$lib/stores';
 
 const MAX_CACHED_CHATS = 20;
@@ -11,6 +12,19 @@ export const cacheChat = (chat: any) => {
 	if (chat.user_id !== get(user)?.id) return;
 	cachedChats.set(chat.id, chat);
 	if (cachedChats.size > MAX_CACHED_CHATS) cachedChats.delete(cachedChats.keys().next().value!);
+};
+
+/** A chat requested before the component that shows it is ready. */
+export const pendingChatRequest = writable<{
+	id: string;
+	promise: ReturnType<typeof getChatById>;
+} | null>(null);
+
+export const requestChat = (id: string) => {
+	const promise = getChatById(localStorage.token, id);
+	promise.catch(() => {});
+	pendingChatRequest.set({ id, promise });
+	return promise;
 };
 
 export const getCachedChat = (id: string) => {

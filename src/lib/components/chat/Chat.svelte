@@ -42,6 +42,8 @@
 		showTabs as _showTabs,
 		chatTabRequest,
 		openEmbeddedChatIds,
+		activeChatTabId,
+		openingChatId,
 		voiceCall as _voiceCall,
 		temporaryChat as _temporaryChat,
 		mobile,
@@ -74,7 +76,13 @@
 		type FolderDetails
 	} from '$lib/stores/folderStates';
 	import { closeChatTabs } from '$lib/stores/chatViewStates';
-	import { cacheChat, cachedChats, getCachedChat } from '$lib/stores/chatCache';
+	import {
+		cacheChat,
+		cachedChats,
+		getCachedChat,
+		pendingChatRequest,
+		requestChat
+	} from '$lib/stores/chatCache';
 
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
@@ -1120,10 +1128,7 @@
 
 		clearTimeout(saveControlsTimer);
 		await saveControls();
-		if (signal.aborted) {
-			pendingChatRequest = null;
-			return;
-		}
+		if (signal.aborted) return;
 		loading = true;
 
 		prompt = '';
@@ -2396,7 +2401,10 @@
 				}
 				if (appLayout?.initNewChat === initNewChat) delete appLayout.initNewChat;
 				selectedFolderSubscribe();
-				if (!embedded) selectedFolder.set(null);
+				if (!embedded) {
+					selectedFolder.set(null);
+					openingChatId.set(null);
+				}
 
 				// Clear the selected chat when leaving the chat surface (e.g. navigating
 				// to the admin panel), otherwise the previously-viewed chat stays selected
@@ -2885,24 +2893,17 @@
 	const openInFolder = async (id: string, preserveTabs: boolean) => {
 		// Phones show one chat at a time, and links into a message need the chat itself.
 		if ($mobile || $page.url.search || $page.url.hash) return false;
-		let found: any =
-			pendingChatRequest?.id === id ? null : (findFolderChat(id) ?? cachedChats.get(id));
+		let found: any = findFolderChat(id) ?? cachedChats.get(id);
 		if (!found) {
 			const promise =
-				pendingChatRequest?.id === id
-					? pendingChatRequest.promise
-					: getChatById(localStorage.token, id);
-			pendingChatRequest = { id, promise };
+				$pendingChatRequest?.id === id ? $pendingChatRequest.promise : requestChat(id);
 			found = await promise.catch(() => null);
-			// The folder's tab shows this copy.
-			if (found?.folder_id) cacheChat(found);
 		}
 		const folder = found?.folder_id
 			? await loadFolderDetails(localStorage.token, found.folder_id).catch(() => null)
 			: null;
 		if ($page.params.id !== id) return true;
 		if (!folder) return false;
-		pendingChatRequest = null;
 		const href = `/folders/${folder.id}`;
 		if ($selectedFolder?.id !== folder.id || $chatId || mainChatHref !== href) {
 			selectedFolder.set(folder);
@@ -2926,8 +2927,10 @@
 		const preserveTabs = routeInitialized;
 		routeInitialized = true;
 		await tick();
-		if ($page.route.id === '/(app)/c/[id]') {
-			const id = $page.params.id ?? '';
+		const id = $page.route.id === '/(app)/c/[id]' ? ($page.params.id ?? null) : null;
+		openingChatId.set(id);
+		if ($pendingChatRequest?.id !== id) pendingChatRequest.set(null);
+		if (id) {
 			if (await openInFolder(id, preserveTabs)) return;
 			if ($page.params.id !== id) return;
 			chatIdProp = id;
@@ -2948,15 +2951,17 @@
 		routeChanged = false;
 		void followRoute();
 	}
+	$: if (!embedded && $openingChatId && [$chatId, $activeChatTabId].includes($openingChatId))
+		openingChatId.set(null);
 	// A chat opened by link needs no model list, so its request starts before the list is in.
-	let pendingChatRequest: { id: string; promise: ReturnType<typeof getChatById> } | null = null;
-	$: if (routeChanged && $models === null && $page.params.id !== pendingChatRequest?.id) {
-		pendingChatRequest =
-			$page.route.id === '/(app)/c/[id]'
-				? { id: $page.params.id, promise: getChatById(localStorage.token, $page.params.id) }
-				: null;
-		pendingChatRequest?.promise.catch(() => {});
-	}
+	$: if (
+		routeChanged &&
+		$models === null &&
+		$page.route.id === '/(app)/c/[id]' &&
+		$page.params.id &&
+		$page.params.id !== $pendingChatRequest?.id
+	)
+		void requestChat($page.params.id);
 	afterNavigate(() => {
 		routeChanged = !embedded;
 		stopAudio();
@@ -3449,8 +3454,8 @@
 		const cached = switching && !$chatRequestQueues[id]?.length ? getCachedChat(id) : null;
 		// Loading changes the copy it is given; leaving the chat caches it again.
 		cachedChats.delete(id);
-		const pending = pendingChatRequest?.id === id ? pendingChatRequest.promise : null;
-		pendingChatRequest = null;
+		const pending = $pendingChatRequest?.id === id ? $pendingChatRequest.promise : null;
+		if (pending) pendingChatRequest.set(null);
 		const loadedChat =
 			fresh ??
 			cached ??

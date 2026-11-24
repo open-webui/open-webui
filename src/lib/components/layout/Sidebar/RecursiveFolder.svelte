@@ -18,10 +18,12 @@
 	const { saveAs } = fileSaver;
 
 	import { goto } from '$app/navigation';
-	import { page } from '$app/stores';
+	import { navigating, page } from '$app/stores';
 	import { toast } from 'svelte-sonner';
 
 	import {
+		activeChatTabId,
+		openingChatId,
 		chatId,
 		chatTabRequest,
 		config,
@@ -628,6 +630,10 @@
 		if (open) void setFolderItems(false, false);
 	}
 
+	$: current = $navigating?.to
+		? $navigating.to.params?.folderId === folderId
+		: $selectedFolder?.id === folderId && !$activeChatTabId && !$openingChatId;
+
 	const openFolderHandler = async () => {
 		await goto(`/folders/${folderId}`);
 		if ($mobile) showSidebar.set(false);
@@ -793,7 +799,11 @@
 			<div
 				bind:this={rowElement}
 				id="folder-{folderId}-button"
-				class="relative w-full py-1 px-1.5 rounded-xl flex items-center gap-1.5 hover:bg-base-100 dark:hover:bg-base-900 transition"
+				class="relative w-full py-1 px-1.5 rounded-xl flex items-center gap-1.5 transition {current
+					? ($settings?.highContrastMode ?? false)
+						? 'bg-base-1000/[0.035] dark:bg-base-0/[0.06]'
+						: 'bg-base-1000/[0.035] dark:bg-base-0/[0.045]'
+					: 'hover:bg-base-100 dark:hover:bg-base-900'}"
 				on:click|stopPropagation
 			>
 				<button
