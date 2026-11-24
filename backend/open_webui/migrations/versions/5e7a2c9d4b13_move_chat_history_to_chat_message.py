@@ -145,6 +145,24 @@ def _without_nul(value: Any) -> Any:
     return value
 
 
+def _drop_saved_list_entries(chat_id: str, messages: dict, existing: dict) -> None:
+    """Old lists give an entry no id of its own although its row exists; its children move to that row."""
+    unclaimed = [row for row in existing.values() if row.id.removeprefix(f'{chat_id}-') not in messages]
+    for message_id, message in list(messages.items()):
+        if 'id' in message or f'{chat_id}-{message_id}' in existing:
+            continue
+        saved = next(
+            (row for row in unclaimed if row.role == message.get('role') and row.content == message.get('content')),
+            None,
+        )
+        if saved:
+            unclaimed.remove(saved)
+            del messages[message_id]
+            for child in messages.values():
+                if child.get('parentId') == message_id:
+                    child['parentId'] = saved.id.removeprefix(f'{chat_id}-')
+
+
 def _move_chat_history(
     conn: sa.Connection, chat_id: str, owner_id: str, chat: dict, current_message_id: str | None
 ) -> None:
@@ -171,22 +189,13 @@ def _move_chat_history(
         deleted_ids = existing.keys() - {f'{chat_id}-{message_id}' for message_id in history['messages']}
         if deleted_ids:
             conn.execute(sa.delete(chat_message_table).where(columns.id.in_(deleted_ids)))
+    else:
+        _drop_saved_list_entries(chat_id, messages, existing)
 
     now = int(time.time())
     updates, inserts = [], []
     for message_id, message in messages.items():
         row_id = f'{chat_id}-{message_id}'
-        # An old list entry without an id of its own is already saved when a row has its role and content.
-        if (
-            row_id not in existing
-            and not isinstance(history.get('messages'), dict)
-            and 'id' not in message
-            and any(
-                stored.role == message.get('role') and stored.content == message.get('content')
-                for stored in existing.values()
-            )
-        ):
-            continue
         created_at = _recorded_timestamp(message.get('timestamp'))
         author = message.get('user') if isinstance(message.get('user'), dict) else {}
         author_id = message.get('user_id') or author.get('id')
