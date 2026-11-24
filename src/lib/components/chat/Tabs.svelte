@@ -1882,6 +1882,8 @@
 
 	const handleMediaQuery = (event: MediaQueryList | MediaQueryListEvent) => {
 		if (panelTarget && isLargeScreen !== event.matches) releasePanel(panelTarget);
+		if (isLargeScreen && !event.matches && tabs.tabs.every((tab) => tab.id === mainChatTabId))
+			showTabs.set(false);
 		isLargeScreen = event.matches;
 	};
 
