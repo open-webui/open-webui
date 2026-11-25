@@ -91,7 +91,7 @@
 						});
 						await framePending;
 						if (version !== generation) return;
-						send({ type: 'frameAck', window: 3 });
+						send({ type: 'frameAck', window: 3, h264: native.supportsH264() });
 						retryDelay = 250;
 						status = '';
 					} catch (reason) {

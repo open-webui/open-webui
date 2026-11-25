@@ -235,7 +235,10 @@
 </script>
 
 {#if channel}
-	<div bind:this={threadRoot} class="flex flex-col w-full h-full bg-base-0 dark:bg-base-900">
+	<div
+		bind:this={threadRoot}
+		class="flex flex-col w-full h-full rounded-[inherit] bg-base-0 dark:bg-base-900"
+	>
 		<div class="sticky top-0 flex min-h-10 items-center justify-between px-4 py-1.5">
 			<div class=" font-medium text-sm">{$i18n.t('Thread')}</div>
 

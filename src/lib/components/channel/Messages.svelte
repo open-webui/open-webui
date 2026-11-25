@@ -15,6 +15,7 @@
 
 	import Message from './Messages/Message.svelte';
 	import AppChannelReply from './AppChannelReply.svelte';
+	import DateSeparator from '../common/DateSeparator.svelte';
 	import Loader from '../common/Loader.svelte';
 	import Spinner from '../common/Spinner.svelte';
 	import Grid from '$lib/components/icons/Grid.svelte';
@@ -26,6 +27,7 @@
 		updateMessage
 	} from '$lib/apis/channels';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
+	import { needsDateSeparator } from '$lib/utils';
 
 	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
@@ -155,6 +157,16 @@
 		{/if}
 
 		{#each messageList as message, messageIdx (id ? `${id}-${message.client_id ?? message.id}` : (message.client_id ?? message.id))}
+			{@const dateSeparator =
+				messageIdx === 0
+					? top
+					: needsDateSeparator(
+							message.created_at / 1000000,
+							messageList[messageIdx - 1].created_at / 1000000
+						)}
+			{#if dateSeparator}
+				<DateSeparator timestamp={message.created_at / 1000000} />
+			{/if}
 			<Message
 				on:reply={(event) =>
 					receiveAppChannelReply({ ...event.detail, parent_id: thread ? id : null })}
@@ -166,6 +178,7 @@
 				disabled={!channel?.write_access || message?.temp_id}
 				pending={!!message?.temp_id}
 				showUserProfile={messageIdx === 0 ||
+					dateSeparator ||
 					Object.values(appReplies).some(
 						(event) => event.message_id === messageList.at(messageIdx - 1)?.id
 					) ||

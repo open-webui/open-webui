@@ -6,8 +6,9 @@
 	const i18n = getContext('i18n');
 
 	import { settings } from '$lib/stores';
-	import { copyToClipboard, isInternalMessage } from '$lib/utils';
+	import { copyToClipboard, isInternalMessage, needsDateSeparator } from '$lib/utils';
 
+	import DateSeparator from '$lib/components/common/DateSeparator.svelte';
 	import MultiResponseMessages from './MultiResponseMessages.svelte';
 	import ResponseMessage from './ResponseMessage.svelte';
 	import UserMessage from './UserMessage.svelte';
@@ -57,6 +58,29 @@
 		isInternalMessage(history.messages[messageId]) &&
 		history.messages[messageId].childrenIds?.length > 0;
 
+	// Compare against the parent in history, as older messages may not be rendered yet.
+	const showsDateSeparator = (history: any, messageId: string) => {
+		const message = history.messages[messageId];
+		if (!message?.timestamp || isInternalMessage(message)) return false;
+
+		const visited = new Set([messageId]);
+		let previous = history.messages[message.parentId];
+		while (previous && (!previous.timestamp || isInternalMessage(previous))) {
+			if (visited.has(previous.id)) return false;
+			visited.add(previous.id);
+			previous = history.messages[previous.parentId];
+		}
+
+		if (!previous) return true;
+		return needsDateSeparator(
+			message.timestamp * 1000,
+			previous.timestamp * 1000,
+			(previous.meta?.response_ended_at ?? previous.timestamp) * 1000
+		);
+	};
+
+	$: dateSeparator = !compactPreview && showsDateSeparator(history, messageId);
+
 	// Keep the latest turn's real height when assigning a chat ID remounts the message list, and once
 	// it is no longer the latest: virtualizing it on screen blanks it before it is drawn again.
 	let wasCurrentTurn = false;
@@ -86,6 +110,10 @@
 	class:message-virtualized={!isWebKit && !isFirefox && !wasCurrentTurn}
 >
 	{#if history.messages[messageId]}
+		{#if dateSeparator}
+			<DateSeparator timestamp={history.messages[messageId].timestamp * 1000} />
+		{/if}
+
 		{#if history.messages[messageId].role === 'user'}
 			<UserMessage
 				{user}

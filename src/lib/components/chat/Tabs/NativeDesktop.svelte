@@ -7,6 +7,7 @@
 	let pending: Record<string, unknown> | null = null;
 	let frame = 0;
 	export const draw = (packet: ArrayBuffer) => frames.draw(packet);
+	export const supportsH264 = () => frames.supportsH264();
 	const flush = () => {
 		cancelAnimationFrame(frame);
 		if (pending) send(pending);

@@ -466,41 +466,41 @@
 			: ''} w-full max-w-full min-w-0 flex flex-col"
 		id="channel-container"
 	>
-		<div class="w-full h-full flex">
-			<div class="h-full flex flex-col min-w-0 flex-1 relative">
-				<Navbar
-					{channel}
-					onPin={pinHandler}
-					onUpdate={async () => {
-						channel = await getChannelById(localStorage.token, id).catch((error) => {
-							return null;
-						});
-					}}
-				>
-					<svelte:fragment slot="subtitle">
-						{#if invitationSession}
-							<div
-								class="flex flex-wrap items-center gap-x-1.5 text-[0.6875rem] font-normal text-base-500 dark:text-base-400"
-							>
-								<span>{$i18n.t('Encrypted chat in progress')}</span>
-								<span aria-hidden="true">·</span>
-								<button
-									type="button"
-									aria-label={$i18n.t('Join encrypted chat')}
-									class="text-[0.6875rem] font-normal text-base-700 underline-offset-2 hover:underline dark:text-base-200"
-									on:click={() => {
-										if (!invitationSession || !canUseEncryption($user, $config?.features)) return;
-										enter(id, { action: 'join', session: invitationSession });
-										void goto(`/channels/${encodeURIComponent(id)}/encrypted`);
-									}}
-								>
-									{$i18n.t('Join')}
-								</button>
-							</div>
-						{/if}
-					</svelte:fragment>
-				</Navbar>
+		<Navbar
+			{channel}
+			onPin={pinHandler}
+			onUpdate={async () => {
+				channel = await getChannelById(localStorage.token, id).catch((error) => {
+					return null;
+				});
+			}}
+		>
+			<svelte:fragment slot="subtitle">
+				{#if invitationSession}
+					<div
+						class="flex flex-wrap items-center gap-x-1.5 text-[0.6875rem] font-normal text-base-500 dark:text-base-400"
+					>
+						<span>{$i18n.t('Encrypted chat in progress')}</span>
+						<span aria-hidden="true">·</span>
+						<button
+							type="button"
+							aria-label={$i18n.t('Join encrypted chat')}
+							class="text-[0.6875rem] font-normal text-base-700 underline-offset-2 hover:underline dark:text-base-200"
+							on:click={() => {
+								if (!invitationSession || !canUseEncryption($user, $config?.features)) return;
+								enter(id, { action: 'join', session: invitationSession });
+								void goto(`/channels/${encodeURIComponent(id)}/encrypted`);
+							}}
+						>
+							{$i18n.t('Join')}
+						</button>
+					</div>
+				{/if}
+			</svelte:fragment>
+		</Navbar>
 
+		<div class="w-full flex-1 min-h-0 flex">
+			<div class="h-full flex flex-col min-w-0 flex-1 relative">
 				{#if channel && messages !== null}
 					<div class="flex-1 overflow-y-auto">
 						<div
@@ -598,9 +598,12 @@
 					minWidth={320}
 					maxWidth={640}
 					minSiblingWidth={360}
-					className="h-full"
+					subtleDivider
+					className="h-full px-2 pt-1 pb-2"
 				>
-					<div class="h-full w-full border-l border-base-100/60 dark:border-base-800/40">
+					<div
+						class="h-full w-full rounded-3xl border border-base-200/60 dark:border-base-800/50 shadow-[0_6px_24px_-4px_rgba(0,0,0,0.1)]"
+					>
 						<Thread
 							{threadId}
 							{channel}
