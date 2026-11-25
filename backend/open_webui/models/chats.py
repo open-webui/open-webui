@@ -244,10 +244,6 @@ class Chat(Base):  # database table mapping for chat entity
     )
 
 
-def is_internal_chat(meta: dict | None) -> bool:
-    return bool(meta and meta.get('internal') is True)
-
-
 class ChatModel(BaseModel):
     model_config = ConfigDict(from_attributes=True)  # allows ORM model binding
     id: str
@@ -1969,7 +1965,7 @@ class ChatTable:
             chat.user_id == user.id
             or user.role == 'admin'
             and permission == 'read'
-            and (ENABLE_ADMIN_CHAT_ACCESS or is_internal_chat(chat.meta))
+            and ENABLE_ADMIN_CHAT_ACCESS
         ):
             return True
         from open_webui.models.shared_chats import SharedChats
