@@ -626,7 +626,8 @@
 		};
 	};
 
-	$: statusContextUsage = contextUsage ?? getLocalContextUsage(history, $settings?.system ?? '');
+	const statusContextUsage = writable<any>(null);
+	$: statusContextUsage.set(contextUsage ?? getLocalContextUsage(history, $settings?.system ?? ''));
 	const getCommand = () => {
 		const chatInput = document.getElementById(inputId);
 		let word = '';
@@ -1777,7 +1778,7 @@
 					hasChatContent: hasChatContent,
 					canCreateSkill: () => canCreateSkill,
 					temporaryEnabled: () => $temporary === true,
-					contextUsage: () => statusContextUsage,
+					contextUsage: statusContextUsage,
 					onCompact: compactHandler,
 					onStatus: statusHandler,
 					onComments: openComments,
@@ -2225,7 +2226,7 @@
 
 								<div class="px-3 pb-2">
 									<StatusDetails
-										contextUsage={statusContextUsage}
+										contextUsage={$statusContextUsage}
 										queuedCount={messageQueue.length}
 										taskCount={chatTasks.length}
 										{chatId}
