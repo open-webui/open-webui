@@ -2981,7 +2981,18 @@ class ChatTable:
 
         try:
             async with get_async_db_context(db) as session:
-                chat_ids_stmt = select(Chat.id).filter_by(user_id=user_id, folder_id=folder_id)
+                folder_chat_ids_stmt = select(Chat.id).filter_by(user_id=user_id, folder_id=folder_id)
+                # Internal child chats sit outside the folder but go with their parent.
+                chat_ids_stmt = select(Chat.id).where(
+                    Chat.user_id == user_id,
+                    or_(
+                        Chat.folder_id == folder_id,
+                        and_(
+                            Chat.meta['internal'].as_boolean().is_(True),
+                            Chat.meta['parent_chat_id'].as_string().in_(folder_chat_ids_stmt),
+                        ),
+                    ),
+                )
                 await session.execute(
                     update(AutomationRun).filter(AutomationRun.chat_id.in_(chat_ids_stmt)).values(chat_id=None)
                 )
@@ -2994,12 +3005,8 @@ class ChatTable:
                         'chat', select(Chat.id).filter_by(user_id=user_id, folder_id=folder_id), db=session
                     )
                 )
-                await session.execute(
-                    delete(ChatViewState).where(
-                        ChatViewState.chat_id.in_(select(Chat.id).filter_by(user_id=user_id, folder_id=folder_id))
-                    )
-                )
-                await session.execute(delete(Chat).filter_by(user_id=user_id, folder_id=folder_id))
+                await session.execute(delete(ChatViewState).where(ChatViewState.chat_id.in_(chat_ids_stmt)))
+                await session.execute(delete(Chat).where(Chat.id.in_(chat_ids_stmt)))
                 await session.commit()
                 await emit_changes(recipients)
 
