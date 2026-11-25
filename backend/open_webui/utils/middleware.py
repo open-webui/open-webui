@@ -5915,6 +5915,7 @@ async def streaming_chat_response_handler(response, ctx):
 
                     # Resolve dispatch before approvals and special handling such as ask_user.
                     response_tool_calls = []
+                    error_outputs = []
                     output_by_call_id = {
                         item.get('call_id'): item for item in output if item.get('type') == 'function_call'
                     }
@@ -5963,7 +5964,7 @@ async def streaming_chat_response_handler(response, ctx):
                         if 'provider_batch' in tool_call:
                             item['provider_batch'] = tool_call['provider_batch']
                         if error:
-                            output.append(
+                            error_outputs.append(
                                 {
                                     'type': 'function_call_output',
                                     'id': output_id('fco'),
@@ -5974,6 +5975,8 @@ async def streaming_chat_response_handler(response, ctx):
                             )
                         else:
                             response_tool_calls.append(tool_call)
+                    # Saved results must follow all calls of the round, or earlier calls load as unknown.
+                    output.extend(error_outputs)
 
                     ask_user_staged, ask_user_error = stage_ask_user_tool_calls(response_tool_calls, output, output_id)
                     if ask_user_error:
