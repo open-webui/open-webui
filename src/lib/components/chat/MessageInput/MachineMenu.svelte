@@ -51,6 +51,7 @@
 	};
 	export let disabled = false;
 	export let chatId: string | null = null;
+	export let onSelect = (id: string | null) => selectMachine(selectedMachineId, id, chatId);
 	export let machineContext: MachineContext | null = null;
 	/** Also offers the working directory of the selected machine. */
 	export let showDirectory = true;
@@ -127,7 +128,7 @@
 
 	const toggleMachine = (id: string) => {
 		closeMenu();
-		selectMachine(selectedMachineId, $selectedMachineId === id ? null : id, chatId);
+		onSelect($selectedMachineId === id ? null : id);
 	};
 
 	$: selectedSystemMachine = systemMachines.find(
@@ -428,7 +429,7 @@
 		bind:show={showMachines}
 		machineId={managedMachineId}
 		connections={writable}
-		onCreate={async (id) => selectMachine(selectedMachineId, id, chatId)}
+		onCreate={async (id) => onSelect(id)}
 	/>
 {/if}
 

@@ -32,6 +32,7 @@
 	const i18n = getContext<Writable<I18n>>('i18n');
 
 	export let show = false;
+	/** Returns true once saved; otherwise the form stays open. */
 	export let onSubmit: Function = (e) => {};
 
 	export let folderId = null;
@@ -126,7 +127,7 @@
 			return;
 		}
 
-		await onSubmit({
+		const saved = await onSubmit({
 			name,
 			meta,
 			// Sharing saves separately; do not overwrite its mode with the editor's snapshot.
@@ -140,7 +141,7 @@
 			},
 			parent_id: edit ? undefined : parentId
 		});
-		show = false;
+		if (saved) show = false;
 		loading = false;
 	};
 
@@ -373,7 +374,11 @@
 									)}
 								/>
 								<div class="flex min-w-0">
-									<MachineMenu selectedMachineId={folderMachineSelection} showDirectory={false}>
+									<MachineMenu
+										selectedMachineId={folderMachineSelection}
+										onSelect={folderMachineSelection.set}
+										showDirectory={false}
+									>
 										{#snippet trigger(selected: string | null, label: string)}
 											<button
 												type="button"

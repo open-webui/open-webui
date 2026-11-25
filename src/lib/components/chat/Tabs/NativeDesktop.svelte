@@ -77,8 +77,15 @@
 		const mouse = position(event);
 		if (!mouse) return;
 		flush();
+		const canvas = surface.querySelector('canvas')!;
+		const box = canvas.getBoundingClientRect();
+		// Some browsers report mouse wheels in lines or pages.
+		const unit = [1, 16, box.height][event.deltaMode] * (canvas.width / box.width);
 		send({
 			...mouse,
+			scrollX: event.deltaX * unit,
+			scrollY: event.deltaY * unit,
+			// Older servers scroll by notches instead.
 			deltaX: Math.sign(event.deltaX) * Math.ceil(Math.abs(event.deltaX) / 100),
 			deltaY: Math.sign(event.deltaY) * Math.ceil(Math.abs(event.deltaY) / 100)
 		});

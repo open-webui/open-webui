@@ -90,6 +90,7 @@
 			const updatedFolder = { ...targetFolder, ..._folder };
 			if ($selectedFolder?.id === targetFolder.id) selectedFolder.set(updatedFolder);
 			onUpdate(updatedFolder);
+			return true;
 		}
 	};
 
@@ -158,6 +159,7 @@
 		if (res) {
 			toast.success($i18n.t('Folder created successfully'));
 			onUpdate();
+			return true;
 		}
 	};
 </script>

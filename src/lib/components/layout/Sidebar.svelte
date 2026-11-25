@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import equal from 'fast-deep-equal';
-	import { v4 as uuidv4 } from 'uuid';
 	import Sortable from 'sortablejs';
 
 	import { goto } from '$app/navigation';
@@ -25,6 +24,7 @@
 		socket,
 		onSocketRestored,
 		config,
+		machines,
 		visiblePinnedModels,
 		visibleControls,
 		selectedFolder,
@@ -100,6 +100,8 @@
 	import Spinner from '../common/Spinner.svelte';
 	import Loader from '../common/Loader.svelte';
 	import Folder from '../common/Folder.svelte';
+	import NewFolderAlt from '../icons/NewFolderAlt.svelte';
+	import FolderOpen from '../icons/FolderOpen.svelte';
 	import SidebarSection from './Sidebar/Section.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
 	import Folders from './Sidebar/Folders.svelte';
@@ -109,6 +111,7 @@
 	import ChannelItem from './Sidebar/ChannelItem.svelte';
 	import SearchModal from './SearchModal.svelte';
 	import FolderModal from './Sidebar/Folders/FolderModal.svelte';
+	import OpenDirectoryModal from './Sidebar/Folders/OpenDirectoryModal.svelte';
 	import PinnedModelList from './Sidebar/PinnedModelList.svelte';
 	import PinnedNoteList from './Sidebar/PinnedNoteList.svelte';
 	import CalendarIcon from './Sidebar/icons/Calendar.svelte';
@@ -130,6 +133,7 @@
 	import XMarkIcon from '../icons/XMark.svelte';
 	import ConfirmDialog from '../common/ConfirmDialog.svelte';
 	import MoreHorizontalIcon from './Sidebar/icons/MoreHorizontal.svelte';
+	import PlusIcon from './Sidebar/icons/Plus.svelte';
 	import MobileSwipePanel from '../common/MobileSwipePanel.svelte';
 
 	const DEFAULT_PINNED_ITEMS = ['notes', 'workspace'];
@@ -260,6 +264,14 @@
 	$: allChatsLoaded = $chats !== null && allLoaded;
 
 	let showCreateFolderModal = false;
+
+	let showOpenDirectory = false;
+	// A machine per chat or model has no one directory to open.
+	$: directoryMachines = $config?.features?.enable_tool_servers
+		? ($machines ?? []).filter(
+				(machine) => machine.id && machine.scope !== 'chat' && machine.scope !== 'model'
+			)
+		: [];
 
 	let showPinnedModels = true;
 	let showPinnedNotes = false;
@@ -478,7 +490,7 @@
 		folders = folderMap;
 	};
 
-	const createFolder = async ({ name, data, meta, parent_id }) => {
+	const createFolder = async ({ name, data, meta, parent_id }: any) => {
 		name = name?.trim();
 		if (!name) {
 			toast.error($i18n.t('Folder name cannot be empty.'));
@@ -499,19 +511,6 @@
 			name = `${name} ${i}`;
 		}
 
-		// Add a dummy folder to the list to show the user that the folder is being created
-		const tempId = uuidv4();
-		folders = {
-			...folders,
-			[tempId]: {
-				id: tempId,
-				name: name,
-				parent_id: parent_id,
-				created_at: Date.now(),
-				updated_at: Date.now()
-			}
-		};
-
 		const res = await createNewFolder(localStorage.token, {
 			name,
 			data,
@@ -527,6 +526,20 @@
 			await initFolders();
 			showFolders = true;
 		}
+		return res;
+	};
+
+	// A folder on a machine's directory, named after it.
+	const openDirectory = async (machineId: string, directory: string) => {
+		const folder = await createFolder({
+			name: directory.split('/').filter(Boolean).at(-1) ?? directory,
+			data: { machine_id: machineId, working_directory: directory },
+			parent_id: null
+		});
+		if (!folder) return false;
+		await goto(`/folders/${folder.id}`);
+		closeMobileSidebar();
+		return true;
 	};
 
 	// Only fetch channels if the feature is enabled and user has permission
@@ -1129,13 +1142,15 @@
 />
 
 {#if $config?.features?.enable_folders && ($user?.role === 'admin' || ($user?.permissions?.features?.folders ?? true))}
-	<FolderModal
-		bind:show={showCreateFolderModal}
-		onSubmit={async (folder) => {
-			await createFolder(folder);
-			showCreateFolderModal = false;
-		}}
-	/>
+	<FolderModal bind:show={showCreateFolderModal} onSubmit={createFolder} />
+
+	{#if showOpenDirectory}
+		<OpenDirectoryModal
+			bind:show={showOpenDirectory}
+			machines={directoryMachines}
+			onSelect={openDirectory}
+		/>
+	{/if}
 {/if}
 
 <svelte:document on:click|capture={sidebarLinkClickHandler} />
@@ -1645,9 +1660,11 @@
 							id="sidebar-folders"
 							bind:open={showFolders}
 							name={$i18n.t('Folders')}
-							onAdd={() => {
-								showCreateFolderModal = true;
-							}}
+							onAdd={directoryMachines.length
+								? null
+								: () => {
+										showCreateFolderModal = true;
+									}}
 							onAddLabel={$i18n.t('New Folder')}
 							on:drop={async (e) => {
 								const { type, id, item } = e.detail;
@@ -1671,6 +1688,34 @@
 								}
 							}}
 						>
+							<svelte:fragment slot="action">
+								{#if directoryMachines.length}
+									<Dropdown align="start" closeOnSelect>
+										<Tooltip content={$i18n.t('New Folder')}>
+											<button
+												type="button"
+												class="flex items-center justify-center w-7 h-7 rounded-lg text-base-300 hover:text-base-500 dark:text-base-600 dark:hover:text-base-400 transition-colors duration-100"
+												aria-label={$i18n.t('New Folder')}
+											>
+												<PlusIcon className="size-3.5" />
+											</button>
+										</Tooltip>
+
+										<div slot="content">
+											<DropdownMenu className="min-w-[10.625rem]">
+												<button type="button" on:click={() => (showCreateFolderModal = true)}>
+													<NewFolderAlt />
+													{$i18n.t('New Folder')}
+												</button>
+												<button type="button" on:click={() => (showOpenDirectory = true)}>
+													<FolderOpen />
+													{$i18n.t('Open directory')}
+												</button>
+											</DropdownMenu>
+										</div>
+									</Dropdown>
+								{/if}
+							</svelte:fragment>
 							<Folders
 								bind:folderRegistry
 								{folders}
