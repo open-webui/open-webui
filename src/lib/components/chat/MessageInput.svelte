@@ -219,6 +219,8 @@
 		((taskIds && taskIds.length > 0) ||
 			(history.currentId && history.messages[history.currentId]?.done != true) ||
 			generating);
+	const isActiveStore = writable(false);
+	$: isActiveStore.set(isActive);
 	$: canCompact = !!history?.currentId;
 	$: canSide =
 		($_user?.role === 'admin' ||
@@ -1759,7 +1761,7 @@
 					selectedMachineId,
 					machineSkills,
 					canCompact: () => !!history?.currentId && contextCompactionEnabled,
-					compactDisabled: () => isActive,
+					compactDisabled: isActiveStore,
 					canStatus: () => !!history?.currentId,
 					canComments: () => canComments,
 					canSide: () => canSide,
@@ -1767,7 +1769,7 @@
 						!!history?.currentId &&
 						!$temporary &&
 						($_user?.role === 'admin' || ($_user?.permissions?.chat?.import ?? true)),
-					forkDisabled: () => isActive,
+					forkDisabled: isActiveStore,
 					canTemporary: () => canToggleTemporary,
 					hasChatContent: hasChatContent,
 					canCreateSkill: () => canCreateSkill,

@@ -5,7 +5,7 @@
 	import Skills from './Commands/Skills.svelte';
 	import Emojis from './Commands/Emojis.svelte';
 	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
-	import type { Readable, Writable } from 'svelte/store';
+	import { readable, type Readable, type Writable } from 'svelte/store';
 
 	export let char = '';
 	export let query = '';
@@ -35,12 +35,12 @@
 	export let onCreateSkill: () => void = () => {};
 	export let insertTextHandler: (text: string) => void = () => {};
 	export let canCompact: boolean | (() => boolean) = false;
-	export let compactDisabled: boolean | (() => boolean) = false;
+	export let compactDisabled: Readable<boolean> = readable(false);
 	export let canStatus: boolean | (() => boolean) = false;
 	export let canComments: boolean | (() => boolean) = false;
 	export let canSide: boolean | (() => boolean) = false;
 	export let canFork: boolean | (() => boolean) = false;
-	export let forkDisabled: boolean | (() => boolean) = false;
+	export let forkDisabled: Readable<boolean> = readable(false);
 	export let canTemporary: boolean | (() => boolean) = false;
 	export let temporaryEnabled: boolean | (() => boolean) = false;
 	export let hasChatContent = false;
@@ -49,13 +49,10 @@
 	export let fileUploadEnabled: boolean | (() => boolean) = true;
 
 	$: compactAvailable = typeof canCompact === 'function' ? canCompact() : canCompact;
-	$: isCompactDisabled =
-		typeof compactDisabled === 'function' ? compactDisabled() : compactDisabled;
 	$: statusAvailable = typeof canStatus === 'function' ? canStatus() : canStatus;
 	$: commentsAvailable = typeof canComments === 'function' ? canComments() : canComments;
 	$: sideAvailable = typeof canSide === 'function' ? canSide() : canSide;
 	$: forkAvailable = typeof canFork === 'function' ? canFork() : canFork;
-	$: isForkDisabled = typeof forkDisabled === 'function' ? forkDisabled() : forkDisabled;
 	$: temporaryAvailable = typeof canTemporary === 'function' ? canTemporary() : canTemporary;
 	$: isTemporaryEnabled =
 		typeof temporaryEnabled === 'function' ? temporaryEnabled() : temporaryEnabled;
@@ -125,13 +122,13 @@
 					canCompare={onCompare !== null}
 					bind:filteredItems
 					canCompact={compactAvailable}
-					compactDisabled={isCompactDisabled}
+					compactDisabled={$compactDisabled}
 					canStatus={statusAvailable}
 					canComments={commentsAvailable}
 					canRecord={onRecord !== null}
 					canSide={sideAvailable}
 					canFork={forkAvailable}
-					forkDisabled={isForkDisabled}
+					forkDisabled={$forkDisabled}
 					canTemporary={temporaryAvailable}
 					temporaryEnabled={isTemporaryEnabled}
 					{contextPercent}
