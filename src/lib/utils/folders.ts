@@ -20,6 +20,8 @@ export type CustomStatus = {
 	icon?: string;
 };
 export type StatusDef = CustomStatus & { custom: boolean };
+/** An entry of meta.statuses: a folder status, or `{ id: NO_STATUS }` marking where "No status" sits. */
+export type StatusEntry = CustomStatus | { id: typeof NO_STATUS };
 
 // Ready-made statuses offered as suggestions when adding statuses; folders start with none.
 export const suggestedStatuses: CustomStatus[] = [

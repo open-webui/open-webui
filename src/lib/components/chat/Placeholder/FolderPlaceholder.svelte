@@ -29,7 +29,7 @@
 		type FolderUser,
 		type FolderStatus,
 		type FolderPriority,
-		type CustomStatus,
+		type StatusEntry,
 		type StatusDef,
 		type CanEditChat,
 		type FolderActivity,
@@ -325,21 +325,9 @@
 	}
 
 	// A reorder changes no chat, so it skips the reload.
-	// Saved in order; a `{ id: NO_STATUS }` entry places "No status" (see groupedStatusDefs).
-	type StatusEntry = CustomStatus | { id: typeof NO_STATUS };
 	async function saveStatuses(statuses: StatusEntry[], reload = true) {
 		if (!folder?.id) return;
 		const folderId = folder.id;
-		// The modal edits only the folder's own statuses: keep "No status" after the one it followed.
-		if (!statuses.some((item) => item.id === NO_STATUS)) {
-			const order = groupedStatusDefs(folder.meta, (key) => key).map((item) => item.id);
-			const before = order.slice(0, order.indexOf(NO_STATUS));
-			if (before.length < order.length - 1) {
-				const anchor = before.reverse().find((id) => statuses.some((item) => item.id === id));
-				const at = anchor ? statuses.findIndex((item) => item.id === anchor) + 1 : 0;
-				statuses = [...statuses.slice(0, at), { id: NO_STATUS }, ...statuses.slice(at)];
-			}
-		}
 		const updated = await updateFolderById(localStorage.token, folderId, {
 			meta: { statuses }
 		});
@@ -1898,4 +1886,8 @@
 	</div>
 </section>
 
-<FolderStatusesModal bind:show={showStatuses} statuses={defs} onSave={saveStatuses} />
+<FolderStatusesModal
+	bind:show={showStatuses}
+	statuses={groupedStatusDefs(folder?.meta, (key) => $i18n.t(key))}
+	onSave={saveStatuses}
+/>
