@@ -1124,6 +1124,8 @@ async def delete_folder_by_id(
                         await Chats.delete_chats_by_user_id_and_folder_id(folder_owner_id, folder_id, db=db)
                         for note in await Notes.get_notes_by_folder_id_and_user_id(folder_id, folder_owner_id, db=db):
                             await Notes.delete_note_by_id(note.id, db=db)
+                            for chat_id in await Chats.get_internal_chat_ids_by_note_id(note.id, db=db):
+                                await Chats.delete_chat_by_id(chat_id, db=db)
                             await close_note(note)
 
                     await Chats.move_chats_by_folder_id(folder_id, None, db=db)

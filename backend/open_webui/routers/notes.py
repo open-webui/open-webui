@@ -831,6 +831,8 @@ async def delete_note_by_id(
 
     try:
         await Notes.delete_note_by_id(id, db=db)
+        for chat_id in await Chats.get_internal_chat_ids_by_note_id(id, db=db):
+            await Chats.delete_chat_by_id(chat_id, db=db)
         await close_note(note)
 
         await publish_event(
