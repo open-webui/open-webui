@@ -15,7 +15,7 @@ from open_webui.models.chats import ChatForm, Chats
 from open_webui.models.config import Config
 from open_webui.models.auths import Auths
 from open_webui.models.users import UserModel, Users
-from open_webui.tasks import create_task, has_active_tasks
+from open_webui.tasks import create_task, has_active_tasks, list_task_ids_by_item_id
 from open_webui.utils.auth import VERIFIED_USER_ROLES, create_token
 from open_webui.utils.chat_id import is_saved_chat_id
 from open_webui.utils.json_codec import JSONCodec
@@ -171,8 +171,12 @@ async def has_upcoming_reply(request: Request, user_id: str, chat_id: str, messa
     """Whether this reply is followed by another without the user writing: a sub-agent has yet to report, or a
     message is waiting."""
     # A sub-agent's task lasts until its report is added, so checking the tasks first can't miss one in between.
+    # Replies after its report run as other tasks.
     for child in await Chats.get_children_by_parent_id(chat_id, user_id):
-        if (child.meta or {}).get('type') == 'subagent' and await has_active_tasks(request.app.state.redis, child.id):
+        meta = child.meta or {}
+        if meta.get('type') == 'subagent' and meta.get('delegation_id') in await list_task_ids_by_item_id(
+            request.app.state.redis, child.id
+        ):
             return True
     return bool(await ChatMessages.get_pending_message_metas(chat_id, message_id))
 
@@ -697,7 +701,8 @@ async def delegate(
         chat_context = copy.deepcopy(run.get('chat_context') or {})
         system_messages = add_or_update_system_message(
             f'{str(config.get("subagents.system_prompt") or "").strip() or DEFAULT_SUBAGENT_SYSTEM_PROMPT}\n\n'
-            f'The lead agent is chat {parent_chat_id}.',
+            f'The lead agent is chat {parent_chat_id}. The lead gets your final reply, so put all findings there. '
+            'Message it only if you are blocked.',
             [*chat_context.get('messages', [])],
             append=True,
         )
@@ -906,8 +911,8 @@ async def delegate(
             f'[ASYNC SUBAGENT COMPLETE - {delegation_id}]',
             (
                 'A background subagent you dispatched earlier has finished. '
-                'The original task source is included so you can decide whether '
-                'to use the result or continue without it.'
+                'If other sub-agents are still running, reply with one line. '
+                'Otherwise answer in full using every report.'
             ),
             '',
             f'Title: {title}',
@@ -952,6 +957,7 @@ async def delegate(
             request.app.state.redis,
             run_background() if background else run_reserved(),
             id=chat_id,
+            task_id=delegation_id,
         )
     except Exception as exc:
         if background:
@@ -969,7 +975,8 @@ async def delegate(
                 'subagent_chat_id': chat_id,
                 'mode': 'background',
                 'task': task,
-                'note': 'Its report starts your next reply. Finish any other work, then end this one. '
+                'note': 'Its report starts your next reply. Do only work you did not delegate, then end this reply '
+                'with one line on what is running. Answer in full once every report is in. '
                 'Do not check on it, ask for it or set a timer.',
             },
             ensure_ascii=False,

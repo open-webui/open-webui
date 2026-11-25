@@ -1922,8 +1922,8 @@ async def delegate_task(
     __message_id__: str = None,
 ) -> str:
     """
-    Delegate focused work to a parallel sub-agent using the current tools. It always reports back, so do not repeat its
-    work.
+    Delegate focused work to a parallel sub-agent using the current tools. Do not redo that work yourself; answer once
+    its report is in.
 
     :param task: The specific task for the sub-agent to complete
     :param title: A short name for the task, 3 to 6 words
