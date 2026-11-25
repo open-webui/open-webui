@@ -757,6 +757,11 @@ class ChatTable:
             )
             return list(result.scalars().all())
 
+    async def get_chat_ids_by_user_id(self, user_id: str, db: AsyncSession | None = None) -> list[str]:
+        async with get_async_db_context(db) as session:
+            result = await session.execute(select(Chat.id).filter_by(user_id=user_id))
+            return list(result.scalars().all())
+
     async def get_children_by_parent_id(self, parent_chat_id: str, user_id: str) -> list:
         async with get_async_db_context() as session:
             result = await session.execute(

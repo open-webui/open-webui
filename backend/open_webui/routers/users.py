@@ -38,6 +38,7 @@ from open_webui.models.access_grants import AccessGrants
 from open_webui.models.knowledge import Knowledges
 from open_webui.models.models import Models
 from open_webui.models.tools import Tools
+from open_webui.tasks import stop_item_tasks
 from open_webui.utils.access_control import fill_missing_permissions, get_permissions, has_permission
 from open_webui.utils.auth import (
     create_api_key,
@@ -1115,6 +1116,9 @@ async def delete_user_by_id(
         )
 
     if user.id != user_id:
+        for chat_id in await Chats.get_chat_ids_by_user_id(user_id, db=db):
+            await stop_item_tasks(request.app.state.redis, chat_id)
+
         result = await Auths.delete_auth_by_id(user_id, db=db)
 
         if result:
