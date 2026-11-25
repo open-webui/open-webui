@@ -5938,7 +5938,10 @@
 	const getChatInputDraft = () => ({
 		prompt,
 		files: files
-			.filter((file) => file.type !== 'image' && !(file.file instanceof File))
+			.filter(
+				(file) =>
+					file.type !== 'image' && !(file.file instanceof File) && file.status !== 'uploading'
+			)
 			.map((file) => ({
 				...file,
 				user: undefined,
