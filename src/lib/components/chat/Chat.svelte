@@ -1959,6 +1959,14 @@
 				await loadChat();
 				return;
 			}
+			// A reply this page has not loaded yet ended.
+			if (
+				type === 'chat:active' &&
+				!event.data.data?.active &&
+				!$temporaryChat &&
+				!history.messages[event.message_id]
+			)
+				await loadChat();
 			if (type === 'chat:list') {
 				return;
 			}
