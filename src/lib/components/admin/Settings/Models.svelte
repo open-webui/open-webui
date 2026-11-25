@@ -169,7 +169,7 @@
 			.filter((m) => {
 				if (viewOption === 'available') return availableModelIds.has(m.id) || isPresetModel(m);
 				if (viewOption === 'unavailable') return !availableModelIds.has(m.id) && !isPresetModel(m);
-				if (viewOption === 'base') return !isPresetModel(m);
+				if (viewOption === 'base') return availableModelIds.has(m.id) && !isPresetModel(m);
 				if (viewOption === 'workspace') return isPresetModel(m);
 				if (viewOption === 'router') return m?.owned_by === 'router';
 				if (viewOption === 'enabled') return m?.is_active ?? true;
