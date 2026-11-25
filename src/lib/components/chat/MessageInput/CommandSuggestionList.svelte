@@ -45,7 +45,7 @@
 	export let temporaryEnabled: boolean | (() => boolean) = false;
 	export let hasChatContent = false;
 	export let canCreateSkill: boolean | (() => boolean) = false;
-	export let contextUsage = null;
+	export let contextUsage: Readable<any> = readable(null);
 	export let fileUploadEnabled: boolean | (() => boolean) = true;
 
 	$: compactAvailable = typeof canCompact === 'function' ? canCompact() : canCompact;
@@ -58,7 +58,7 @@
 		typeof temporaryEnabled === 'function' ? temporaryEnabled() : temporaryEnabled;
 	$: createSkillAvailable =
 		typeof canCreateSkill === 'function' ? canCreateSkill() : canCreateSkill;
-	$: resolvedContextUsage = typeof contextUsage === 'function' ? contextUsage() : contextUsage;
+	$: resolvedContextUsage = $contextUsage;
 	$: contextHasThreshold = Number(resolvedContextUsage?.threshold) > 0;
 	$: contextPercent = contextHasThreshold
 		? Math.max(0, Math.round(resolvedContextUsage?.percent ?? 0))

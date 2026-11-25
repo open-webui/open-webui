@@ -627,6 +627,8 @@
 	};
 
 	$: statusContextUsage = contextUsage ?? getLocalContextUsage(history, $settings?.system ?? '');
+	const statusContextUsageStore = writable<any>(null);
+	$: statusContextUsageStore.set(statusContextUsage);
 	const getCommand = () => {
 		const chatInput = document.getElementById(inputId);
 		let word = '';
@@ -1777,7 +1779,7 @@
 					hasChatContent: hasChatContent,
 					canCreateSkill: () => canCreateSkill,
 					temporaryEnabled: () => $temporary === true,
-					contextUsage: () => statusContextUsage,
+					contextUsage: statusContextUsageStore,
 					onCompact: compactHandler,
 					onStatus: statusHandler,
 					onComments: openComments,
