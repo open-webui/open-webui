@@ -415,6 +415,7 @@
 		chatStreamingStates = {};
 		chatTitleEditors = {};
 		chatTabActions = {};
+		seenTabIds = new Set();
 		const entry = chatViewEntry($user.id, id, $temporaryChat);
 		const loading: ViewState = { status: 'loading', entry, chatId: id };
 		setView(loading);
