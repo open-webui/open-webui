@@ -90,16 +90,16 @@
 			disabled={child.type === 'timer' || !appLayout?.openPageTab}
 			on:click={() => open(child)}
 		>
-			<span dir="auto" class="truncate">{child.title}</span>
 			{#if child.status === 'waiting'}
 				<span
-					class="size-1.5 shrink-0 rounded-full bg-yellow-500"
+					class="mx-0.75 size-1.5 shrink-0 rounded-full bg-yellow-500"
 					role="img"
 					aria-label={$i18n.t('Waiting for your answer')}
 				></span>
 			{:else if child.status === 'running'}
 				<Spinner className="size-3 shrink-0" />
 			{/if}
+			<span dir="auto" class="truncate">{child.title}</span>
 		</button>
 		<span class="shrink-0 tabular-nums text-base-400 dark:text-base-600">
 			{child.due_at

@@ -1805,6 +1805,7 @@
 					return;
 				}
 				chat = fresh;
+				serverContextUsage = fresh.context_usage ?? null;
 				mergeChatMessages(fresh.chat.history, baseline);
 			} catch (error) {
 				if ($chatId === id && joinedChatId === id && !signal.aborted) {
@@ -6124,7 +6125,9 @@
 		{contextUsage}
 		queuedCount={messageQueue.length}
 		taskCount={chatTasks.length}
-		onCompact={contextCompactionEnabled ? handleManualCompact : undefined}
+		onCompact={contextCompactionEnabled && !streaming && !taskIds?.length
+			? handleManualCompact
+			: undefined}
 	/>
 {/snippet}
 
