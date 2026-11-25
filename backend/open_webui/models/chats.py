@@ -2914,8 +2914,8 @@ class ChatTable:
         try:
             async with get_async_db_context(db) as session:
                 await session.execute(update(AutomationRun).filter_by(chat_id=id).values(chat_id=None))
-                await session.execute(delete(ChatMessage).filter_by(chat_id=id))
                 recipients = await delete_resource_comments('chat', select(Chat.id).filter_by(id=id), db=session)
+                await session.execute(delete(ChatMessage).filter_by(chat_id=id))
                 await delete_resource_tags('chat', select(Chat.id).filter_by(id=id), session)
                 await session.execute(
                     delete(ChatViewState).where(ChatViewState.chat_id.in_(select(Chat.id).filter_by(id=id)))
@@ -2932,10 +2932,10 @@ class ChatTable:
         try:
             async with get_async_db_context(db) as session:
                 await session.execute(update(AutomationRun).filter_by(chat_id=id).values(chat_id=None))
-                await session.execute(delete(ChatMessage).filter_by(chat_id=id))
                 recipients = await delete_resource_comments(
                     'chat', select(Chat.id).filter_by(id=id, user_id=user_id), db=session
                 )
+                await session.execute(delete(ChatMessage).filter_by(chat_id=id))
                 await delete_resource_tags('chat', select(Chat.id).filter_by(id=id, user_id=user_id), session)
                 await session.execute(
                     delete(ChatViewState).where(
@@ -2961,11 +2961,11 @@ class ChatTable:
                     .filter(AutomationRun.chat_id.in_(select(Chat.id).filter_by(user_id=user_id)))
                     .values(chat_id=None)
                 )
-                await session.execute(
-                    delete(ChatMessage).filter(ChatMessage.chat_id.in_(select(Chat.id).filter_by(user_id=user_id)))
-                )
                 recipients = await delete_resource_comments(
                     'chat', select(Chat.id).filter_by(user_id=user_id), db=session
+                )
+                await session.execute(
+                    delete(ChatMessage).filter(ChatMessage.chat_id.in_(select(Chat.id).filter_by(user_id=user_id)))
                 )
                 await delete_resource_tags('chat', select(Chat.id).filter_by(user_id=user_id), session)
                 await session.execute(
@@ -2990,8 +2990,8 @@ class ChatTable:
                 await session.execute(
                     update(AutomationRun).filter(AutomationRun.chat_id.in_(chat_ids_stmt)).values(chat_id=None)
                 )
-                await session.execute(delete(ChatMessage).filter(ChatMessage.chat_id.in_(chat_ids_stmt)))
                 recipients = await delete_resource_comments('chat', chat_ids_stmt, db=session)
+                await session.execute(delete(ChatMessage).filter(ChatMessage.chat_id.in_(chat_ids_stmt)))
                 await delete_resource_tags('chat', chat_ids_stmt, session)
                 await session.execute(delete(SharedChatTable).filter(SharedChatTable.chat_id.in_(chat_ids_stmt)))
                 recipients.update(
