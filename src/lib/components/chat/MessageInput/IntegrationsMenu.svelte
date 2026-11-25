@@ -109,14 +109,17 @@
 	let imageModelQuery = '';
 	let videoModelQuery = '';
 
+	const isDeviceTool = (id: string) =>
+		id.startsWith('server:tether:') || id.startsWith('server:mcp:tether:');
+
 	$: toolIds = Object.keys(tools ?? {});
 	$: toolGroups = [
 		[$i18n.t('Workspace'), toolIds.filter((id) => !id.startsWith('server:'))],
 		[
 			$i18n.t('Tool Servers'),
-			toolIds.filter((id) => id.startsWith('server:') && !id.startsWith('server:tether:'))
+			toolIds.filter((id) => id.startsWith('server:') && !isDeviceTool(id))
 		],
-		[$i18n.t('Your devices'), toolIds.filter((id) => id.startsWith('server:tether:'))]
+		[$i18n.t('Your devices'), toolIds.filter(isDeviceTool)]
 	].filter(([, ids]) => ids.length > 0);
 	$: skillIds = Object.keys(skills ?? {});
 	$: skillGroups = [
