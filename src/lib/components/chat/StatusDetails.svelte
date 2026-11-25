@@ -81,15 +81,6 @@
 		</div>
 	{/if}
 
-	{#if taskCount}
-		<div class="flex min-h-5 items-center gap-3 text-base-600 dark:text-base-400">
-			<span class="min-w-0 flex-1 truncate">{$i18n.t('Tasks')}</span>
-			<span class="font-mono text-[0.625rem] text-base-400 dark:text-base-600">
-				{taskCount}
-			</span>
-		</div>
-	{/if}
-
 	<div class="flex min-h-5 items-center gap-3 text-base-600 dark:text-base-400">
 		<span class="min-w-0 flex-1 truncate">{$i18n.t('Chat ID')}</span>
 		{#if chatId}
@@ -104,4 +95,13 @@
 			<span class="font-mono text-[0.625rem] text-base-400 dark:text-base-600"> none </span>
 		{/if}
 	</div>
+
+	{#if taskCount}
+		<div class="flex min-h-5 items-center gap-3 text-base-600 dark:text-base-400">
+			<span class="min-w-0 flex-1 truncate">{$i18n.t('Tasks')}</span>
+			<span class="font-mono text-[0.625rem] text-base-400 dark:text-base-600">
+				{taskCount}
+			</span>
+		</div>
+	{/if}
 </div>
