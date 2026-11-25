@@ -4248,6 +4248,8 @@ async def non_streaming_chat_response_handler(response, ctx):
                         content = get_output_text(response_output)
 
                     response_output = [*(metadata.get('initial_output') or []), *response_output]
+                    from open_webui.utils.subagents import has_upcoming_reply
+
                     await event_emitter(
                         {
                             'type': 'chat:completion',
@@ -4256,6 +4258,10 @@ async def non_streaming_chat_response_handler(response, ctx):
                                 'done': True,
                                 'output': response_output,
                                 'title': title,
+                                'has_upcoming_reply': save_to_chat
+                                and await has_upcoming_reply(
+                                    request, user.id, metadata['chat_id'], metadata['message_id']
+                                ),
                             },
                         }
                     )
@@ -6601,6 +6607,12 @@ async def streaming_chat_response_handler(response, ctx):
                     current_output,
                 )
 
+                from open_webui.utils.subagents import has_upcoming_reply
+
+                # The page shows no notification until the last reply.
+                data['has_upcoming_reply'] = save_to_chat and await has_upcoming_reply(
+                    request, user.id, metadata['chat_id'], metadata['message_id']
+                )
                 await event_emitter(
                     {
                         'type': 'chat:completion',

@@ -167,6 +167,16 @@ async def get_queued_messages(chat_id: str, user_id: str, reply_id: str) -> list
     return [message for message in queued if message['meta'].get('type') == queued[0]['meta'].get('type')]
 
 
+async def has_upcoming_reply(request: Request, user_id: str, chat_id: str, message_id: str) -> bool:
+    """Whether this reply is followed by another without the user writing: a sub-agent has yet to report, or a
+    message is waiting."""
+    # A sub-agent's task lasts until its report is added, so checking the tasks first can't miss one in between.
+    for child in await Chats.get_children_by_parent_id(chat_id, user_id):
+        if (child.meta or {}).get('type') == 'subagent' and await has_active_tasks(request.app.state.redis, child.id):
+            return True
+    return bool(await ChatMessages.get_pending_message_metas(chat_id, message_id))
+
+
 async def insert_queued_turn(
     chat_id: str, user: UserModel, reply_id: str, queued: list[dict], assistant_meta: dict
 ) -> dict | None:

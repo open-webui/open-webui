@@ -558,11 +558,12 @@
 			?.checkVisibility();
 		if (!event?.internal && ((!isVisible && !$temporaryChat) || isInBackground)) {
 			if (type === 'chat:completion') {
-				const { done, content, output, title } = data;
+				const { done, content, output, title, has_upcoming_reply } = data;
 				const displayTitle = title || $i18n.t('New Chat');
 				const contentPreview = cleanText(removeAllDetails(getOutputText(output) || content || ''));
 
-				if (done) {
+				// Another reply follows, e.g. once a sub-agent reports back.
+				if (done && !has_upcoming_reply) {
 					if (
 						($settings?.notificationSound ?? true) &&
 						($settings?.notificationSoundAlways ?? false) &&
