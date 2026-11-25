@@ -529,13 +529,28 @@
 		return res;
 	};
 
-	// A folder on a machine's directory, named after it.
+	// Opens the folder on a machine's directory, or makes one named after it.
 	const openDirectory = async (machineId: string, directory: string) => {
-		const folder = await createFolder({
-			name: directory.split('/').filter(Boolean).at(-1) ?? directory,
-			data: { machine_id: machineId, working_directory: directory },
-			parent_id: null
+		const owned = await getFolders(localStorage.token).catch((error) => {
+			toast.error(`${error}`);
+			return null;
 		});
+		if (!owned) return false;
+
+		// Browsing ends a path with a slash; cloning and typing may not.
+		const trim = (path: string) => path.replace(/\/+$/, '');
+		const folder =
+			owned.find(
+				(folder: any) =>
+					folder.machine_id === machineId &&
+					folder.directory &&
+					trim(folder.directory) === trim(directory)
+			) ??
+			(await createFolder({
+				name: directory.split('/').filter(Boolean).at(-1) ?? directory,
+				data: { machine_id: machineId, working_directory: directory },
+				parent_id: null
+			}));
 		if (!folder) return false;
 		await goto(`/folders/${folder.id}`);
 		closeMobileSidebar();

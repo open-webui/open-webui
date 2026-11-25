@@ -140,5 +140,13 @@ export const sortFolders = <T extends { id: string; name?: string }>(
 	);
 };
 
+/** Whether a folder, or one inside it, is on a directory. */
+export const hasDirectory = (folders: any[], id: string): boolean =>
+	folders.some(
+		(folder) =>
+			(folder.id === id && !!folder.directory) ||
+			(folder.parent_id === id && hasDirectory(folders, folder.id))
+	);
+
 export const isChatUnread = (chat: WorkspaceChat) =>
 	(chat.last_read_at ?? 0) === 0 || chat.updated_at > (chat.last_read_at ?? 0);

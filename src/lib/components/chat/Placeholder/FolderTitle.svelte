@@ -7,7 +7,7 @@
 
 	import { toast } from 'svelte-sonner';
 
-	import { selectedFolder, user } from '$lib/stores';
+	import { folders, selectedFolder, user } from '$lib/stores';
 	import {
 		loadFolderDetails,
 		updateFolderDetails,
@@ -23,6 +23,7 @@
 	} from '$lib/apis/folders';
 	import { getChatsByFolderId } from '$lib/apis/chats';
 	import { refreshSidebar } from '$lib/stores/chatList';
+	import { hasDirectory } from '$lib/utils/folders';
 
 	import FolderModal from '$lib/components/layout/Sidebar/Folders/FolderModal.svelte';
 	import FolderShareModal from '$lib/components/layout/Sidebar/Folders/FolderShareModal.svelte';
@@ -174,6 +175,8 @@
 					showFolderModal = true;
 				}}
 				onDelete={() => {
+					// Closing a directory is not a reason to lose its chats.
+					deleteFolderContents = !hasDirectory($folders, folder!.id);
 					showDeleteConfirm = true;
 				}}
 				onExport={() => {

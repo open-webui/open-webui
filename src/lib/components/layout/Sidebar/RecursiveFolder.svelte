@@ -46,7 +46,7 @@
 	} from '$lib/stores/folderStates';
 	import { pendingChatRequest } from '$lib/stores/chatCache';
 	import { refreshFolderChatLists } from '$lib/stores/chatList';
-	import { sortFolders } from '$lib/utils/folders';
+	import { hasDirectory, sortFolders } from '$lib/utils/folders';
 	import { updateNoteFolderIdById } from '$lib/apis/notes';
 	import { createNoteHandler } from '$lib/components/notes/utils';
 	import dayjs from '$lib/dayjs';
@@ -965,6 +965,8 @@
 								showFolderModal = true;
 							}}
 							onDelete={() => {
+								// Closing a directory is not a reason to lose its chats.
+								deleteFolderContents = !hasDirectory(Object.values(folders), folderId);
 								showDeleteConfirm = true;
 							}}
 							onExport={() => {

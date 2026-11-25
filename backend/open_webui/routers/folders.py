@@ -147,7 +147,12 @@ async def get_folders(
     unread_counts = await get_folder_unread_counts(user.id, db=db)
 
     return [
-        FolderNameIdResponse(**folder.model_dump(), unread_count=unread_counts.get(folder.id, 0))
+        FolderNameIdResponse(
+            **folder.model_dump(),
+            machine_id=machine_id_of(folder.data or {}),
+            directory=(folder.data or {}).get('working_directory'),
+            unread_count=unread_counts.get(folder.id, 0),
+        )
         for folder in folder_list
     ]
 
