@@ -826,9 +826,8 @@
 		return null;
 	};
 
-	const messageHasPendingAskUser = (message) => {
-		return !!getPendingAskUserFromMessage(message);
-	};
+	const hasPendingToolCall = (message) =>
+		message.output?.some((item) => item?.type === 'function_call' && item.status === 'pending');
 
 	const answerPendingAskUser = async (messageId, callId, answers, timedOut = false) => {
 		if (!$chatId || !messageId || !callId) {
@@ -1725,12 +1724,15 @@
 	};
 	$: if (!prompt.trim()) emitTyping(false);
 
+	// Only the local copy is marked when opening a chat finishes a taskless reply.
+	const interrupted = Symbol('interrupted');
 	const mergeChatMessages = (
 		incoming: typeof history,
 		baseline: Record<string, any> | null = null
 	) => {
 		const currentId = history.currentId;
 		const next = incoming?.messages ?? {};
+		const idleRefresh = baseline && chat?.task_ids?.length === 0 && !taskIds?.length && !generating;
 		// An edited prompt adds a sibling; other viewers should keep their selected branch.
 		const hasNewBranch = Object.values(next).some(
 			(message: any) =>
@@ -1760,17 +1762,21 @@
 				(local.user_id ?? chat?.user_id) === $user?.id &&
 				(taskIds?.length || generating);
 			if (!local || (!ownActive && (!baseline || baseline[id] === local))) {
-				history.messages[id] = { ...local, ...message };
-				// Keep recovered replies finished unless their task is active or has been replaced.
+				const merged = { ...local, ...message };
+				const taskId = local?.meta?.task_id;
 				if (
 					local?.done === true &&
 					message.done === false &&
-					local.meta?.task_id &&
-					local.meta.task_id === message.meta?.task_id &&
-					!taskIds?.includes(local.meta.task_id)
+					taskId === message.meta?.task_id &&
+					(taskId
+						? !taskIds?.includes(taskId)
+						: local[interrupted] && idleRefresh && !hasPendingToolCall(merged))
 				) {
-					history.messages[id].done = true;
+					merged.done = true;
+				} else if (message.done !== undefined) {
+					delete merged[interrupted];
 				}
+				history.messages[id] = merged;
 			}
 			if (local) {
 				history.messages[id] = {
@@ -3621,12 +3627,10 @@
 									message?.role === 'assistant' &&
 									(message.user_id ?? chat?.user_id) === $user?.id &&
 									!message.done &&
-									!messageHasPendingAskUser(message) &&
-									!message.output?.some(
-										(item) => item?.type === 'function_call' && item?.status === 'pending'
-									)
+									!hasPendingToolCall(message)
 								) {
 									message.done = true;
+									if (!message.meta?.task_id) message[interrupted] = true;
 									history = history;
 								}
 							}
@@ -5707,6 +5711,7 @@
 		if (history.messages[message.id].done == true) {
 			const responseMessage = history.messages[message.id];
 			responseMessage.done = false;
+			delete responseMessage[interrupted];
 			responseMessage.error = null;
 			await tick();
 
