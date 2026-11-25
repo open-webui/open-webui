@@ -45,7 +45,7 @@ TOKENS = {
 BOOTSTRAP = Path(__file__).with_name('bootstrap.sh').read_text()
 
 # Local ends of SSH tunnels. Unix socket paths max out around 104 characters on macOS, so keep this short.
-RUN_DIR = Path(tempfile.mkdtemp(prefix='open-webui-', dir='/tmp'))
+RUN_DIR = Path(tempfile.mkdtemp(prefix='open-webui-', dir='/tmp' if Path('/tmp').is_dir() else None))
 
 
 def describe(error: BaseException) -> str:
