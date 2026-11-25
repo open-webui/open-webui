@@ -166,7 +166,6 @@
 	{#if folder && !readOnly}
 		<div class="flex shrink-0 items-center">
 			<FolderMenu
-				align="end"
 				{onNewChat}
 				{onNewNote}
 				onEdit={() => {
