@@ -60,7 +60,7 @@ async def steer_queued_messages(request, user, output, ended):
     metadata = output.metadata
     while not ended.is_set():
         with contextlib.suppress(TimeoutError):
-            await asyncio.wait_for(ended.wait(), 1)
+            await asyncio.wait_for(ended.wait(), 0.25)
         if not output.can_steer():
             continue
         reply_id = metadata['message_id']
