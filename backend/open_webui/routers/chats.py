@@ -1884,15 +1884,16 @@ async def delete_chat_by_id(
     # deleting the chat to prevent orphaned requests.
     await stop_item_tasks(request.app.state.redis, id)
 
-    # Cascade to internal child chats spawned from this one.
-    for child_id in await Chats.get_internal_chat_ids_by_parent_id(id, chat.user_id):
-        await stop_item_tasks(request.app.state.redis, child_id)
-        await Chats.delete_chat_by_id_and_user_id(child_id, chat.user_id)
-
+    # Delete first so stopped sub-agents have no chat to report back to.
     if user.role == 'admin':
         result = await Chats.delete_chat_by_id(id, db=db)
     else:
         result = await Chats.delete_chat_by_id_and_user_id(id, user.id, db=db)
+
+    # Cascade to internal child chats spawned from this one.
+    for child_id in await Chats.get_internal_chat_ids_by_parent_id(id, chat.user_id):
+        await stop_item_tasks(request.app.state.redis, child_id)
+        await Chats.delete_chat_by_id_and_user_id(child_id, chat.user_id)
 
     if result:
         await publish_event(
