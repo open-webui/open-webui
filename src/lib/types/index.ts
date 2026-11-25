@@ -23,6 +23,7 @@ export type MachineContext = {
 
 export type AppLayoutContext = {
 	openPageTab?: (tab: { href: string; label: string; inSplit?: boolean }) => void;
+	openProfile?: (userId: string) => void;
 	initNewChat?: (options?: {
 		preserveTabs?: boolean;
 		preserveInput?: boolean;

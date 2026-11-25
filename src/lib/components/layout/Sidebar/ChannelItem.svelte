@@ -23,7 +23,7 @@
 
 	let showEditChannelModal = false;
 
-	let itemElement;
+	let itemElement: HTMLElement;
 
 	const hasPublicReadGrant = (grants: any) =>
 		Array.isArray(grants) &&
@@ -92,7 +92,7 @@
 			<div class="flex ml-[0.0625rem] mr-0.5 relative">
 				{#each channelMembers.slice(0, 2) as u, index}
 					<div class={index === 1 ? '-ml-2.5' : ''}>
-						<ProfilePreview user={u}>
+						<ProfilePreview user={u} onClick={() => itemElement?.querySelector('a')?.click()}>
 							<img
 								src={`${WEBUI_API_BASE_URL}/users/${u.id}/profile/image`}
 								alt={u.name}

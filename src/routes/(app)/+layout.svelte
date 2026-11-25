@@ -53,6 +53,7 @@
 	import Chat from '$lib/components/chat/Chat.svelte';
 	import { pageTabKey } from '$lib/components/chat/Tabs/tabs';
 	import ChangelogModal from '$lib/components/ChangelogModal.svelte';
+	import UserProfileModal from '$lib/components/UserProfileModal.svelte';
 	import AccountPending from '$lib/components/layout/Overlay/AccountPending.svelte';
 	import UpdateInfoToast from '$lib/components/layout/UpdateInfoToast.svelte';
 	import Modal from '$lib/components/common/Modal.svelte';
@@ -63,7 +64,10 @@
 
 	const i18n = getContext('i18n');
 	const getUserSettings = getContext<(token: string) => Promise<any>>('getUserSettings');
-	const appLayout = setContext<AppLayoutContext>('appLayout', {});
+	let profileUserId: string | null = null;
+	const appLayout = setContext<AppLayoutContext>('appLayout', {
+		openProfile: (userId) => (profileUserId = userId)
+	});
 
 	let loaded = false;
 	// Settings (including the admin panels) load on first open, then stay mounted.
@@ -498,6 +502,7 @@
 	{/await}
 {/if}
 <ChangelogModal bind:show={$showChangelog} />
+<UserProfileModal bind:userId={profileUserId} />
 
 {#if WEBUI_BUILD_CHANNEL === 'main' && version && compareVersion(version.latest, version.current) && ($settings?.showUpdateToast ?? true)}
 	<div class=" absolute bottom-8 right-8 z-50" in:fade={{ duration: 100 }}>

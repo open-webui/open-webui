@@ -22,6 +22,7 @@
 	let transport = 'vnc';
 	let clipboardAvailable = true;
 	let audioAvailable = false;
+	let hideCursor = false;
 	const send = (message: Record<string, unknown>) => {
 		if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify(message));
 	};
@@ -72,11 +73,13 @@
 				transport?: string;
 				audio?: boolean;
 				clipboard?: boolean;
+				cursor?: boolean;
 			}>(target, '/desktop');
 			if (version !== generation) return;
 			transport = info.transport ?? 'vnc';
 			clipboardAvailable = info.clipboard !== false;
 			audioAvailable = info.audio === true;
+			hideCursor = info.cursor === true;
 			await tick();
 			if (version !== generation) return;
 			if (transport === 'frames') {
@@ -151,7 +154,7 @@
 	};
 	const paste = (text: string, shift = false) => {
 		if (transport === 'frames' || !clipboardAvailable) {
-			send({ type: 'paste', text });
+			send({ type: 'paste', text, shift });
 			return;
 		}
 		if (!viewer) return;
@@ -204,7 +207,7 @@
 			}
 		}}
 	>
-		{#if transport === 'frames'}<NativeDesktop bind:this={native} {send} />{/if}
+		{#if transport === 'frames'}<NativeDesktop bind:this={native} {send} {hideCursor} />{/if}
 	</div>
 	{#if status || error}
 		<div

@@ -3,6 +3,7 @@
 	const { goto } = getPageContext();
 
 	import { getContext, onMount } from 'svelte';
+	import { toast } from 'svelte-sonner';
 	import dayjs, { getDayjsLocale } from '$lib/dayjs';
 	import relativeTime from 'dayjs/plugin/relativeTime';
 
@@ -76,6 +77,7 @@
 
 		const res = await getDMChannelByUserId(localStorage.token, user.id).catch((error) => {
 			console.error('Error fetching DM channel:', error);
+			toast.error(`${error}`);
 			return null;
 		});
 

@@ -326,6 +326,7 @@ class UserInfoResponse(UserStatus):
     name: str
     email: str
     role: str
+    profile_banner_image_url: str | None = None
     bio: str | None = None
     last_active_at: int | None = None
     timezone: str | None = None

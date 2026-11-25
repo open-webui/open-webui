@@ -13,8 +13,10 @@
 	import { LinkPreview } from 'bits-ui';
 	import { getContext, onDestroy } from 'svelte';
 	import { user as sessionUser } from '$lib/stores';
+	import type { AppLayoutContext } from '$lib/types';
 
 	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
+	const appLayout = getContext<AppLayoutContext | undefined>('appLayout');
 	import UserStatusLinkPreview from './UserStatusLinkPreview.svelte';
 
 	export let user: { id?: string | null; name?: string | null } | null = null;
@@ -25,6 +27,8 @@
 	export let sideOffset = 8;
 
 	export let openPreview = false;
+	// Replaces opening the profile.
+	export let onClick: ((userId: string) => void) | null = null;
 
 	const closeProfilePreview = () => {
 		if (openPreview) {
@@ -54,7 +58,13 @@
 					{...props}
 					type="button"
 					aria-label={user.name || $i18n.t('User')}
-					onclick={() => (openPreview = !openPreview)}
+					onclick={(event: MouseEvent & { currentTarget: HTMLButtonElement }) => {
+						const open = onClick ?? appLayout?.openProfile;
+						openPreview = open ? false : !openPreview;
+						// Getting focus back from the dialog after a mouse click would reopen the preview.
+						if (open && event.detail) event.currentTarget.blur();
+						if (user.id) open?.(user.id);
+					}}
 				>
 					<slot />
 				</button>

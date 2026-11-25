@@ -2,6 +2,8 @@
 	import { onDestroy } from 'svelte';
 	import FrameCanvas from './FrameCanvas.svelte';
 	export let send: (message: Record<string, unknown>) => void;
+	// The picture already includes the host's cursor.
+	export let hideCursor = false;
 	let surface: HTMLDivElement;
 	let frames: FrameCanvas;
 	let pending: Record<string, unknown> | null = null;
@@ -51,6 +53,9 @@
 		event.preventDefault();
 		flush();
 		send({ type: 'key', code: event.code, down });
+		// macOS never reports the release of a key pressed while Command is held.
+		if (down && event.metaKey && !/^(Meta|Shift|Control|Alt)/.test(event.code))
+			send({ type: 'key', code: event.code, down: false });
 	};
 	onDestroy(release);
 </script>
@@ -59,7 +64,9 @@
 
 <div
 	bind:this={surface}
-	class="flex h-full w-full touch-none items-center justify-center overflow-hidden outline-none"
+	class="flex h-full w-full touch-none items-center justify-center overflow-hidden outline-none {hideCursor
+		? '[&>canvas]:cursor-none'
+		: ''}"
 	role="application"
 	aria-label="Desktop screen"
 	tabindex="0"

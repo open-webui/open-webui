@@ -238,6 +238,7 @@ async def get_session_user(
         'name': user.name,
         'role': user.role,
         'profile_image_url': user.profile_image_url,
+        'profile_banner_image_url': user.profile_banner_image_url,
         'bio': user.bio,
         'gender': user.gender,
         'date_of_birth': user.date_of_birth,

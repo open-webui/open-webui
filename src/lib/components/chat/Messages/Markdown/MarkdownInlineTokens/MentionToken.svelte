@@ -153,8 +153,10 @@
 					on:click={async () => {
 						if (triggerChar === '@') {
 							if (idType === 'U') {
-								// Open user profile
-								console.log('Clicked user mention', id);
+								if (appLayout?.openProfile && !userUnavailable) {
+									openPreview = false;
+									appLayout.openProfile(id);
+								}
 							} else if (idType === 'M') {
 								console.log('Clicked model mention', id);
 								await goto(`/?model=${id}`);
