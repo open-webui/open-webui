@@ -826,8 +826,12 @@
 		return null;
 	};
 
-	const hasPendingToolCall = (message) =>
-		message.output?.some((item) => item?.type === 'function_call' && item.status === 'pending');
+	// With no active tasks, only finish our own replies that aren't waiting on a tool.
+	const canFinish = (message) =>
+		message?.role === 'assistant' &&
+		(message.user_id ?? chat?.user_id) === $user?.id &&
+		!message.done &&
+		!message.output?.some((item) => item?.type === 'function_call' && item.status === 'pending');
 
 	const answerPendingAskUser = async (messageId, callId, answers, timedOut = false) => {
 		if (!$chatId || !messageId || !callId) {
@@ -1724,8 +1728,6 @@
 	};
 	$: if (!prompt.trim()) emitTyping(false);
 
-	// Only the local copy is marked when opening a chat finishes a taskless reply.
-	const interrupted = Symbol('interrupted');
 	const mergeChatMessages = (
 		incoming: typeof history,
 		baseline: Record<string, any> | null = null
@@ -1762,21 +1764,16 @@
 				(local.user_id ?? chat?.user_id) === $user?.id &&
 				(taskIds?.length || generating);
 			if (!local || (!ownActive && (!baseline || baseline[id] === local))) {
-				const merged = { ...local, ...message };
+				history.messages[id] = { ...local, ...message };
 				const taskId = local?.meta?.task_id;
 				if (
 					local?.done === true &&
 					message.done === false &&
 					taskId === message.meta?.task_id &&
-					(taskId
-						? !taskIds?.includes(taskId)
-						: local[interrupted] && idleRefresh && !hasPendingToolCall(merged))
+					(taskId ? !taskIds?.includes(taskId) : idleRefresh && canFinish(message))
 				) {
-					merged.done = true;
-				} else if (message.done !== undefined) {
-					delete merged[interrupted];
+					history.messages[id].done = true;
 				}
-				history.messages[id] = merged;
 			}
 			if (local) {
 				history.messages[id] = {
@@ -3623,14 +3620,8 @@
 						// No active tasks and message incomplete → generation was interrupted
 						if (pendingTaskIds.length === 0) {
 							for (const message of Object.values(history.messages)) {
-								if (
-									message?.role === 'assistant' &&
-									(message.user_id ?? chat?.user_id) === $user?.id &&
-									!message.done &&
-									!hasPendingToolCall(message)
-								) {
+								if (canFinish(message)) {
 									message.done = true;
-									if (!message.meta?.task_id) message[interrupted] = true;
 									history = history;
 								}
 							}
@@ -5711,7 +5702,6 @@
 		if (history.messages[message.id].done == true) {
 			const responseMessage = history.messages[message.id];
 			responseMessage.done = false;
-			delete responseMessage[interrupted];
 			responseMessage.error = null;
 			await tick();
 
