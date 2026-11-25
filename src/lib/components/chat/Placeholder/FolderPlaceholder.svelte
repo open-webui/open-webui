@@ -22,6 +22,7 @@
 		NO_STATUS,
 		NO_PRIORITY,
 		statusDefs,
+		groupedStatusDefs,
 		priorityDefs,
 		priorityKey,
 		isChatUnread,
@@ -261,6 +262,29 @@
 		}
 	};
 
+	// Folded groups are remembered per folder and grouping.
+	const COLLAPSED = 'folder-workspace-collapsed';
+	let collapsed: Record<string, Record<string, boolean>> = (() => {
+		try {
+			return JSON.parse(localStorage.getItem(COLLAPSED) ?? '{}') ?? {};
+		} catch {
+			return {};
+		}
+	})();
+	const toggleCollapsed = (by: GroupBy, id: string) => {
+		if (!folder?.id) return;
+		const key = `${folder.id}:${by}`;
+		const { [id]: folded, ...rest } = collapsed[key] ?? {};
+		const next = folded ? rest : { ...rest, [id]: true };
+		const { [key]: _, ...others } = collapsed;
+		collapsed = Object.keys(next).length ? { ...others, [key]: next } : others;
+		try {
+			localStorage.setItem(COLLAPSED, JSON.stringify(collapsed));
+		} catch {
+			/* Storage is optional. */
+		}
+	};
+
 	// Built-in plus folder-defined statuses, shared with rows, cards and menus.
 	let defs: StatusDef[] = statusDefs(null, (key) => key);
 	const defsStore = writable<StatusDef[]>(defs);
@@ -300,22 +324,55 @@
 		}
 	}
 
-	async function saveStatuses(custom: CustomStatus[]) {
+	// A reorder changes no chat, so it skips the reload.
+	// Saved in order; a `{ id: NO_STATUS }` entry places "No status" (see groupedStatusDefs).
+	type StatusEntry = CustomStatus | { id: typeof NO_STATUS };
+	async function saveStatuses(statuses: StatusEntry[], reload = true) {
 		if (!folder?.id) return;
 		const folderId = folder.id;
+		// The modal edits only the folder's own statuses: keep "No status" after the one it followed.
+		if (!statuses.some((item) => item.id === NO_STATUS)) {
+			const order = groupedStatusDefs(folder.meta, (key) => key).map((item) => item.id);
+			const before = order.slice(0, order.indexOf(NO_STATUS));
+			if (before.length < order.length - 1) {
+				const anchor = before.reverse().find((id) => statuses.some((item) => item.id === id));
+				const at = anchor ? statuses.findIndex((item) => item.id === anchor) + 1 : 0;
+				statuses = [...statuses.slice(0, at), { id: NO_STATUS }, ...statuses.slice(at)];
+			}
+		}
 		const updated = await updateFolderById(localStorage.token, folderId, {
-			meta: { statuses: custom }
+			meta: { statuses }
 		});
 		if (!updated) return;
 		updateFolderDetails(folderId, updated);
 		selectedFolder.update((current) =>
 			current?.id === folderId ? { ...current, ...updated } : current
 		);
+		if (!reload) return;
 		const valid = new Set(statusDefs(updated.meta, (key) => key).map((item) => item.id));
 		statusFilter = statusFilter.filter((id) => valid.has(id));
 		markFolderChatsDirty(folderId);
 		await tick();
 		await load();
+	}
+
+	// Board columns dragged into a new order; statuses the filter hides keep their places.
+	async function reorderStatuses(ids: string[]) {
+		const order = groupedStatusDefs(folder?.meta, (key) => key);
+		const moved = ids.filter((id) => order.some((item) => item.id === id));
+		const byId = new Map(order.map((item) => [item.id, item]));
+		let index = 0;
+		const next = order.map((item) => (moved.includes(item.id) ? byId.get(moved[index++])! : item));
+		try {
+			await saveStatuses(
+				next.map(({ id, name, glyph, color, icon }) =>
+					id === NO_STATUS ? { id: NO_STATUS } : { id, name, glyph, color, icon }
+				),
+				false
+			);
+		} catch (error) {
+			toast.error(String(error));
+		}
 	}
 
 	let currentFolderId = '';
@@ -371,14 +428,9 @@
 		_deps?: unknown
 	): Group[] {
 		if (by === 'status') {
-			const defined = statusDefs(folder?.meta, t).filter(
-				(status) => !statusFilter.length || statusFilter.includes(status.id)
-			);
-			// Grouped views put "No status" last, like "Untagged" and "Read".
-			return [
-				...defined.filter((status) => status.id !== NO_STATUS),
-				...defined.filter((status) => status.id === NO_STATUS)
-			].map((status) => ({ id: status.id, label: status.name, status: status.id }));
+			return groupedStatusDefs(folder?.meta, t)
+				.filter((status) => !statusFilter.length || statusFilter.includes(status.id))
+				.map((status) => ({ id: status.id, label: status.name, status: status.id }));
 		}
 		if (by === 'priority') {
 			const defined = priorityDefs(t).filter(
@@ -1811,6 +1863,7 @@
 		{:else if view === 'board'}
 			<FolderBoard
 				onAddStatus={readOnly || columnsBy !== 'status' ? null : () => (showStatuses = true)}
+				onReorder={readOnly || columnsBy !== 'status' ? null : reorderStatuses}
 				columns={boardColumns}
 				rows={boardRows}
 				{rowOf}
@@ -1824,6 +1877,8 @@
 				onPriority={prioritize}
 				onDrop={update}
 				onTagsChange={changed}
+				collapsed={collapsed[`${folder?.id}:${rowsBy}`] ?? {}}
+				onCollapse={(id) => toggleCollapsed(rowsBy, id)}
 			/>
 		{:else}
 			<ChatList
@@ -1836,6 +1891,8 @@
 				onMove={move}
 				onPriority={prioritize}
 				onTagsChange={changed}
+				collapsed={collapsed[`${folder?.id}:${grouping}`] ?? {}}
+				onCollapse={(id) => toggleCollapsed(grouping, id)}
 			/>
 		{/if}
 	</div>

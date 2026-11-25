@@ -62,13 +62,46 @@
 	export let onDrop: (chat: WorkspaceChat, changes: [Field, string][]) => Promise<void>;
 	export let onTagsChange: () => Promise<void>;
 	export let onAddStatus: (() => void) | null = null;
+	/** Saves a new column order; set only when columns are statuses. */
+	export let onReorder: ((ids: string[]) => Promise<void>) | null = null;
+	/** Swimlanes the user folded. */
+	export let collapsed: Record<string, boolean> = {};
+	export let onCollapse: (id: string) => void;
 	export let saving = '';
 	export let loading = false;
 	export let loadingGroup = '';
 
 	let dragged: WorkspaceChat | null = null;
 	let over = '';
-	let collapsed: Record<string, boolean> = {};
+
+	// Status columns move by their header, live like the statuses modal.
+	let moving = '';
+	let order: string[] | null = null;
+	$: shownColumns = order
+		? order.flatMap((id) => columns.filter((column) => column.id === id))
+		: columns;
+	const movable = (column: BoardGroup) => !!onReorder && !!column.status;
+	function moveColumn(event: DragEvent, overId: string) {
+		if (!moving || !order) return false;
+		event.preventDefault();
+		const target = columns.find((column) => column.id === overId);
+		if (overId === moving || !target || !movable(target)) return true;
+		const next = order.filter((id) => id !== moving);
+		next.splice(order.indexOf(overId), 0, moving);
+		order = next;
+		return true;
+	}
+	async function endMove(event: DragEvent) {
+		const ids = order;
+		moving = '';
+		if (
+			ids &&
+			event.dataTransfer?.dropEffect !== 'none' &&
+			ids.join() !== columns.map((column) => column.id).join()
+		)
+			await onReorder?.(ids);
+		order = null;
+	}
 
 	// Inline rename, like the list rows.
 	let renaming = '';
@@ -117,7 +150,7 @@
 
 	const dropzone = (column: string, row: string | null) => ({
 		dragover: (event: DragEvent) => {
-			if (!dragged || !canDrop(column, row)) return;
+			if (moveColumn(event, column) || !dragged || !canDrop(column, row)) return;
 			event.preventDefault();
 			over = cellKey(column, row);
 			if (event.dataTransfer)
@@ -164,7 +197,20 @@
 {/snippet}
 
 {#snippet columnHeader(column: BoardGroup)}
-	<header class="flex h-9 shrink-0 items-center gap-2 px-3">
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<header
+		class="flex h-9 shrink-0 items-center gap-2 px-3 {movable(column)
+			? 'cursor-grab active:cursor-grabbing'
+			: ''}"
+		draggable={movable(column) && !saving && !loading}
+		on:dragstart={(event) => {
+			moving = column.id;
+			order = columns.map((item) => item.id);
+			event.dataTransfer?.setData('text/plain', column.id);
+			if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
+		}}
+		on:dragend={endMove}
+	>
 		{@render groupIcon(column)}
 		<h3 class="min-w-0 truncate text-xs text-base-700 dark:text-base-200">
 			{column.label}
@@ -354,12 +400,14 @@
 		class="scrollbar-hidden flex h-full min-h-0 gap-2 overflow-x-auto px-3 pt-1 pb-2"
 		aria-label={$i18n.t('Conversation board')}
 	>
-		{#each columns as column (column.id)}
+		{#each shownColumns as column (column.id)}
 			{@const chats = column.page?.chats ?? []}
 			{@const zone = dropzone(column.id, null)}
 			<section
-				class="flex min-h-0 w-72 min-w-64 flex-1 flex-col rounded-2xl transition-colors {over ===
-				cellKey(column.id, null)
+				class="flex min-h-0 w-72 min-w-64 flex-1 flex-col rounded-2xl transition-colors {moving ===
+				column.id
+					? 'opacity-40'
+					: ''} {over === cellKey(column.id, null)
 					? 'bg-base-100 ring-1 ring-base-200 dark:bg-base-850 dark:ring-base-800'
 					: 'bg-base-50/80 dark:bg-base-850/40'}"
 				aria-label={column.label}
@@ -395,8 +443,16 @@
 			<div
 				class="sticky top-0 z-[2] flex gap-2 bg-base-0/80 pb-1 backdrop-blur-md dark:bg-base-900/80"
 			>
-				{#each columns as column (column.id)}
-					<div class="w-72 shrink-0 rounded-2xl bg-base-50/80 dark:bg-base-850/40">
+				{#each shownColumns as column (column.id)}
+					<div
+						class="w-72 shrink-0 rounded-2xl bg-base-50/80 dark:bg-base-850/40 {moving === column.id
+							? 'opacity-40'
+							: ''}"
+						role="group"
+						aria-label={column.label}
+						on:dragover={(event) => moveColumn(event, column.id)}
+						on:drop|preventDefault
+					>
 						{@render columnHeader(column)}
 					</div>
 				{/each}
@@ -414,7 +470,7 @@
 							aria-label={collapsed[row.id]
 								? $i18n.t('Expand {{name}}', { name: row.label })
 								: $i18n.t('Collapse {{name}}', { name: row.label })}
-							on:click={() => (collapsed = { ...collapsed, [row.id]: !collapsed[row.id] })}
+							on:click={() => onCollapse(row.id)}
 						>
 							<ChevronRight
 								className="size-3 transition-transform {collapsed[row.id] ? '' : 'rotate-90'}"
@@ -428,7 +484,7 @@
 
 					{#if !collapsed[row.id]}
 						<div class="flex gap-2 pb-2">
-							{#each columns as column (column.id)}
+							{#each shownColumns as column (column.id)}
 								{@const chats = cellChats(column, row)}
 								{@const zone = dropzone(column.id, row.id)}
 								<div
@@ -456,7 +512,7 @@
 			{/each}
 
 			<div class="flex gap-2">
-				{#each columns as column (column.id)}
+				{#each shownColumns as column (column.id)}
 					<div class="w-72 shrink-0">{@render more(column)}</div>
 				{/each}
 			</div>

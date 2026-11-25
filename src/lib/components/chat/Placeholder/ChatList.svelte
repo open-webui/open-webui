@@ -50,6 +50,8 @@
 	export let onMove: (chat: WorkspaceChat, status: FolderStatus) => Promise<void>;
 	export let onPriority: (chat: WorkspaceChat, priority: FolderPriority) => Promise<void>;
 	export let onTagsChange: () => Promise<void>;
+	export let collapsed: Record<string, boolean> = {};
+	export let onCollapse: (id: string) => void;
 
 	// Same payload as the sidebar chat item, so a row can be dropped into split view
 	// or onto the composer.
@@ -60,7 +62,6 @@
 		event.dataTransfer.setData('application/x-open-webui-chat', chat.id);
 	};
 
-	let collapsed: Record<string, boolean> = {};
 	let menuOpen: Record<string, boolean> = {};
 
 	// Inline rename, like the sidebar chat item.
@@ -161,7 +162,7 @@
 						aria-label={collapsed[group.id]
 							? $i18n.t('Expand {{name}}', { name: group.label })
 							: $i18n.t('Collapse {{name}}', { name: group.label })}
-						on:click={() => (collapsed = { ...collapsed, [group.id]: !collapsed[group.id] })}
+						on:click={() => onCollapse(group.id)}
 					>
 						<ChevronRight
 							className="size-3 transition-transform {collapsed[group.id] ? '' : 'rotate-90'}"
