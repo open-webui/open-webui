@@ -22,8 +22,19 @@
 		current: '',
 		latest: ''
 	};
+	// Settings search reads these keys from the locale file, which i18n:parse cannot see: $i18n.t('settings.personal.about.sections.community.title')
+	const communityLinks = [
+		['GitHub', 'https://github.com/open-webui/open-webui'],
+		['Enterprise', 'https://docs.openwebui.com/enterprise'],
+		['Careers', 'https://careers.openwebui.com/'],
+		['Sponsor', 'https://github.com/sponsors/open-webui'],
+		['Discord', 'https://discord.gg/5rJgQTnV4s'],
+		['Reddit', 'https://www.reddit.com/r/OpenWebUI/'],
+		['X', 'https://x.com/OpenWebUI']
+	];
+
 	const actionButtonClass =
-		'text-xs text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white';
+		'text-xs text-base-500 transition-colors hover:text-base-900 dark:text-base-500 dark:hover:text-base-0';
 
 	const checkForVersionUpdates = async () => {
 		updateAvailable = null;
@@ -52,7 +63,7 @@
 </script>
 
 <div id="tab-about" class="flex flex-col h-full justify-between text-sm">
-	<h2 class="text-sm font-medium text-gray-900 dark:text-white mb-4">
+	<h2 class="text-sm font-medium text-base-900 dark:text-base-0 mb-4">
 		{$i18n.t('settings.personal.about.title')}
 	</h2>
 
@@ -65,7 +76,7 @@
 			first
 		>
 			<UserSettingRow description={$i18n.t('settings.personal.about.seeWhatSNew.description')}>
-				<div slot="label" class="flex flex-col text-xs text-gray-600 dark:text-gray-400">
+				<div slot="label" class="flex flex-col text-xs text-base-600 dark:text-base-400">
 					<div
 						class="flex flex-wrap {($settings?.highContrastMode ?? false)
 							? 'items-center'
@@ -117,51 +128,41 @@
 					</button>
 				{/if}
 			</UserSettingRow>
-		</UserSettingSection>
 
-		{#if ollamaVersion}
-			<UserSettingSection title={$i18n.t('settings.personal.about.sections.ollamaVersion.title')}>
-				<div class="text-xs text-gray-600 dark:text-gray-400">
-					{ollamaVersion ?? 'N/A'}
-				</div>
-			</UserSettingSection>
-		{/if}
-
-		<UserSettingSection title={$i18n.t('settings.personal.about.sections.community.title')}>
 			{#if $config?.license_metadata}
 				<!-- LICENSE covers this Open WebUI license attribution.
 				Do not alter, remove, obscure, or replace it except as LICENSE permits:
 				https://docs.openwebui.com/license. -->
-				<div class="text-xs text-gray-600 dark:text-gray-400">
+				<div class="text-xs text-base-600 dark:text-base-400">
 					{#if !$WEBUI_NAME.includes('Open WebUI')}
 						<span>{$WEBUI_NAME}</span> -
 					{/if}
-
 					<span class="capitalize">{$config?.license_metadata?.type}</span>
 					{$i18n.t('license purchased by')}
 					<span class="capitalize">{$config?.license_metadata?.organization_name}</span>
 				</div>
 			{:else}
-				<div class="flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-400 dark:text-gray-600">
-					<a
-						class="hover:text-gray-700 dark:hover:text-gray-400"
-						href="https://discord.gg/5rJgQTnV4s"
-						target="_blank">Discord</a
-					>
-					<a
-						class="hover:text-gray-700 dark:hover:text-gray-400"
-						href="https://twitter.com/OpenWebUI"
-						target="_blank">X</a
-					>
-					<a
-						class="hover:text-gray-700 dark:hover:text-gray-400"
-						href="https://github.com/open-webui/open-webui"
-						target="_blank">GitHub</a
-					>
+				<div class="flex flex-wrap gap-x-1.5 gap-y-1 text-xs text-base-400 dark:text-base-600">
+					{#each communityLinks as [label, href], idx}
+						{#if idx > 0}<span aria-hidden="true">·</span>{/if}
+						<a class="hover:text-base-700 dark:hover:text-base-400" {href} target="_blank"
+							>{label}</a
+						>
+					{/each}
 				</div>
 			{/if}
+		</UserSettingSection>
 
-			<div class="text-xs text-gray-400 dark:text-gray-500">
+		{#if ollamaVersion}
+			<UserSettingSection title={$i18n.t('settings.personal.about.sections.ollamaVersion.title')}>
+				<div class="text-xs text-base-600 dark:text-base-400">
+					{ollamaVersion ?? 'N/A'}
+				</div>
+			</UserSettingSection>
+		{/if}
+
+		<UserSettingSection>
+			<div class="text-xs text-base-400 dark:text-base-500">
 				{$i18n.t('Emoji graphics provided by')}
 				<a href="https://github.com/jdecked/twemoji" target="_blank">Twemoji</a>, {$i18n.t(
 					'licensed under'
@@ -169,7 +170,7 @@
 				<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank">CC-BY 4.0</a>.
 			</div>
 
-			<div class="text-xs text-gray-400 dark:text-gray-500">
+			<div class="text-xs text-base-400 dark:text-base-500">
 				<!-- LICENSE covers this Open WebUI copyright attribution.
 				Do not alter, remove, obscure, or replace it except as LICENSE permits:
 				https://docs.openwebui.com/license. -->
@@ -181,9 +182,9 @@
 				>
 			</div>
 
-			<div class="text-xs text-gray-400 dark:text-gray-500">
+			<div class="text-xs text-base-400 dark:text-base-500">
 				{$i18n.t('Created by')}
-				<a class="text-gray-500 dark:text-gray-400" href="https://github.com/tjbck" target="_blank"
+				<a class="text-base-500 dark:text-base-400" href="https://github.com/tjbck" target="_blank"
 					>Tim J. Baek</a
 				>
 			</div>

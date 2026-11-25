@@ -15,6 +15,7 @@ import type { AudioQueue, NotificationSoundStyle } from '$lib/utils/audio';
 import type { I18nOverrides } from '$lib/utils/translationDictionary';
 
 import emojiShortCodes from '$lib/emoji-shortcodes.json';
+import { isMachine } from '$lib/utils/machines';
 
 // Backend identity and session state
 export const WEBUI_NAME = writable(APP_NAME);
@@ -36,7 +37,17 @@ export const MODEL_DOWNLOAD_POOL = writable({});
 export const mobile = writable(false);
 
 export const socket: Writable<null | Socket> = writable(null);
-export const socketConnected: Writable<boolean> = writable(true);
+export const socketLost: Writable<boolean> = writable(false);
+
+// Runs when a lost connection comes back, not when it is first made.
+export const onSocketRestored = (callback: () => void) => {
+	let lost = false;
+	return socketLost.subscribe((value) => {
+		if (lost && !value) callback();
+		lost = value;
+	});
+};
+
 export const activeUserIds: Writable<null | string[]> = writable(null);
 export const USAGE_POOL: Writable<null | string[]> = writable(null);
 
@@ -73,23 +84,31 @@ type ChannelListItem = {
 export const channels = writable<ChannelListItem[]>([]);
 export const channelId = writable(null);
 
-export { chats, pinnedChats } from './chatList';
+export {
+	chats,
+	pinnedChats,
+	recentChats,
+	refreshRecentChats,
+	activeFolders,
+	refreshActiveFolders
+} from './chatList';
 export const pinnedNotes = writable([]);
 export const tags = writable([]);
 export const folders = writable([]);
 
 export const selectedFolder = writable<FolderDetails | null>(null);
 
-export const models: Writable<Model[]> = writable([]);
+// null until the first list has loaded; an empty list means there are no models
+export const models: Writable<Model[] | null> = writable(null);
 
 export const baseModels = derived(models, ($models) =>
-	$models.filter((model) => model.owned_by !== 'terminal')
+	($models ?? []).filter((model) => !isMachine(model.owned_by))
 );
 
 export const knowledge: Writable<null | Document[]> = writable(null);
 export const tools = writable(null);
 export const skills: Writable<null | any[]> = writable(null);
-export const terminalSkills: Writable<any[]> = writable([]);
+export const machineSkills: Writable<any[]> = writable([]);
 export const functions = writable(null);
 
 export type ImageModel = {
@@ -126,7 +145,7 @@ export const adminGroupCount: Writable<number | null> = writable(null);
 export const adminLeaderboardCount: Writable<number | null> = writable(null);
 export const adminFeedbackCount: Writable<number | null> = writable(null);
 
-export const terminalServers: Writable<any[] | null> = writable(null);
+export const machines: Writable<any[] | null> = writable(null);
 
 // Persistent Pyodide worker for code interpreter FS
 export const pyodideWorker: Writable<Worker | null> = writable(null);
@@ -145,7 +164,7 @@ export const pinnedModels = derived([settings, config], ([$settings, $config]) =
 // Pins for models the user cannot see are kept in their settings but left out of the sidebar
 export const visiblePinnedModels = derived([pinnedModels, models], ([$pinnedModels, $models]) =>
 	$pinnedModels.filter((id) =>
-		$models.some((model) => model.id === id && !model.info?.meta?.hidden)
+		($models ?? []).some((model) => model.id === id && !model.info?.meta?.hidden)
 	)
 );
 
@@ -201,21 +220,25 @@ export const showEmbeds = writable(false);
 /** A voice call is open in the main chat's voice tab. */
 export const voiceCall = writable(false);
 export const showFileNav = writable<{
-	terminalId: string;
+	machineId: string;
 	directory: string;
 	chatId: string | null;
 } | null>(null);
 export type FileNavOpenRequest = string | { path: string; page?: number | null };
 export const showFileNavPath: Writable<FileNavOpenRequest | null> = writable(null);
 export const showFileNavDir: Writable<string | null> = writable(null);
-export const selectedTerminalId: Writable<string | null> = writable(null);
+export const selectedMachineId: Writable<string | null> = writable(null);
 
-export const embed = writable(null);
+export const embed = writable<any>(null);
 
 /** Whether the main chat is temporary, or for a new chat, whether it starts as one. */
 export const temporaryChat = writable(false);
 export const openEmbeddedChatIds = writable<Set<string>>(new Set());
-export const chatTabRequest = writable<{ parentChatId: string; prompt: string } | null>(null);
+/** The saved chat whose tab is in front, when it is not the main chat. */
+export const activeChatTabId = writable<string | null>(null);
+export const chatTabRequest = writable<
+	{ parentChatId: string; prompt: string } | { folderId: string } | null
+>(null);
 
 export type QueryData = {
 	query: string;
@@ -232,12 +255,12 @@ export const desktopEvent: Writable<DesktopEvent | null> = writable(null);
 
 export const isLastActiveTab = writable(true);
 
-export type Model = OpenAIModel | OllamaModel | AgentModel;
+export type Model = OpenAIModel | OllamaModel | AgentModel | RouterModel;
 
 export interface AgentModel extends BaseModel {
-	owned_by: 'terminal';
+	owned_by: 'machine' | 'terminal'; // 'terminal' from older servers
 	agent: {
-		terminal_id: string;
+		machine_id: string;
 		// Built-in ids such as 'codex' or 'claude-code', or 'acp-<id>' for agents configured in Open Terminal.
 		provider: string;
 		model: string;
@@ -248,7 +271,7 @@ type BaseModel = {
 	id: string;
 	name: string;
 	info?: ModelConfig;
-	owned_by: 'ollama' | 'openai' | 'arena' | 'terminal';
+	owned_by: 'ollama' | 'openai' | 'router' | 'machine' | 'terminal';
 };
 
 export interface OpenAIModel extends BaseModel {
@@ -258,6 +281,11 @@ export interface OpenAIModel extends BaseModel {
 	// Set on the user's own connections, which the server reaches through their Tether.
 	owner_id?: string;
 	base_url?: string;
+}
+
+export interface RouterModel extends BaseModel {
+	owned_by: 'router';
+	router: true;
 }
 
 export interface OllamaModel extends BaseModel {
@@ -335,10 +363,12 @@ type Settings = {
 	iframeSandboxAllowForms?: boolean;
 	iframeSandboxAllowSameOrigin?: boolean;
 	iframeSandboxAllowDownloads?: boolean;
-	terminalPreviewAllowSameOrigin?: boolean;
+	machinePreviewAllowSameOrigin?: boolean;
+	terminalPreviewAllowSameOrigin?: boolean; // former name
 	scrollOnBranchChange?: boolean;
 	scrollOnResponseGeneration?: boolean;
-	terminalFileDisplay?: 'sidebar' | 'inline';
+	machineFileDisplay?: 'sidebar' | 'inline';
+	terminalFileDisplay?: 'sidebar' | 'inline'; // former name
 	chatBubble?: boolean;
 	copyFormatted?: boolean;
 	models?: string[];
@@ -362,6 +392,8 @@ type Settings = {
 	recentEmojis?: string[];
 	pinnedMenuItems?: string[];
 	pinnedNotesOrder?: string[];
+	/** Folder ids in display order, by parent folder id ('root' for top-level folders). */
+	folderOrder?: Record<string, string[]>;
 
 	defaultUploadContext?: 'full' | 'focused';
 
@@ -410,7 +442,8 @@ type Config = {
 		max_size?: number | null;
 		max_count?: number | null;
 		full_context?: boolean;
-		full_text_char_threshold?: number;
+		full_text_threshold?: number;
+		full_text_threshold_type?: string;
 		image_compression?: { width?: number | null; height?: number | null };
 	};
 	metadata?: {
@@ -429,6 +462,7 @@ type Config = {
 	default_locale: string;
 	i18n?: I18nOverrides;
 	default_models: string;
+	fallback_default_models?: string | null;
 	default_pinned_models?: string | null;
 	default_prompt_suggestions: PromptSuggestion[] | null;
 	default_prompt_suggestions_i18n?: Record<string, { suggestion_prompts: PromptSuggestion[] }>;
@@ -462,14 +496,15 @@ type Config = {
 		enable_channels?: boolean;
 		enable_user_webhooks?: boolean;
 		enable_automations?: boolean;
+		enable_automation_webhooks?: boolean;
 		enable_calendar?: boolean;
 		enable_subagents?: boolean;
 		enable_plugins?: boolean;
 		enable_tools?: boolean;
 		enable_functions?: boolean;
 		enable_tool_servers?: boolean;
-		enable_terminal_servers?: boolean;
-		// The user's own terminals, models and tool servers come from their Tether.
+		enable_machines?: boolean;
+		// The user's own machines, models and tool servers come from their Tether.
 		tether?: boolean;
 		enable_apps?: boolean;
 		enable_autocomplete_generation: boolean;

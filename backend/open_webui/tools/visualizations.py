@@ -1,5 +1,6 @@
 """The visualization tool validates source; only the isolated browser frame executes it."""
 
+import re
 from typing import Literal
 
 MAX_HTML_BYTES = 256 * 1024
@@ -63,4 +64,8 @@ async def render_visualization(
         return {'error': 'html exceeds the 256 KiB limit'}
     if libraries is not None and libraries not in ([], ['chartjs']):
         return {'error': 'libraries must be [] or ["chartjs"]'}
+    scripts = re.findall(r'<script\b[^<>]*>(.*?)(?:</script|$)', html, re.IGNORECASE | re.DOTALL)
+    uses_chartjs = any(re.search(r'new\s+(?:window\.)?Chart\s*\(', script) for script in scripts)
+    if uses_chartjs and libraries != ['chartjs']:
+        return {'error': 'html uses Chart.js, so libraries must be ["chartjs"]'}
     return {'status': 'accepted'}

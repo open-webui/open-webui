@@ -13,6 +13,7 @@
 	import DocumentArrowUp from '$lib/components/icons/DocumentArrowUp.svelte';
 	import DocumentDuplicate from '$lib/components/icons/DocumentDuplicate.svelte';
 	import Camera from '$lib/components/icons/Camera.svelte';
+	import Viewfinder from '$lib/components/icons/Viewfinder.svelte';
 	import Note from '$lib/components/icons/Note.svelte';
 	import Clip from '$lib/components/icons/Clip.svelte';
 	import ChatBubbleOval from '$lib/components/icons/ChatBubbleOval.svelte';
@@ -28,6 +29,8 @@
 	import Knowledge from './InputMenu/Knowledge.svelte';
 	import AttachWebpageModal from './AttachWebpageModal.svelte';
 	import GlobeAlt from '$lib/components/icons/GlobeAlt.svelte';
+	import Mic from '$lib/components/icons/Mic.svelte';
+	import CursorArrowRays from '$lib/components/icons/CursorArrowRays.svelte';
 
 	const i18n: any = getContext('i18n');
 
@@ -49,6 +52,11 @@
 	export let onClose: Function;
 	export let toolApprovalMode = 'full';
 	export let onToolApprovalModeChange: Function = () => {};
+	// Audio recording actions; the composer decides where the recording goes.
+	export let recordActions: {
+		record: () => void;
+		captureAudio: () => void;
+	} | null = null;
 
 	export let show = false;
 	export let tab = '';
@@ -66,6 +74,9 @@
 		'terminal',
 		'directory'
 	].includes(tab);
+
+	$: showImageCapture = visionCapableModels.length > 0 && $visibleControls['chat.capture'];
+	$: showCapture = showImageCapture || !!recordActions;
 
 	let showAttachWebpageModal = false;
 	$: showAddContext =
@@ -189,7 +200,7 @@
 					{#if toolPermissionsEnabled}
 						<button
 							role="menuitem"
-							class="flex gap-2 w-full items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl text-left"
+							class="flex gap-2 w-full items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer hover:bg-base-50/40 dark:hover:bg-base-800/40 rounded-xl text-left"
 							on:click={() => {
 								tab = 'tool_permissions';
 							}}
@@ -212,20 +223,20 @@
 								</div>
 
 								<div class="flex items-center gap-2 min-w-0">
-									<div class="text-xs text-gray-500 truncate">
+									<div class="text-xs text-base-500 truncate">
 										{$i18n.t(
 											toolApprovalModes.find((mode) => mode.value === toolApprovalMode)?.label ??
 												'Full access'
 										)}
 									</div>
-									<div class="text-gray-500">
+									<div class="text-base-500">
 										<ChevronRight />
 									</div>
 								</div>
 							</div>
 						</button>
 
-						<div class="h-px mx-1 my-1 bg-gray-100 dark:bg-gray-800"></div>
+						<div class="h-px mx-1 my-1 bg-base-100 dark:bg-base-800"></div>
 					{/if}
 				</div>
 			{/if}
@@ -244,7 +255,7 @@
 					>
 						<button
 							role="menuitem"
-							class="flex w-full gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl text-left {!fileUploadEnabled
+							class="flex w-full gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer hover:bg-base-50/40 dark:hover:bg-base-800/40 rounded-xl text-left {!fileUploadEnabled
 								? 'opacity-50'
 								: ''}"
 							type="button"
@@ -261,7 +272,74 @@
 						</button>
 					</Tooltip>
 
-					{#if visionCapableModels.length > 0 && $visibleControls['chat.capture']}
+					{#if showCapture}
+						<button
+							role="menuitem"
+							type="button"
+							class="flex w-full gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer hover:bg-base-50/40 dark:hover:bg-base-800/40 rounded-xl text-left"
+							on:click={() => {
+								tab = 'capture';
+							}}
+						>
+							<Viewfinder />
+							<div class="flex items-center w-full justify-between">
+								<div>{$i18n.t('Capture')}</div>
+								<div class="text-base-500"><ChevronRight /></div>
+							</div>
+						</button>
+					{/if}
+
+					{#if showAddContext}
+						<button
+							role="menuitem"
+							type="button"
+							class="flex w-full gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer hover:bg-base-50/40 dark:hover:bg-base-800/40 rounded-xl text-left"
+							on:click={() => {
+								tab = 'attachments';
+							}}
+						>
+							<DocumentDuplicate />
+							<div class="flex items-center w-full justify-between">
+								<div>{$i18n.t('Attachments')}</div>
+								<div class="text-base-500"><ChevronRight /></div>
+							</div>
+						</button>
+					{/if}
+				</div>
+			{:else if tab === 'capture' && showCapture}
+				<div in:fly={{ x: 20, duration: 150 }}>
+					<button
+						role="menuitem"
+						type="button"
+						class="flex w-full gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer hover:bg-base-50/40 dark:hover:bg-base-800/40 rounded-xl text-left"
+						on:click={() => {
+							tab = '';
+						}}
+					>
+						<ChevronLeft />
+						<div>{$i18n.t('Capture')}</div>
+					</button>
+
+					{#if recordActions}
+						<!-- i18n:parse cannot see keys passed in as variables, so these keep them in the locale files: $i18n.t('Record') $i18n.t('Capture Audio') -->
+						<!-- Earlier wording, kept so i18n:parse does not drop its translations: $i18n.t('Upload Audio') -->
+						{#each [{ label: 'Record', icon: Mic, action: recordActions.record }, { label: 'Capture Audio', icon: CursorArrowRays, action: recordActions.captureAudio }] as item}
+							<button
+								role="menuitem"
+								type="button"
+								class="flex w-full gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer hover:bg-base-50/40 dark:hover:bg-base-800/40 rounded-xl text-left"
+								on:click={() => {
+									show = false;
+									item.action();
+								}}
+							>
+								<svelte:component this={item.icon} className="size-4" />
+								<div class="line-clamp-1">{$i18n.t(item.label)}</div>
+							</button>
+						{/each}
+					{/if}
+
+					{#if showImageCapture}
 						<Tooltip
 							content={fileUploadCapableModels.length !== selectedModels.length
 								? $i18n.t('Model(s) do not support file upload')
@@ -272,7 +350,7 @@
 						>
 							<button
 								role="menuitem"
-								class="flex w-full gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl text-left {!fileUploadEnabled
+								class="flex w-full gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer hover:bg-base-50/40 dark:hover:bg-base-800/40 rounded-xl text-left {!fileUploadEnabled
 									? 'opacity-50'
 									: ''}"
 								type="button"
@@ -291,27 +369,12 @@
 									}
 								}}
 							>
-								<Camera />
-								<div class=" line-clamp-1">{$i18n.t('Capture')}</div>
+								<Camera className="size-4" />
+								<div class="line-clamp-1">
+									{detectMobile() ? $i18n.t('Camera') : $i18n.t('Screenshot')}
+								</div>
 							</button>
 						</Tooltip>
-					{/if}
-
-					{#if showAddContext}
-						<button
-							role="menuitem"
-							type="button"
-							class="flex w-full gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl text-left"
-							on:click={() => {
-								tab = 'attachments';
-							}}
-						>
-							<DocumentDuplicate />
-							<div class="flex items-center w-full justify-between">
-								<div>{$i18n.t('Attachments')}</div>
-								<div class="text-gray-500"><ChevronRight /></div>
-							</div>
-						</button>
 					{/if}
 				</div>
 			{:else if tab === 'attachments'}
@@ -319,7 +382,7 @@
 					<button
 						role="menuitem"
 						type="button"
-						class="flex w-full gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl text-left"
+						class="flex w-full gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer hover:bg-base-50/40 dark:hover:bg-base-800/40 rounded-xl text-left"
 						on:click={() => {
 							tab = '';
 						}}
@@ -337,7 +400,7 @@
 						>
 							<button
 								role="menuitem"
-								class="flex w-full gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl text-left {!webUploadEnabled
+								class="flex w-full gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer hover:bg-base-50/40 dark:hover:bg-base-800/40 rounded-xl text-left {!webUploadEnabled
 									? 'opacity-50'
 									: ''}"
 								type="button"
@@ -365,7 +428,7 @@
 						>
 							<button
 								role="menuitem"
-								class="flex gap-2 w-full items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl text-left {!fileUploadEnabled
+								class="flex gap-2 w-full items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer hover:bg-base-50/40 dark:hover:bg-base-800/40 rounded-xl text-left {!fileUploadEnabled
 									? 'opacity-50'
 									: ''}"
 								on:click={() => {
@@ -381,7 +444,7 @@
 										{$i18n.t('Attach Files')}
 									</div>
 
-									<div class="text-gray-500">
+									<div class="text-base-500">
 										<ChevronRight />
 									</div>
 								</div>
@@ -400,7 +463,7 @@
 						>
 							<button
 								role="menuitem"
-								class="flex gap-2 w-full items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl text-left {!fileUploadEnabled
+								class="flex gap-2 w-full items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer hover:bg-base-50/40 dark:hover:bg-base-800/40 rounded-xl text-left {!fileUploadEnabled
 									? 'opacity-50'
 									: ''}"
 								on:click={() => {
@@ -416,7 +479,7 @@
 										{$i18n.t('Attach Notes')}
 									</div>
 
-									<div class="text-gray-500">
+									<div class="text-base-500">
 										<ChevronRight />
 									</div>
 								</div>
@@ -435,7 +498,7 @@
 						>
 							<button
 								role="menuitem"
-								class="flex gap-2 w-full items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl text-left {!fileUploadEnabled
+								class="flex gap-2 w-full items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer hover:bg-base-50/40 dark:hover:bg-base-800/40 rounded-xl text-left {!fileUploadEnabled
 									? 'opacity-50'
 									: ''}"
 								on:click={() => {
@@ -451,7 +514,7 @@
 										{$i18n.t('Attach Knowledge')}
 									</div>
 
-									<div class="text-gray-500">
+									<div class="text-base-500">
 										<ChevronRight />
 									</div>
 								</div>
@@ -470,7 +533,7 @@
 						>
 							<button
 								role="menuitem"
-								class="flex gap-2 w-full items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl text-left {!fileUploadEnabled
+								class="flex gap-2 w-full items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer hover:bg-base-50/40 dark:hover:bg-base-800/40 rounded-xl text-left {!fileUploadEnabled
 									? 'opacity-50'
 									: ''}"
 								on:click={() => {
@@ -486,7 +549,7 @@
 										{$i18n.t('Reference Chats')}
 									</div>
 
-									<div class="text-gray-500">
+									<div class="text-base-500">
 										<ChevronRight />
 									</div>
 								</div>
@@ -498,7 +561,7 @@
 						{#if $config?.features?.enable_google_drive_integration}
 							<button
 								role="menuitem"
-								class="flex w-full gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl text-left"
+								class="flex w-full gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer hover:bg-base-50/40 dark:hover:bg-base-800/40 rounded-xl text-left"
 								type="button"
 								on:click={() => {
 									uploadGoogleDriveHandler();
@@ -542,7 +605,7 @@
 						{#if $config?.features?.enable_onedrive_integration && ($config?.features?.enable_onedrive_personal || $config?.features?.enable_onedrive_business)}
 							<button
 								role="menuitem"
-								class="flex gap-2 w-full items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl text-left {!fileUploadEnabled
+								class="flex gap-2 w-full items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer hover:bg-base-50/40 dark:hover:bg-base-800/40 rounded-xl text-left {!fileUploadEnabled
 									? 'opacity-50'
 									: ''}"
 								on:click={() => {
@@ -640,7 +703,7 @@
 										{$i18n.t('Microsoft OneDrive')}
 									</div>
 
-									<div class="text-gray-500">
+									<div class="text-base-500">
 										<ChevronRight />
 									</div>
 								</div>
@@ -652,7 +715,7 @@
 				<div class="flex min-h-0 flex-col overflow-hidden" in:fly={{ x: 20, duration: 150 }}>
 					<button
 						role="menuitem"
-						class="flex w-full shrink-0 justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+						class="flex w-full shrink-0 justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer rounded-xl hover:bg-base-50/40 dark:hover:bg-base-800/40"
 						on:click={() => {
 							tab = '';
 						}}
@@ -672,7 +735,7 @@
 								<button
 									role="menuitemradio"
 									aria-checked={toolApprovalMode === mode.value}
-									class="flex gap-2 w-full items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl text-left"
+									class="flex gap-2 w-full items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer hover:bg-base-50/40 dark:hover:bg-base-800/40 rounded-xl text-left"
 									on:click={() => {
 										toolApprovalMode = mode.value;
 										onToolApprovalModeChange(mode.value);
@@ -683,7 +746,7 @@
 										<div class="line-clamp-1">{$i18n.t(mode.label)}</div>
 										{#if toolApprovalMode === mode.value}
 											<svg
-												class="size-3 shrink-0 text-gray-500"
+												class="size-3 shrink-0 text-base-500"
 												viewBox="0 0 24 24"
 												fill="none"
 												stroke="currentColor"
@@ -704,7 +767,7 @@
 				<div class="flex min-h-0 flex-col overflow-hidden" in:fly={{ x: 20, duration: 150 }}>
 					<button
 						role="menuitem"
-						class="flex w-full shrink-0 justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+						class="flex w-full shrink-0 justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer rounded-xl hover:bg-base-50/40 dark:hover:bg-base-800/40"
 						on:click={() => {
 							tab = 'attachments';
 						}}
@@ -724,7 +787,7 @@
 				<div class="flex min-h-0 flex-col overflow-hidden" in:fly={{ x: 20, duration: 150 }}>
 					<button
 						role="menuitem"
-						class="flex w-full shrink-0 justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+						class="flex w-full shrink-0 justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer rounded-xl hover:bg-base-50/40 dark:hover:bg-base-800/40"
 						on:click={() => {
 							tab = 'attachments';
 						}}
@@ -744,7 +807,7 @@
 				<div class="flex min-h-0 flex-col overflow-hidden" in:fly={{ x: 20, duration: 150 }}>
 					<button
 						role="menuitem"
-						class="flex w-full shrink-0 justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+						class="flex w-full shrink-0 justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer rounded-xl hover:bg-base-50/40 dark:hover:bg-base-800/40"
 						on:click={() => {
 							tab = 'attachments';
 						}}
@@ -764,7 +827,7 @@
 				<div class="flex min-h-0 flex-col overflow-hidden" in:fly={{ x: 20, duration: 150 }}>
 					<button
 						role="menuitem"
-						class="flex w-full shrink-0 justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+						class="flex w-full shrink-0 justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer rounded-xl hover:bg-base-50/40 dark:hover:bg-base-800/40"
 						on:click={() => {
 							tab = 'attachments';
 						}}
@@ -784,7 +847,7 @@
 				<div in:fly={{ x: 20, duration: 150 }}>
 					<button
 						role="menuitem"
-						class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+						class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer rounded-xl hover:bg-base-50/40 dark:hover:bg-base-800/40"
 						on:click={() => {
 							tab = 'attachments';
 						}}
@@ -801,7 +864,7 @@
 					{#if $config?.features?.enable_onedrive_personal}
 						<button
 							role="menuitem"
-							class="flex w-full gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl text-left"
+							class="flex w-full gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer hover:bg-base-50/40 dark:hover:bg-base-800/40 rounded-xl text-left"
 							type="button"
 							on:click={() => {
 								uploadOneDriveHandler('personal');
@@ -817,7 +880,7 @@
 					{#if $config?.features?.enable_onedrive_business}
 						<button
 							role="menuitem"
-							class="flex w-full gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl text-left"
+							class="flex w-full gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer hover:bg-base-50/40 dark:hover:bg-base-800/40 rounded-xl text-left"
 							type="button"
 							on:click={() => {
 								uploadOneDriveHandler('organizations');

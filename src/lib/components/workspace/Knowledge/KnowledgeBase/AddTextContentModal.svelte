@@ -23,13 +23,13 @@
 	ariaLabel={$i18n.t('Add text content')}
 	size="full"
 	containerClassName=""
-	className="h-full bg-white dark:bg-gray-900"
+	className="h-full bg-base-0 dark:bg-base-900"
 	bind:show
 >
 	<div class="absolute top-0 right-0 p-5">
 		<button
 			aria-label={$i18n.t('Close')}
-			class="self-center dark:text-white"
+			class="self-center dark:text-base-0"
 			type="button"
 			on:click={() => {
 				show = false;
@@ -38,7 +38,7 @@
 			<XMark className="size-3.5" />
 		</button>
 	</div>
-	<div class="flex flex-col md:flex-row w-full h-full md:space-x-4 dark:text-gray-200">
+	<div class="flex flex-col md:flex-row w-full h-full md:space-x-4 dark:text-base-200">
 		<form
 			class="flex flex-col w-full h-full"
 			on:submit|preventDefault={() => {
@@ -75,7 +75,7 @@
 					<div class=" flex-1 w-full h-full">
 						<textarea
 							aria-label={$i18n.t('Content')}
-							class="w-full h-full min-h-[12.5rem] bg-transparent outline-none resize-none text-base leading-relaxed placeholder:text-gray-300 dark:placeholder:text-gray-600"
+							class="w-full h-full min-h-[12.5rem] bg-transparent outline-none resize-none text-base leading-relaxed placeholder:text-base-300 dark:placeholder:text-base-600"
 							bind:value={content}
 							placeholder={$i18n.t('Write something...')}
 						/>
@@ -105,7 +105,7 @@
 						<Tooltip content={$i18n.t('Voice Input')}>
 							<button
 								aria-label={$i18n.t('Voice Input')}
-								class=" p-2 bg-gray-50 text-gray-700 dark:bg-gray-700 dark:text-white transition rounded-full"
+								class=" p-2 bg-base-50 text-base-700 dark:bg-base-700 dark:text-base-0 transition rounded-full"
 								type="button"
 								on:click={async () => {
 									try {
@@ -140,7 +140,7 @@
 				<div class=" shrink-0">
 					<Tooltip content={$i18n.t('Save')}>
 						<button
-							class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
+							class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-base-0 transition hover:bg-base-1000 disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-base-0"
 							type="submit"
 						>
 							{$i18n.t('Save')}

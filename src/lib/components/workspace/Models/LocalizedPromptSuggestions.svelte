@@ -64,7 +64,7 @@
 					title={localeLabel}
 					type="button"
 					{disabled}
-					class="hover:text-gray-900 disabled:opacity-40 dark:hover:text-gray-100"
+					class="hover:text-base-900 disabled:opacity-40 dark:hover:text-base-100"
 					on:click={useDefault}
 				>
 					{$i18n.t('Use default')}

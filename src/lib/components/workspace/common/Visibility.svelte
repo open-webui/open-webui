@@ -18,20 +18,20 @@
 	];
 </script>
 
-<div class="-mx-1 rounded-xl bg-gray-50/60 px-3 py-2 dark:bg-white/[0.03]">
+<div class="-mx-1 rounded-xl bg-base-50/60 px-3 py-2 dark:bg-base-0/[0.03]">
 	<Dropdown closeOnSelect>
 		<button
 			type="button"
-			class="flex h-6 items-center gap-2 rounded-md text-[0.8125rem] font-medium text-gray-800 transition hover:text-gray-950 dark:text-gray-200 dark:hover:text-white"
+			class="flex h-6 items-center gap-2 rounded-md text-[0.8125rem] font-medium text-base-800 transition hover:text-base-950 dark:text-base-200 dark:hover:text-base-0"
 		>
 			{#if state === 'private'}
-				<LockClosed className="size-3.5 text-gray-500 dark:text-gray-400" />
+				<LockClosed className="size-3.5 text-base-500 dark:text-base-400" />
 			{:else}
-				<Hashtag className="size-3.5 text-gray-500 dark:text-gray-400" />
+				<Hashtag className="size-3.5 text-base-500 dark:text-base-400" />
 			{/if}
 			<span class="sr-only">{$i18n.t('Visibility')}</span>
 			<span>{state === 'private' ? $i18n.t('Private') : $i18n.t('Public')}</span>
-			<ChevronDown className="size-3 text-gray-400 dark:text-gray-500" strokeWidth="2" />
+			<ChevronDown className="size-3 text-base-400 dark:text-base-500" strokeWidth="2" />
 		</button>
 		<div slot="content">
 			<DropdownMenu className="min-w-40">
@@ -59,7 +59,7 @@
 			</DropdownMenu>
 		</div>
 	</Dropdown>
-	<p class="mt-0.5 text-xs leading-5 text-gray-500 dark:text-gray-400">
+	<p class="mt-0.5 text-xs leading-5 text-base-500 dark:text-base-400">
 		{#if state === 'private'}
 			{$i18n.t('Only invited users can access')}
 		{:else}

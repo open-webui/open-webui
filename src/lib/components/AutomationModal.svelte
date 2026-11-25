@@ -8,20 +8,24 @@
 
 	import ScheduleDropdown from '$lib/components/automations/ScheduleDropdown.svelte';
 	import ModelDropdown from '$lib/components/automations/ModelDropdown.svelte';
-	import TerminalDropdown from '$lib/components/automations/TerminalDropdown.svelte';
-	import { getTerminalServers, type TerminalServer } from '$lib/apis/terminal';
+	import MachineDropdown from '$lib/components/automations/MachineDropdown.svelte';
+	import WebhookDropdown from '$lib/components/automations/WebhookDropdown.svelte';
+	import { getMachines, type MachineServer } from '$lib/apis/machines';
 	import DestinationDropdown from '$lib/components/automations/DestinationDropdown.svelte';
 	import { getFolders } from '$lib/apis/folders';
 	import { getChannels } from '$lib/apis/channels';
-	import { baseModels, channels, folders, type AgentModel } from '$lib/stores';
+	import { baseModels, channels, config, folders, type AgentModel } from '$lib/stores';
 
 	import {
 		createAutomation,
 		getAutomationModels,
+		startsNew,
+		repliesInThread,
 		updateAutomationById,
 		type AutomationForm,
 		type AutomationResponse
 	} from '$lib/apis/automations';
+	import { automationMachineOf } from '$lib/utils/machines';
 
 	const i18n = getContext('i18n');
 	const dispatch = createEventDispatcher();
@@ -35,9 +39,9 @@
 	let name = '';
 	let prompt = '';
 	let model_id = '';
-	let terminalServerId = '';
-	let terminalCwd = '';
-	let terminalServers: TerminalServer[] = [];
+	let machineServerId = '';
+	let machineCwd = '';
+	let machines: MachineServer[] = [];
 	let agentModels: AgentModel[] = [];
 	let modelsLoading = false;
 	let initialized = false;
@@ -46,7 +50,11 @@
 	let folder_id = '';
 	let target_type: 'chat' | 'channel' = 'chat';
 	let channel_id = '';
+	let start_new = true;
+	let reply_in_thread = true;
 	let is_active = true;
+	let webhookEnabled = false;
+	let webhookAllowGet = false;
 
 	let loading = false;
 	let foldersLoaded = false;
@@ -54,7 +62,7 @@
 
 	const loadAgentModels = (
 		visible: boolean,
-		terminalId: string,
+		machineId: string,
 		cwd: string,
 		target: string,
 		automationId?: string
@@ -62,7 +70,7 @@
 		const request = ++modelRequest;
 		clearTimeout(modelTimer);
 		agentModels = [];
-		modelsLoading = visible && !!terminalId && target === 'chat';
+		modelsLoading = visible && !!machineId && target === 'chat';
 		if (!visible) return;
 		if (!modelsLoading) {
 			if (model_id.startsWith('agent:')) model_id = '';
@@ -72,7 +80,7 @@
 			try {
 				const available = await getAutomationModels(
 					localStorage.token,
-					terminalId,
+					machineId,
 					cwd.trim(),
 					automationId
 				);
@@ -88,13 +96,7 @@
 			}
 		}, 250);
 	};
-	$: loadAgentModels(
-		show && initialized,
-		terminalServerId,
-		terminalCwd,
-		target_type,
-		automation?.id
-	);
+	$: loadAgentModels(show && initialized, machineServerId, machineCwd, target_type, automation?.id);
 	onDestroy(() => {
 		clearTimeout(modelTimer);
 		modelRequest++;
@@ -102,6 +104,8 @@
 
 	// Schedule dropdown ref
 	let scheduleDropdown: ScheduleDropdown;
+	let savedRrule = '';
+	$: allowWebhook = !!$config?.features?.enable_automation_webhooks;
 
 	const submitHandler = async () => {
 		if (!name.trim() || !prompt.trim() || !model_id.trim()) {
@@ -110,6 +114,10 @@
 		}
 		if (target_type === 'channel' && !channel_id) {
 			toast.error($i18n.t('Channel is required'));
+			return;
+		}
+		if (scheduleDropdown.frequency === 'CUSTOM' && !scheduleDropdown.buildRrule().trim()) {
+			toast.error($i18n.t('Invalid value') + ': ' + $i18n.t('Custom schedule'));
 			return;
 		}
 		if (scheduleDropdown?.frequency === 'ONCE') {
@@ -121,17 +129,24 @@
 		}
 		loading = true;
 		try {
+			const rrule = scheduleDropdown.buildRrule();
+			const sourceRrule = (automation ?? cloneFrom)?.data.rrule;
 			const form: AutomationForm = {
 				name: name.trim(),
 				folder_id: target_type === 'channel' ? null : folder_id || null,
 				data: {
 					prompt: prompt.trim(),
 					model_id: model_id.trim(),
-					rrule: scheduleDropdown.buildRrule(),
-					terminal: terminalServerId
-						? { server_id: terminalServerId, cwd: terminalCwd.trim() || undefined }
+					// An untouched schedule keeps its stored start date.
+					rrule: sourceRrule && rrule === savedRrule ? sourceRrule : rrule,
+					webhook: webhookEnabled ? { allow_get: webhookAllowGet } : null,
+					machine: machineServerId
+						? { server_id: machineServerId, cwd: machineCwd.trim() || undefined }
 						: undefined,
-					target: target_type === 'channel' ? { type: 'channel', channel_id } : { type: 'chat' }
+					target:
+						target_type === 'channel'
+							? { type: 'channel', channel_id, new_thread: start_new, reply_in_thread }
+							: { type: 'chat', new_chat: start_new }
 				},
 				is_active
 			};
@@ -157,7 +172,7 @@
 	const init = async () => {
 		initialized = false;
 		await tick();
-		terminalServers = await getTerminalServers(localStorage.token);
+		machines = await getMachines(localStorage.token);
 		if (!foldersLoaded && ($folders ?? []).length === 0) {
 			const res = await getFolders(localStorage.token).catch(() => null);
 			if (res) folders.set(res);
@@ -169,8 +184,8 @@
 			channelsLoaded = true;
 		}
 
-		terminalServerId = (automation ?? cloneFrom)?.data.terminal?.server_id ?? '';
-		terminalCwd = (automation ?? cloneFrom)?.data.terminal?.cwd ?? '';
+		machineServerId = automationMachineOf((automation ?? cloneFrom)?.data)?.server_id ?? '';
+		machineCwd = automationMachineOf((automation ?? cloneFrom)?.data)?.cwd ?? '';
 		if (automation) {
 			name = automation.name;
 			prompt = automation.data.prompt;
@@ -178,10 +193,12 @@
 			folder_id = automation.folder_id ?? '';
 			target_type = automation.data.target?.type === 'channel' ? 'channel' : 'chat';
 			channel_id = automation.data.target?.channel_id ?? '';
+			start_new = startsNew(automation.data.target);
+			reply_in_thread = repliesInThread(automation.data.target);
 			is_active = automation.is_active;
-			if (scheduleDropdown) {
-				scheduleDropdown.parseRrule(automation.data.rrule);
-			}
+			webhookEnabled = !!automation.data.webhook;
+			webhookAllowGet = !!automation.data.webhook?.allow_get;
+			scheduleDropdown?.parseRrule(automation.data.rrule);
 		} else if (cloneFrom) {
 			name = cloneFrom.name;
 			prompt = cloneFrom.data.prompt;
@@ -195,10 +212,12 @@
 			)
 				? (cloneFrom.data.target?.channel_id ?? '')
 				: '';
+			start_new = startsNew(cloneFrom.data.target);
+			reply_in_thread = repliesInThread(cloneFrom.data.target);
 			is_active = true;
-			if (scheduleDropdown) {
-				scheduleDropdown.parseRrule(cloneFrom.data.rrule);
-			}
+			webhookEnabled = !!cloneFrom.data.webhook;
+			webhookAllowGet = !!cloneFrom.data.webhook?.allow_get;
+			scheduleDropdown?.parseRrule(cloneFrom.data.rrule);
 		} else {
 			name = '';
 			prompt = '';
@@ -206,8 +225,13 @@
 			folder_id = folderId ?? '';
 			target_type = 'chat';
 			channel_id = '';
+			start_new = true;
+			reply_in_thread = true;
 			is_active = true;
+			webhookEnabled = false;
+			webhookAllowGet = false;
 		}
+		savedRrule = scheduleDropdown?.buildRrule?.() ?? '';
 		initialized = true;
 	};
 
@@ -219,9 +243,9 @@
 <Modal ariaLabel={name || $i18n.t('Automation')} size="lg" bind:show>
 	<div>
 		<!-- Header -->
-		<div class="flex justify-between dark:text-gray-100 px-4 pt-3 pb-1">
+		<div class="flex justify-between dark:text-base-100 px-4 pt-3 pb-1">
 			<input
-				class="w-full text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700"
+				class="w-full text-sm bg-transparent outline-hidden placeholder:text-base-300 dark:placeholder:text-base-700"
 				type="text"
 				bind:value={name}
 				aria-label={$i18n.t('Automation title')}
@@ -238,12 +262,12 @@
 
 		<!-- Prompt -->
 		<div class="px-4 pb-2">
-			<label for="automation-instructions" class="block mb-1 text-xs text-gray-500"
+			<label for="automation-instructions" class="block mb-1 text-xs text-base-500"
 				>{$i18n.t('Instructions')}</label
 			>
 			<textarea
 				id="automation-instructions"
-				class="w-full text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700 resize-none min-h-[min(28rem,55vh)]"
+				class="w-full text-sm bg-transparent outline-hidden placeholder:text-base-300 dark:placeholder:text-base-700 resize-none min-h-[min(28rem,55vh)]"
 				bind:value={prompt}
 				rows={8}
 				placeholder={$i18n.t('Enter prompt here.')}
@@ -257,6 +281,15 @@
 			<div class="flex items-center gap-0.5 flex-wrap min-w-0 sm:flex-1">
 				<ScheduleDropdown bind:this={scheduleDropdown} side="top" align="start" />
 
+				{#if allowWebhook || webhookEnabled}
+					<WebhookDropdown
+						bind:enabled={webhookEnabled}
+						bind:allowGet={webhookAllowGet}
+						side="top"
+						align="start"
+					/>
+				{/if}
+
 				<ModelDropdown
 					bind:model_id
 					items={[...$baseModels, ...agentModels]}
@@ -269,30 +302,26 @@
 					bind:target_type
 					bind:channel_id
 					bind:folder_id
+					bind:start_new
+					bind:reply_in_thread
 					folders={$folders}
 					channels={$channels}
 					side="top"
 					align="start"
 				/>
-				<TerminalDropdown
-					{terminalServers}
-					bind:terminalServerId
-					bind:terminalCwd
-					side="top"
-					align="start"
-				/>
+				<MachineDropdown {machines} bind:machineServerId bind:machineCwd side="top" align="start" />
 			</div>
 
 			<div class="flex items-center justify-end gap-2 shrink-0">
 				<button
-					class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 disabled:opacity-60 dark:text-gray-400 dark:hover:bg-gray-850 dark:hover:text-white"
+					class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal text-base-600 transition hover:bg-base-100 hover:text-base-900 disabled:opacity-60 dark:text-base-400 dark:hover:bg-base-850 dark:hover:text-base-0"
 					type="button"
 					on:click={() => (show = false)}
 				>
 					{$i18n.t('Cancel')}
 				</button>
 				<button
-					class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white disabled:cursor-not-allowed"
+					class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-base-0 transition hover:bg-base-1000 disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-base-0 disabled:cursor-not-allowed"
 					on:click={submitHandler}
 					type="button"
 					disabled={loading || modelsLoading || !initialized}

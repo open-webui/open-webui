@@ -1,66 +1,81 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
 	import type { Readable } from 'svelte/store';
+	import type { AppLayoutContext } from '$lib/types';
 
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
-
-	type SubagentResult = {
-		delegation_id?: string;
-		delegation_ids?: string[];
-		subagent_chat_id?: string;
-		subagent_chat_ids?: string[];
-	};
+	import Markdown from './Markdown.svelte';
 
 	const i18n = getContext<Readable<{ t: (value: string) => string }>>('i18n');
+	const appLayout = getContext<AppLayoutContext | undefined>('appLayout');
 
 	export let content: string;
-	export let result: SubagentResult;
 
-	let expanded = false;
-	$: delegationIds = Array.isArray(result.delegation_ids) ? result.delegation_ids : [];
-	$: delegationLabel =
-		result.delegation_id ?? (delegationIds.length > 1 ? `${delegationIds.length} tasks` : '');
-	$: summary = (() => {
-		const line = content
-			.split('\n')
-			.map((value) => value.trim())
-			.find((value) => value && !value.startsWith('['));
-		if (!line) return delegationLabel;
-		return line.length > 96 ? `${line.slice(0, 96)}...` : line;
-	})();
+	let expanded: Record<number, boolean> = {};
+
+	// The report written by subagents.py; several that finished together share one message.
+	$: reports = content
+		.split(/^\[ASYNC SUBAGENT COMPLETE - .*\]$/m)
+		.filter((report) => report.trim())
+		.map((report) => {
+			const [head, ...result] = report.split('--- RESULT ---');
+			const field = (pattern: RegExp) => head.match(pattern)?.[1]?.trim() ?? '';
+			return {
+				title: field(/^Title: (.*)\nOriginal task: /m) || field(/^Original task: (.*)$/m),
+				chatId: field(/^Subagent chat: (.*)$/m),
+				status: field(/^Status: (\S+)/m),
+				duration: field(/Duration: (\S+)/),
+				result: (result.length ? result.join('--- RESULT ---') : head).trim()
+			};
+		});
+
+	const label = (status: string) =>
+		({
+			completed: $i18n.t('Sub-agent finished'),
+			interrupted: $i18n.t('Sub-agent stopped')
+		})[status] ?? $i18n.t('Sub-agent failed');
 </script>
 
-<div class="w-full min-w-0 pb-1">
-	<button
-		type="button"
-		class="w-full min-w-0 flex items-center gap-2 text-left text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
-		aria-expanded={expanded}
-		on:click={() => (expanded = !expanded)}
-	>
-		<span class="text-[0.75rem] font-normal shrink-0">
-			{$i18n.t('Background sub-agent finished')}
-		</span>
-		{#if summary}
-			<span class="text-[0.75rem] truncate min-w-0 flex-1">{summary}</span>
-		{/if}
-		{#if delegationLabel}
-			<span
-				class="hidden sm:inline text-[0.6875rem] font-mono text-gray-400 dark:text-gray-600 shrink-0"
-			>
-				{delegationLabel}
-			</span>
-		{/if}
-		<ChevronDown
-			className="size-3 text-gray-400 dark:text-gray-600 shrink-0 transition-transform duration-150 {expanded
-				? 'rotate-180'
-				: ''}"
-		/>
-	</button>
-	{#if expanded}
-		<div
-			class="mt-2 ml-3 border-l border-gray-100 dark:border-white/8 pl-3 text-[0.78125rem] leading-relaxed text-gray-600 dark:text-gray-400 whitespace-pre-wrap break-words"
+<div class="w-full min-w-0 text-[0.90625rem]">
+	{#each reports as report, index}
+		<button
+			type="button"
+			class="group flex max-w-full min-w-0 items-center gap-1.5 py-0.5 text-left text-base-500 transition hover:text-base-700 dark:hover:text-base-300"
+			aria-expanded={!!expanded[index]}
+			on:click={() => (expanded[index] = !expanded[index])}
 		>
-			{content}
-		</div>
-	{/if}
+			<span dir="auto" class="min-w-0 truncate">{label(report.status)} · {report.title}</span>
+			<span class="shrink-0 text-xs tabular-nums">{report.duration}</span>
+			<ChevronDown
+				strokeWidth="3.5"
+				className="size-3 shrink-0 transition {expanded[index]
+					? 'rotate-180'
+					: 'opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100'}"
+			/>
+		</button>
+		{#if expanded[index]}
+			<div
+				class="my-1 border-l border-base-100 pl-2.5 text-base-500 dark:border-base-800 dark:text-base-400"
+			>
+				<div class="markdown-prose-xs max-w-none break-words">
+					<Markdown
+						id={`subagent-${report.chatId}`}
+						content={report.result}
+						allowHtml={false}
+						allowEmbeds={false}
+					/>
+				</div>
+				{#if report.chatId && appLayout?.openPageTab}
+					<button
+						type="button"
+						class="mt-1 text-xs text-base-400 transition hover:text-base-600 dark:text-base-600 dark:hover:text-base-400"
+						on:click={() =>
+							appLayout?.openPageTab?.({ href: `/c/${report.chatId}`, label: report.title })}
+					>
+						{$i18n.t('Open thread')}
+					</button>
+				{/if}
+			</div>
+		{/if}
+	{/each}
 </div>

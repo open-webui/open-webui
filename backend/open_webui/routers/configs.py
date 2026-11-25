@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Optional
+import re
+from typing import Any, Literal, Optional
 
 import aiohttp
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -10,9 +11,11 @@ from open_webui.config import BannerModel
 from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL, AIOHTTP_CLIENT_TIMEOUT, ENABLE_TOOL_SERVERS
 from open_webui.events import EVENTS, publish_event
 from open_webui.models.config import Config
+from open_webui.models.models import Models
 from open_webui.models.oauth_sessions import OAuthSessions
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.headers import bearer_auth_header, get_custom_headers
+from open_webui.utils.machines import MANAGED_SCHEMES
 from open_webui.utils.mcp.client import MCPClient
 from open_webui.utils.oauth import (
     OAUTH_MAX_FIELD_SIZE,
@@ -26,13 +29,14 @@ from open_webui.utils.oauth import (
     recover_oauth_client_metadata,
     resolve_oauth_client_info,
 )
+from open_webui.utils.tool_search import ToolSearchError, validate_decisions_config
 from open_webui.utils.tools import (
     get_tool_server_data,
     get_tool_server_url,
-    set_terminal_servers,
+    set_machines,
     set_tool_servers,
 )
-from pydantic import BaseModel, ConfigDict, Field, StrictBool, field_validator
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, StrictBool, field_validator, model_validator
 
 router = APIRouter()
 
@@ -67,12 +71,14 @@ MODELS_CONFIG_KEYS = {
 }
 SUBAGENTS_CONFIG_KEYS = {
     'ENABLE_SUBAGENTS': 'subagents.enable',
-    'SUBAGENTS_BACKGROUND_ENABLED': 'subagents.background_enabled',
     'SUBAGENTS_MAX_CONCURRENT': 'subagents.max_concurrent',
     'SUBAGENTS_MAX_ASYNC': 'subagents.max_async',
     'SUBAGENTS_MAX_ITERATIONS': 'subagents.max_iterations',
     'SUBAGENTS_MAX_OUTPUT': 'subagents.max_output',
     'SUBAGENTS_SYSTEM_PROMPT': 'subagents.system_prompt',
+}
+ROUTER_MODELS_CONFIG_KEYS = {
+    'ROUTER_MODELS': 'router.models',
 }
 
 
@@ -99,6 +105,10 @@ async def import_config(request: Request, form_data: ImportConfigForm, user=Depe
     from open_webui.utils.mfa import update_mfa_config
 
     await update_mfa_config(request, form_data.config)
+    if 'tool_server.connections' in form_data.config:
+        await set_tool_servers(request)
+    if 'machines.connections' in form_data.config:
+        await set_machines(request)
     await publish_event(
         request,
         EVENTS.CONFIG_IMPORTED,
@@ -310,7 +320,7 @@ async def set_tool_servers_config(
     return {'TOOL_SERVER_CONNECTIONS': connections}
 
 
-class TerminalServerConnection(BaseModel):
+class MachineConnection(BaseModel):
     id: str | None = ''
     name: str | None = ''
 
@@ -329,43 +339,64 @@ class TerminalServerConnection(BaseModel):
     model_config = ConfigDict(extra='allow')
 
 
-class TerminalServersConfigForm(BaseModel):
-    TERMINAL_SERVER_CONNECTIONS: list[TerminalServerConnection]
+class MachinesConfigForm(BaseModel):
+    # TERMINAL_SERVER_CONNECTIONS is the former name, still accepted.
+    MACHINE_CONNECTIONS: list[MachineConnection] = Field(
+        validation_alias=AliasChoices('MACHINE_CONNECTIONS', 'TERMINAL_SERVER_CONNECTIONS')
+    )
 
 
-@router.get('/terminal_servers')
-async def get_terminal_servers_config(request: Request, user=Depends(get_admin_user)):
-    return {'TERMINAL_SERVER_CONNECTIONS': await Config.get('terminal_server.connections')}
+@router.get('/machines')
+async def get_machines_config(request: Request, user=Depends(get_admin_user)):
+    return {'MACHINE_CONNECTIONS': await Config.get('machines.connections')}
 
 
-@router.post('/terminal_servers')
-async def set_terminal_servers_config(
+@router.post('/machines')
+async def set_machines_config(
     request: Request,
-    form_data: TerminalServersConfigForm,
+    form_data: MachinesConfigForm,
     user=Depends(get_admin_user),
 ):
     connections = [
-        connection.model_dump(exclude={'policy', 'lifecycle'}) for connection in form_data.TERMINAL_SERVER_CONNECTIONS
+        connection.model_dump(exclude={'policy', 'lifecycle'}) for connection in form_data.MACHINE_CONNECTIONS
     ]
-    await Config.upsert({'terminal_server.connections': connections})
 
-    await set_terminal_servers(request)
+    # Managed machines (SSH, this computer) are run by /api/v1/machines: the browser can rename
+    # or disable them, but never change where they point or their key.
+    stored = await Config.get('machines.connections', []) or []
+    machines = {c['id']: c for c in stored if (c.get('ssh') or c.get('local')) and c.get('id')}
+    for connection in connections:
+        machine = machines.get(connection.get('id'))
+        if machine:
+            connection.pop('ssh', None)
+            connection.pop('local', None)
+            connection.update({k: machine[k] for k in ('url', 'key', 'ssh', 'local') if k in machine})
+    # ssh:// and local:// entries that are not stored machines were removed elsewhere; never re-create them.
+    connections = [
+        c for c in connections if c.get('id') in machines or not str(c.get('url') or '').startswith(MANAGED_SCHEMES)
+    ]
+    # A page opened before a machine was added does not know about it, so keep machines the
+    # form left out. Removing a machine goes through DELETE /api/v1/machines/{id}.
+    submitted = {connection.get('id') for connection in connections}
+    connections += [machine for machine_id, machine in machines.items() if machine_id not in submitted]
+
+    await Config.upsert({'machines.connections': connections})
+
+    await set_machines(request)
 
     await publish_event(
         request,
-        EVENTS.CONFIG_TERMINAL_SERVERS_UPDATED,
+        EVENTS.CONFIG_MACHINES_UPDATED,
         actor=user,
-        subject_id='terminal_server.connections',
+        subject_id='machines.connections',
         subject_type='config',
         data={'count': len(connections)},
     )
-    return {'TERMINAL_SERVER_CONNECTIONS': connections}
+    return {'MACHINE_CONNECTIONS': connections}
 
 
-@router.post('/terminal_servers/verify')
-async def verify_terminal_server_connection(
-    request: Request, form_data: TerminalServerConnection, user=Depends(get_admin_user)
-):
+@router.post('/machines/verify')
+async def verify_machine_connection(request: Request, form_data: MachineConnection, user=Depends(get_admin_user)):
     """
     Verify the connection to a terminal server by detecting its type.
 
@@ -377,18 +408,23 @@ async def verify_terminal_server_connection(
 
     base_url = (form_data.url or '').rstrip('/')
     if not base_url:
-        raise HTTPException(status_code=400, detail='Terminal server URL is required')
+        raise HTTPException(status_code=400, detail='Machine URL is required')
 
     headers = {}
     if form_data.auth_type in ('bearer', 'session') and form_data.key:
         headers.update(bearer_auth_header(form_data.key))
 
+    timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT)
+    if base_url.startswith(MANAGED_SCHEMES):
+        from open_webui.utils.machines import get_machine_client
+
+        client = get_machine_client(base_url, timeout=timeout)  # through the machine's socket
+    else:
+        client = aiohttp.ClientSession(trust_env=True, timeout=timeout)
+
     try:
-        async with aiohttp.ClientSession(
-            trust_env=True,
-            timeout=aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT),
-        ) as session:
-            # Orchestrators expose a templates API; plain terminals don't.
+        async with client as session:
+            # Orchestrators expose a templates API; plain machines don't.
             try:
                 async with session.get(
                     f'{base_url}/api/v1/terminals/templates', headers=headers, ssl=AIOHTTP_CLIENT_SESSION_SSL
@@ -411,7 +447,7 @@ async def verify_terminal_server_connection(
     except Exception as e:
         log.debug('Failed to connect to the terminal server: %s', e)
 
-    raise HTTPException(status_code=400, detail='Failed to connect to the terminal server')
+    raise HTTPException(status_code=400, detail='Failed to connect to the machine')
 
 
 @router.post('/tool_servers/verify')
@@ -639,7 +675,6 @@ async def set_models_config(request: Request, form_data: ModelsConfigForm, user=
 
 class SubagentsConfigForm(BaseModel):
     ENABLE_SUBAGENTS: bool
-    SUBAGENTS_BACKGROUND_ENABLED: bool
     SUBAGENTS_MAX_CONCURRENT: int | None = Field(default=None, gt=0)
     SUBAGENTS_MAX_ASYNC: int | None = Field(default=None, gt=0)
     SUBAGENTS_MAX_ITERATIONS: int | None = Field(default=None, gt=0)
@@ -683,6 +718,148 @@ async def set_subagents_config(
         subject_id='subagents',
         subject_type='config',
         data={'enabled': values.get('ENABLE_SUBAGENTS')},
+    )
+    return values
+
+
+class RouterModelRoute(BaseModel):
+    model_id: str
+    condition: str | None = None
+    pattern: str | None = None
+    model_config = ConfigDict(extra='forbid')
+
+    @field_validator('condition', 'pattern', mode='before')
+    @classmethod
+    def normalize_empty(cls, value):
+        return value if (value or '').strip() else None
+
+    @model_validator(mode='after')
+    def validate_match(self):
+        if self.condition and self.pattern:
+            raise ValueError('A route can have a condition or a pattern, not both.')
+        if self.pattern:
+            try:
+                re.compile(self.pattern)
+            except re.error as e:
+                raise ValueError(f'Invalid pattern: {e}')
+        return self
+
+
+class RouterModelMeta(BaseModel):
+    routes: list[RouterModelRoute] = Field(min_length=1)
+    strategy: Literal['first', 'random'] = 'first'
+    model_config = ConfigDict(extra='allow')
+
+    @model_validator(mode='before')
+    @classmethod
+    def drop_access_grants(cls, data):
+        # Access lives on the model row (/models/model/access/update), like any model.
+        if isinstance(data, dict):
+            data = {key: value for key, value in data.items() if key != 'access_grants'}
+        return data
+
+    @field_validator('routes')
+    @classmethod
+    def group_routes(cls, routes):
+        # Stored in the order they're evaluated: patterns, conditions, defaults.
+        return (
+            [route for route in routes if route.pattern]
+            + [route for route in routes if route.condition]
+            + [route for route in routes if not (route.pattern or route.condition)]
+        )
+
+
+class RouterModelDecisionsConfig(BaseModel):
+    api_base_url: str = 'https://api.openai.com/v1'
+    api_key: str = ''
+    model: str = 'gpt-6-luna'
+    threshold: float = Field(default=0.5, ge=0, le=1)
+    prompt: str = ''
+
+
+class RouterModelConfig(BaseModel):
+    decisions: RouterModelDecisionsConfig | None = None
+    model_config = ConfigDict(extra='allow')
+
+
+class RouterModel(BaseModel):
+    id: str = Field(min_length=1)
+    name: str = Field(min_length=1)
+    meta: RouterModelMeta
+    config: RouterModelConfig = Field(default_factory=RouterModelConfig)
+
+    @model_validator(mode='after')
+    def validate_decisions(self):
+        if any(route.condition for route in self.meta.routes):
+            decisions = self.config.decisions
+            if not decisions:
+                raise ValueError('Routes with a condition need a Decisions API.')
+            try:
+                validate_decisions_config(decisions.api_base_url.strip(), decisions.model.strip())
+            except ToolSearchError as e:
+                raise ValueError(str(e))
+        else:
+            self.config.decisions = None
+        return self
+
+
+class RouterModelsConfigForm(BaseModel):
+    ROUTER_MODELS: list[RouterModel]
+
+    @field_validator('ROUTER_MODELS')
+    @classmethod
+    def validate_unique_ids(cls, value):
+        ids = [model.id for model in value]
+        if len(ids) != len(set(ids)):
+            raise ValueError('Router model IDs must be unique.')
+        return value
+
+
+@router.get('/router_models', response_model=RouterModelsConfigForm)
+async def get_router_models_config(user=Depends(get_admin_user)):
+    return await get_config_values(ROUTER_MODELS_CONFIG_KEYS)
+
+
+@router.post('/router_models', response_model=RouterModelsConfigForm)
+async def set_router_models_config(
+    request: Request,
+    form_data: RouterModelsConfigForm,
+    user=Depends(get_admin_user),
+):
+    from open_webui.utils.models import get_all_models
+
+    if not request.app.state.MODELS:
+        await get_all_models(request, user=user)
+    models = request.app.state.MODELS
+    router_model_ids = {model.id for model in form_data.ROUTER_MODELS}
+
+    for router_model in form_data.ROUTER_MODELS:
+        existing = models.get(router_model.id)
+        if existing and existing.get('owned_by') != 'router':
+            raise HTTPException(400, f'Model ID "{router_model.id}" is already in use.')
+        for route in router_model.meta.routes:
+            if route.model_id in router_model_ids or (models.get(route.model_id) or {}).get('owned_by') == 'router':
+                raise HTTPException(400, 'A route cannot use another router model.')
+
+    previous_ids = {model.get('id') for model in await Config.get('router.models', []) or []}
+    await Config.upsert(
+        config_updates(
+            form_data.model_dump(exclude_none=True),
+            ROUTER_MODELS_CONFIG_KEYS,
+        )
+    )
+    # A deleted router model takes its model row (and access grants) with it.
+    for model_id in previous_ids - router_model_ids:
+        if await Models.get_model_by_id(model_id):
+            await Models.delete_model_by_id(model_id)
+    values = await get_config_values(ROUTER_MODELS_CONFIG_KEYS)
+    await publish_event(
+        request,
+        EVENTS.CONFIG_UPDATED,
+        actor=user,
+        subject_id='router_models',
+        subject_type='config',
+        data={'count': len(values.get('ROUTER_MODELS') or [])},
     )
     return values
 

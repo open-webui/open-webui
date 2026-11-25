@@ -3,7 +3,8 @@
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 	import { formatFileSize, safeLinkUrl } from '$lib/utils';
-	import { settings, showFileNavPath } from '$lib/stores';
+	import type { AppLayoutContext } from '$lib/types';
+	import { embed, settings, showEmbeds, showFileNavPath, showTabs, user } from '$lib/stores';
 
 	import FileItemModal from './FileItemModal.svelte';
 	import GarbageBin from '../icons/GarbageBin.svelte';
@@ -12,15 +13,20 @@
 	import XMark from '$lib/components/icons/XMark.svelte';
 
 	const i18n = getContext('i18n');
+	const appLayout = getContext<AppLayoutContext | undefined>('appLayout');
 	const dispatch = createEventDispatcher();
 
 	export let className = 'w-60';
 	export let colorClassName =
-		'bg-white dark:bg-gray-850 border border-gray-50/30 dark:border-gray-800/30';
+		'bg-base-0 dark:bg-base-850 border border-base-50/30 dark:border-base-800/30';
 	export let url: string | null = null;
 
 	export let dismissible = false;
 	export let modal = false;
+	/** The chat the file opens in a tab beside, instead of in the modal. */
+	export let chatId: string | null = null;
+	/** Anything more the file's tab needs. */
+	export let tabOptions: Record<string, any> = {};
 	export let loading = false;
 
 	export let item: any = null;
@@ -38,12 +44,47 @@
 	import Folder from '../icons/Folder.svelte';
 	let showModal = false;
 
+	// Where there are no chat tabs to browse it in
+	const canOpenKnowledge = () =>
+		!modal &&
+		item?.type === 'collection' &&
+		!!item.id &&
+		!!appLayout?.openPageTab &&
+		($user?.role === 'admin' || !!$user?.permissions?.workspace?.knowledge);
+
 	const decodeString = (str: string) => {
 		try {
 			return decodeURIComponent(str);
 		} catch (e) {
 			return str;
 		}
+	};
+
+	const openInTab = () => {
+		const id = item?.type === 'file' ? item.id : null;
+		const knowledgeId = item?.type === 'collection' ? item.id : null;
+		const content = item?.file?.data?.content ?? item?.content ?? '';
+		const key = item?.id || item?.itemId || item?.url;
+		if (chatId === null || !(id || knowledgeId || (key && content))) return false;
+
+		showTabs.set(true);
+		showEmbeds.set(true);
+		embed.set({
+			key,
+			file: {
+				id: id ?? undefined,
+				knowledgeId,
+				page: null,
+				passages: [],
+				content,
+				attachment: item,
+				...tabOptions
+			},
+			url: item.url,
+			title: decodeString(name ?? ''),
+			chatId
+		});
+		return true;
 	};
 </script>
 
@@ -63,8 +104,17 @@
 
 			if (filesystemPath) {
 				showFileNavPath.set(filesystemPath);
+			} else if (item?.type === 'collection' && openInTab()) {
+				// Browsed beside the chat
+			} else if (canOpenKnowledge()) {
+				// Opens beside the chat, so the conversation stays readable
+				appLayout?.openPageTab?.({
+					href: `/workspace/knowledge/${item.id}`,
+					label: name,
+					inSplit: true
+				});
 			} else if (item?.file?.data?.content || item?.type === 'file' || item?.content || modal) {
-				showModal = !showModal;
+				if (!openInTab()) showModal = !showModal;
 			} else {
 				if (url) {
 					if (type === 'file') {
@@ -84,7 +134,7 @@
 	>
 		{#if !small}
 			<div
-				class="size-10 shrink-0 flex justify-center items-center bg-black/20 dark:bg-white/10 text-white rounded-xl"
+				class="size-10 shrink-0 flex justify-center items-center bg-base-1000/20 dark:bg-base-0/10 text-white rounded-xl"
 			>
 				{#if !loading}
 					<svg
@@ -108,7 +158,7 @@
 				{/if}
 			</div>
 		{:else}
-			<div class="shrink-0 text-gray-500 dark:text-gray-400">
+			<div class="shrink-0 text-base-500 dark:text-base-400">
 				{#if !loading}
 					<Tooltip
 						content={type === 'collection'
@@ -142,14 +192,14 @@
 
 		{#if !small}
 			<div class="flex flex-col justify-center -space-y-0.5 px-2.5 w-full">
-				<div class=" dark:text-gray-100 text-sm font-normal line-clamp-1 mb-1">
+				<div class=" dark:text-base-100 text-sm font-normal line-clamp-1 mb-1">
 					{decodeString(name)}
 				</div>
 
 				<div
 					class=" flex justify-between text-xs line-clamp-1 {($settings?.highContrastMode ?? false)
-						? 'text-gray-800 dark:text-gray-100'
-						: 'text-gray-500'}"
+						? 'text-base-800 dark:text-base-100'
+						: 'text-base-500'}"
 				>
 					{#if type === 'file' || type === 'filesystem'}
 						{$i18n.t('File')}
@@ -174,14 +224,14 @@
 				placement="top-start"
 			>
 				<div class="flex min-w-0 flex-1 items-center overflow-hidden">
-					<div class="flex min-w-0 flex-1 items-center justify-between dark:text-gray-100">
+					<div class="flex min-w-0 flex-1 items-center justify-between dark:text-base-100">
 						<div class="min-w-0 flex-1 truncate pr-1 font-normal">{decodeString(name)}</div>
 						{#if size}
-							<div class="max-w-[35%] shrink-0 truncate text-[0.6875rem] capitalize text-gray-500">
+							<div class="max-w-[35%] shrink-0 truncate text-[0.6875rem] capitalize text-base-500">
 								{formatFileSize(size)}
 							</div>
 						{:else}
-							<div class="max-w-[35%] shrink-0 truncate text-[0.6875rem] capitalize text-gray-500">
+							<div class="max-w-[35%] shrink-0 truncate text-[0.6875rem] capitalize text-base-500">
 								{#if type === 'collection'}
 									{$i18n.t('Knowledge')}
 								{:else}
@@ -199,7 +249,7 @@
 		<div class=" absolute -top-[3px] -right-[3px] flex">
 			<button
 				aria-label={$i18n.t('Remove File')}
-				class=" bg-white text-black border border-gray-50 rounded-full {($settings?.highContrastMode ??
+				class=" bg-base-0 text-base-1000 border border-base-50 rounded-full {($settings?.highContrastMode ??
 				false)
 					? ''
 					: 'hover-reveal transition'}"
@@ -212,7 +262,7 @@
 			</button>
 
 			<!-- <button
-				class=" p-1 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-full group-hover:visible invisible transition"
+				class=" p-1 dark:text-base-300 dark:hover:text-base-0 hover:bg-base-1000/5 dark:hover:bg-base-0/5 rounded-full group-hover:visible invisible transition"
 				type="button"
 				on:click={() => {
 				}}

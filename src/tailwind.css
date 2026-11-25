@@ -33,6 +33,115 @@
 }
 
 /*
+  `base-*` is the UI colour scale; `gray-*` stays plain grey. `base-0` and
+  `base-1000` are its light and dark ends (white and black by default). Each
+  step reads `--app-base-*` and otherwise falls back to grey (or white/black),
+  so the default look and legacy custom CSS that overrides `--color-gray-*`
+  keep working. `inline` resolves the fallback per element.
+*/
+@theme inline static {
+	--color-base-0: var(--app-base-0, #fff);
+	--color-base-50: var(--app-base-50, var(--color-gray-50));
+	--color-base-100: var(--app-base-100, var(--color-gray-100));
+	--color-base-200: var(--app-base-200, var(--color-gray-200));
+	--color-base-300: var(--app-base-300, var(--color-gray-300));
+	--color-base-400: var(--app-base-400, var(--color-gray-400));
+	--color-base-500: var(--app-base-500, var(--color-gray-500));
+	--color-base-600: var(--app-base-600, var(--color-gray-600));
+	--color-base-700: var(--app-base-700, var(--color-gray-700));
+	--color-base-800: var(--app-base-800, var(--color-gray-800));
+	--color-base-850: var(--app-base-850, var(--color-gray-850));
+	--color-base-900: var(--app-base-900, var(--color-gray-900));
+	--color-base-950: var(--app-base-950, var(--color-gray-950));
+	--color-base-1000: var(--app-base-1000, #000);
+}
+
+/* Grey, white and black UI utilities moved to `base`; keep them for external HTML and custom CSS. */
+@source inline('{hover:,dark:,dark:hover:,}{bg,text,border}-{gray-{50,{100..900..100},850,950},white,black}');
+
+@layer theme {
+	/*
+	  Two-colour themes: set `--app-bg` (background) and `--app-fg` (strongest
+	  text) and `--app-base-*` is mixed from them. Unset, the mixes are invalid
+	  and `base` stays grey. With the default seeds (light: white/black, dark:
+	  #171717/white) the mixes reproduce the greys.
+	*/
+	html:not(.dark) {
+		--app-base-0: color-mix(in oklab, var(--app-fg) 0%, var(--app-bg));
+		--app-base-50: color-mix(in oklab, var(--app-fg) 2%, var(--app-bg));
+		--app-base-100: color-mix(in oklab, var(--app-fg) 6%, var(--app-bg));
+		--app-base-200: color-mix(in oklab, var(--app-fg) 8%, var(--app-bg));
+		--app-base-300: color-mix(in oklab, var(--app-fg) 15%, var(--app-bg));
+		--app-base-400: color-mix(in oklab, var(--app-fg) 23%, var(--app-bg));
+		--app-base-500: color-mix(in oklab, var(--app-fg) 31%, var(--app-bg));
+		--app-base-600: color-mix(in oklab, var(--app-fg) 49%, var(--app-bg));
+		--app-base-700: color-mix(in oklab, var(--app-fg) 58%, var(--app-bg));
+		--app-base-800: color-mix(in oklab, var(--app-fg) 68%, var(--app-bg));
+		--app-base-850: color-mix(in oklab, var(--app-fg) 73%, var(--app-bg));
+		--app-base-900: color-mix(in oklab, var(--app-fg) 80%, var(--app-bg));
+		--app-base-950: color-mix(in oklab, var(--app-fg) 84%, var(--app-bg));
+		--app-base-1000: color-mix(in oklab, var(--app-fg) 100%, var(--app-bg));
+	}
+
+	html.dark {
+		--app-base-0: color-mix(in oklab, var(--app-fg) 100%, var(--app-bg));
+		--app-base-50: color-mix(in oklab, var(--app-fg) 97.5%, var(--app-bg));
+		--app-base-100: color-mix(in oklab, var(--app-fg) 92.5%, var(--app-bg));
+		--app-base-200: color-mix(in oklab, var(--app-fg) 90%, var(--app-bg));
+		--app-base-300: color-mix(in oklab, var(--app-fg) 81.25%, var(--app-bg));
+		--app-base-400: color-mix(in oklab, var(--app-fg) 71.25%, var(--app-bg));
+		--app-base-500: color-mix(in oklab, var(--app-fg) 61.25%, var(--app-bg));
+		--app-base-600: color-mix(in oklab, var(--app-fg) 38.75%, var(--app-bg));
+		--app-base-700: color-mix(in oklab, var(--app-fg) 27.5%, var(--app-bg));
+		--app-base-800: color-mix(in oklab, var(--app-fg) 15%, var(--app-bg));
+		--app-base-850: color-mix(in oklab, var(--app-fg) 8.75%, var(--app-bg));
+		--app-base-900: color-mix(in oklab, var(--app-fg) 0%, var(--app-bg));
+		--app-base-950: color-mix(in oklab, var(--app-bg), black 20%);
+		--app-base-1000: color-mix(in oklab, var(--app-bg), black 60%);
+	}
+}
+
+/* Markdown (`prose`) colours follow the theme too; fallbacks are the plugin's own colours. */
+@layer utilities {
+	.prose {
+		--tw-prose-body: var(--app-base-700, oklch(37.3% 0.034 259.733));
+		--tw-prose-headings: var(--app-base-900, oklch(21% 0.034 264.665));
+		--tw-prose-lead: var(--app-base-600, oklch(44.6% 0.03 256.802));
+		--tw-prose-links: var(--app-base-900, oklch(21% 0.034 264.665));
+		--tw-prose-bold: var(--app-base-900, oklch(21% 0.034 264.665));
+		--tw-prose-counters: var(--app-base-500, oklch(55.1% 0.027 264.364));
+		--tw-prose-bullets: var(--app-base-300, oklch(87.2% 0.01 258.338));
+		--tw-prose-hr: var(--app-base-200, oklch(92.8% 0.006 264.531));
+		--tw-prose-quotes: var(--app-base-900, oklch(21% 0.034 264.665));
+		--tw-prose-quote-borders: var(--app-base-200, oklch(92.8% 0.006 264.531));
+		--tw-prose-captions: var(--app-base-500, oklch(55.1% 0.027 264.364));
+		--tw-prose-kbd: var(--app-base-900, oklch(21% 0.034 264.665));
+		--tw-prose-code: var(--app-base-900, oklch(21% 0.034 264.665));
+		--tw-prose-pre-code: var(--app-base-200, oklch(92.8% 0.006 264.531));
+		--tw-prose-pre-bg: var(--app-base-800, oklch(27.8% 0.033 256.848));
+		--tw-prose-th-borders: var(--app-base-300, oklch(87.2% 0.01 258.338));
+		--tw-prose-td-borders: var(--app-base-200, oklch(92.8% 0.006 264.531));
+		--tw-prose-invert-body: var(--app-base-300, oklch(87.2% 0.01 258.338));
+		--tw-prose-invert-headings: var(--app-base-0, #fff);
+		--tw-prose-invert-lead: var(--app-base-400, oklch(70.7% 0.022 261.325));
+		--tw-prose-invert-links: var(--app-base-0, #fff);
+		--tw-prose-invert-bold: var(--app-base-0, #fff);
+		--tw-prose-invert-counters: var(--app-base-400, oklch(70.7% 0.022 261.325));
+		--tw-prose-invert-bullets: var(--app-base-600, oklch(44.6% 0.03 256.802));
+		--tw-prose-invert-hr: var(--app-base-700, oklch(37.3% 0.034 259.733));
+		--tw-prose-invert-quotes: var(--app-base-100, oklch(96.7% 0.003 264.542));
+		--tw-prose-invert-quote-borders: var(--app-base-700, oklch(37.3% 0.034 259.733));
+		--tw-prose-invert-captions: var(--app-base-400, oklch(70.7% 0.022 261.325));
+		--tw-prose-invert-kbd: var(--app-base-0, #fff);
+		--tw-prose-invert-code: var(--app-base-0, #fff);
+		--tw-prose-invert-pre-code: var(--app-base-300, oklch(87.2% 0.01 258.338));
+		--tw-prose-invert-pre-bg: color-mix(in oklab, var(--app-base-1000, #000) 50%, transparent);
+		--tw-prose-invert-th-borders: var(--app-base-600, oklch(44.6% 0.03 256.802));
+		--tw-prose-invert-td-borders: var(--app-base-700, oklch(37.3% 0.034 259.733));
+	}
+}
+
+/*
   The default border color has changed to `currentColor` in Tailwind CSS v4,
   so we've added these compatibility styles to make sure everything still
   looks the same as it did with Tailwind CSS v3.
@@ -46,7 +155,7 @@
 	::before,
 	::backdrop,
 	::file-selector-button {
-		border-color: var(--color-gray-200, currentColor);
+		border-color: var(--color-base-200, currentColor);
 	}
 }
 
@@ -72,11 +181,11 @@
 
 	input::placeholder,
 	textarea::placeholder {
-		color: theme(--color-gray-400);
+		color: var(--color-base-400);
 	}
 
 	input[type='checkbox'] {
-		@apply appearance-none size-3.5 align-middle bg-white border border-gray-300 rounded transition cursor-pointer focus:ring-2 focus:ring-blue-500 focus:outline-none dark:bg-gray-800 dark:border-gray-600 self-center;
+		@apply appearance-none size-3.5 align-middle bg-base-0 border border-base-300 rounded transition cursor-pointer focus:ring-2 focus:ring-blue-500 focus:outline-none dark:bg-base-800 dark:border-base-600 self-center;
 		/* Center the custom mark */
 		display: inline-block;
 		position: relative;

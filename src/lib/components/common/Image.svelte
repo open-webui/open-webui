@@ -53,7 +53,7 @@
 		<div
 			class="{imageClassName} inline-flex {compactUnavailable
 				? ''
-				: 'h-[1.6875rem] min-w-8 gap-1.5 px-2'} items-center justify-center overflow-hidden border border-gray-100/50 bg-gray-50/40 text-gray-500 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-400"
+				: 'h-[1.6875rem] min-w-8 gap-1.5 px-2'} items-center justify-center overflow-hidden border border-base-100/50 bg-base-50/40 text-base-500 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-400"
 			data-cy="image-unavailable"
 		>
 			<Photo className="size-3.5 shrink-0" strokeWidth="1.5" />
@@ -85,7 +85,7 @@
 		<div class=" absolute -top-1 -right-1">
 			<button
 				aria-label={$i18n.t('Remove image')}
-				class=" bg-white text-black border border-white rounded-full hover-reveal transition"
+				class=" bg-base-0 text-base-1000 border border-base-0 rounded-full hover-reveal transition"
 				type="button"
 				on:click={() => {
 					onDismiss();

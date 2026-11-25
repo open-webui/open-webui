@@ -62,7 +62,9 @@
 	const TEXT_SEARCH_PROVIDERS = ['openai'];
 	const DEFAULT_PROVIDER = 'openai';
 
-	let loading = false;
+	// The page shows its own spinner until the first load finishes.
+	export let loaded = false;
+
 	let testing = false;
 	let verifying = false;
 	// Stores the connection can search, offered as suggestions for the Vector Store ID.
@@ -231,7 +233,6 @@
 	};
 
 	const refresh = async () => {
-		loading = true;
 		const [connectionRes, knowledgeRes] = await Promise.all([
 			getExternalKnowledgeConnections(localStorage.token).catch((error) => {
 				toast.error(`${error}`);
@@ -242,12 +243,17 @@
 				return null;
 			})
 		]);
-		connections = connectionRes?.items ?? [];
-		// Stores a connection lists are managed through that connection's row.
-		items = (knowledgeRes?.items ?? []).filter(
-			(item: ExternalKnowledgeItem) => !hasStoreIds(connectionForItem(item))
-		);
-		loading = false;
+		// A failed refresh keeps the rows already shown.
+		if (connectionRes) {
+			connections = connectionRes.items ?? [];
+		}
+		if (knowledgeRes) {
+			// Stores a connection lists are managed through that connection's row.
+			items = (knowledgeRes.items ?? []).filter(
+				(item: ExternalKnowledgeItem) => !hasStoreIds(connectionForItem(item))
+			);
+		}
+		loaded = true;
 	};
 
 	const endpointPlaceholder = () => {
@@ -414,6 +420,7 @@
 		}
 
 		if (!testResult?.documents?.length) {
+			// Earlier wording, kept so i18n:parse does not drop its translations: $i18n.t('Test must pass before a source is created.')
 			toast.error($i18n.t('Test the source before creating it.'));
 			return;
 		}
@@ -578,10 +585,10 @@
 		: $i18n.t('Add Knowledge Connection')}
 	bind:show={showSourceModal}
 	size="sm"
-	className="bg-white dark:bg-gray-900 rounded-4xl"
+	className="bg-base-0 dark:bg-base-900 rounded-4xl"
 >
 	<div>
-		<div class="flex justify-between dark:text-gray-100 px-4 pt-3 pb-1">
+		<div class="flex justify-between dark:text-base-100 px-4 pt-3 pb-1">
 			<h1 class="text-sm font-medium self-center">
 				{editingItem || editingConnection
 					? $i18n.t('Edit Knowledge Connection')
@@ -589,7 +596,7 @@
 			</h1>
 
 			<button
-				class="self-center rounded-lg py-1 text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 px-0"
+				class="self-center rounded-lg py-1 text-base-500 transition hover:text-base-700 dark:text-base-400 dark:hover:text-base-200 px-0"
 				aria-label={$i18n.t('Close')}
 				type="button"
 				on:click={() => {
@@ -601,7 +608,7 @@
 			</button>
 		</div>
 
-		<div class="flex flex-col md:flex-row w-full px-4 pb-4 md:space-x-4 dark:text-gray-200">
+		<div class="flex flex-col md:flex-row w-full px-4 pb-4 md:space-x-4 dark:text-base-200">
 			<div class="flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6">
 				<form
 					class="flex flex-col w-full"
@@ -613,14 +620,14 @@
 						<div class="flex gap-2">
 							<div class="flex flex-col flex-1">
 								<div class="flex justify-between mb-0.5">
-									<label class="text-xs text-gray-500" for="external-source-name"
+									<label class="text-xs text-base-500" for="external-source-name"
 										>{$i18n.t('Name')}</label
 									>
 								</div>
 								<div class="flex flex-1 items-center">
 									<input
 										id="external-source-name"
-										class="w-full flex-1 text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700"
+										class="w-full flex-1 text-sm bg-transparent outline-hidden placeholder:text-base-300 dark:placeholder:text-base-700"
 										bind:value={sourceForm.name}
 										on:input={markUntested}
 										placeholder={$i18n.t('Research Knowledge')}
@@ -631,7 +638,7 @@
 
 							<div class="flex flex-col flex-1">
 								<div class="flex justify-between mb-0.5">
-									<label class="text-xs text-gray-500" for="external-source-provider"
+									<label class="text-xs text-base-500" for="external-source-provider"
 										>{$i18n.t('Provider')}</label
 									>
 								</div>
@@ -654,12 +661,12 @@
 
 						{#if !connectionMode}
 							<div class="flex flex-col w-full mt-2">
-								<label class="text-xs text-gray-500 mb-0.5" for="external-source-description"
+								<label class="text-xs text-base-500 mb-0.5" for="external-source-description"
 									>{$i18n.t('Description')}</label
 								>
 								<textarea
 									id="external-source-description"
-									class="w-full text-sm bg-transparent outline-hidden resize-none placeholder:text-gray-300 dark:placeholder:text-gray-700"
+									class="w-full text-sm bg-transparent outline-hidden resize-none placeholder:text-base-300 dark:placeholder:text-base-700"
 									rows="2"
 									bind:value={sourceForm.description}
 								></textarea>
@@ -669,14 +676,14 @@
 						<div class="flex gap-2 mt-2">
 							<div class="flex flex-col flex-1">
 								<div class="flex justify-between mb-0.5">
-									<label class="text-xs text-gray-500" for="external-source-endpoint"
+									<label class="text-xs text-base-500" for="external-source-endpoint"
 										>{$i18n.t('Endpoint')}</label
 									>
 								</div>
 								<div class="flex flex-1 items-center">
 									<input
 										id="external-source-endpoint"
-										class="w-full flex-1 text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700"
+										class="w-full flex-1 text-sm bg-transparent outline-hidden placeholder:text-base-300 dark:placeholder:text-base-700"
 										bind:value={sourceForm.endpoint}
 										on:input={markUntested}
 										placeholder={endpointPlaceholder()}
@@ -689,7 +696,7 @@
 											className="shrink-0 flex items-center mr-1"
 										>
 											<button
-												class="self-center p-1 bg-transparent hover:bg-gray-50/70 dark:hover:bg-gray-850/50 rounded-lg transition"
+												class="self-center p-1 bg-transparent hover:bg-base-50/70 dark:hover:bg-base-850/50 rounded-lg transition"
 												type="button"
 												on:click={verifyConnection}
 												disabled={verifying}
@@ -722,7 +729,7 @@
 						<div class="flex gap-2 mt-2">
 							<div class="flex flex-col flex-1">
 								<div class="flex justify-between mb-0.5">
-									<label class="text-xs text-gray-500" for="external-source-timeout"
+									<label class="text-xs text-base-500" for="external-source-timeout"
 										>{$i18n.t('Timeout')}</label
 									>
 								</div>
@@ -740,14 +747,14 @@
 							{#if sourceForm.provider !== 'pgvector'}
 								<div class="flex flex-col flex-1">
 									<div class="flex justify-between mb-0.5">
-										<label class="text-xs text-gray-500" for="external-source-api-key"
+										<label class="text-xs text-base-500" for="external-source-api-key"
 											>{$i18n.t('API Key / Token')}</label
 										>
 									</div>
 									<div class="flex flex-1 items-center">
 										<input
 											id="external-source-api-key"
-											class="w-full text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700"
+											class="w-full text-sm bg-transparent outline-hidden placeholder:text-base-300 dark:placeholder:text-base-700"
 											type="password"
 											bind:value={sourceForm.apiKey}
 											on:input={markUntested}
@@ -762,7 +769,7 @@
 							<div class="flex gap-2 mt-2">
 								<div class="flex flex-col w-full">
 									<div class="flex justify-between mb-0.5">
-										<label class="text-xs text-gray-500" for="external-source-db-name"
+										<label class="text-xs text-base-500" for="external-source-db-name"
 											>{$i18n.t('Database')}</label
 										>
 									</div>
@@ -779,11 +786,11 @@
 							</div>
 						{/if}
 
-						<hr class="border-gray-100/50 dark:border-gray-700/10 my-2.5 w-full" />
+						<hr class="border-base-100/50 dark:border-base-700/10 my-2.5 w-full" />
 
 						{#if textSearch && !editingItem}
 							<div class="flex justify-between items-center mb-2">
-								<label class="text-xs text-gray-500" for="external-source-stores-as-knowledge-bases"
+								<label class="text-xs text-base-500" for="external-source-stores-as-knowledge-bases"
 									>{$i18n.t('List stores as knowledge bases')}</label
 								>
 								<Switch
@@ -797,7 +804,7 @@
 						<div class="flex gap-2">
 							<div class="flex flex-col w-full">
 								<div class="flex justify-between mb-0.5">
-									<label class="text-xs text-gray-500" for="external-source-collection"
+									<label class="text-xs text-base-500" for="external-source-collection"
 										>{connectionMode
 											? $i18n.t('Store IDs')
 											: textSearch
@@ -810,13 +817,13 @@
 										<div class="flex flex-wrap gap-1 mb-1">
 											{#each storeIds as id (id)}
 												<div
-													class="flex items-center gap-1 rounded-lg bg-gray-50 dark:bg-gray-850 px-2 py-0.5 text-xs"
+													class="flex items-center gap-1 rounded-lg bg-base-50 dark:bg-base-850 px-2 py-0.5 text-xs"
 												>
 													<span class="line-clamp-1"
 														>{storeOptions.find((store) => store.id === id)?.name ?? id}</span
 													>
 													<button
-														class="text-gray-400 hover:text-gray-900 dark:hover:text-white transition"
+														class="text-base-400 hover:text-base-900 dark:hover:text-base-0 transition"
 														type="button"
 														aria-label={$i18n.t('Remove')}
 														on:click={() => removeStoreId(id)}
@@ -829,7 +836,7 @@
 									{/if}
 									<input
 										id="external-source-collection"
-										class="w-full text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700"
+										class="w-full text-sm bg-transparent outline-hidden placeholder:text-base-300 dark:placeholder:text-base-700"
 										bind:value={storeIdInput}
 										on:change={() => addStoreIds(storeIdInput)}
 										on:keydown={(e) => {
@@ -853,7 +860,7 @@
 									<div class="flex flex-1 items-center">
 										<input
 											id="external-source-collection"
-											class="w-full text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700"
+											class="w-full text-sm bg-transparent outline-hidden placeholder:text-base-300 dark:placeholder:text-base-700"
 											bind:value={sourceForm.sourceName}
 											on:input={markUntested}
 											placeholder="research-docs"
@@ -868,14 +875,14 @@
 							<div class="flex gap-2 mt-2">
 								<div class="flex flex-col flex-1">
 									<div class="flex justify-between mb-0.5">
-										<label class="text-xs text-gray-500" for="external-source-table"
+										<label class="text-xs text-base-500" for="external-source-table"
 											>{$i18n.t('Table')}</label
 										>
 									</div>
 									<div class="flex flex-1 items-center">
 										<input
 											id="external-source-table"
-											class="w-full text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700"
+											class="w-full text-sm bg-transparent outline-hidden placeholder:text-base-300 dark:placeholder:text-base-700"
 											bind:value={sourceForm.tableName}
 											on:input={markUntested}
 											placeholder="document_chunk"
@@ -886,14 +893,14 @@
 
 								<div class="flex flex-col flex-1">
 									<div class="flex justify-between mb-0.5">
-										<label class="text-xs text-gray-500" for="external-source-collection-field"
+										<label class="text-xs text-base-500" for="external-source-collection-field"
 											>{$i18n.t('Collection Field')}</label
 										>
 									</div>
 									<div class="flex flex-1 items-center">
 										<input
 											id="external-source-collection-field"
-											class="w-full text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700"
+											class="w-full text-sm bg-transparent outline-hidden placeholder:text-base-300 dark:placeholder:text-base-700"
 											bind:value={sourceForm.collectionField}
 											on:input={markUntested}
 											placeholder="collection_name"
@@ -908,14 +915,14 @@
 							<div class="flex gap-2 mt-2">
 								<div class="flex flex-col flex-1">
 									<div class="flex justify-between mb-0.5">
-										<label class="text-xs text-gray-500" for="external-source-content-field"
+										<label class="text-xs text-base-500" for="external-source-content-field"
 											>{$i18n.t('Content Field')}</label
 										>
 									</div>
 									<div class="flex flex-1 items-center">
 										<input
 											id="external-source-content-field"
-											class="w-full text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700"
+											class="w-full text-sm bg-transparent outline-hidden placeholder:text-base-300 dark:placeholder:text-base-700"
 											bind:value={sourceForm.contentField}
 											on:input={markUntested}
 											placeholder={sourceForm.provider === 'pgvector' ? 'text' : 'payload.text'}
@@ -926,14 +933,14 @@
 
 								<div class="flex flex-col flex-1">
 									<div class="flex justify-between mb-0.5">
-										<label class="text-xs text-gray-500" for="external-source-vector-field">
+										<label class="text-xs text-base-500" for="external-source-vector-field">
 											{$i18n.t('Vector Field')}
 										</label>
 									</div>
 									<div class="flex flex-1 items-center">
 										<input
 											id="external-source-vector-field"
-											class="w-full text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700"
+											class="w-full text-sm bg-transparent outline-hidden placeholder:text-base-300 dark:placeholder:text-base-700"
 											bind:value={sourceForm.vectorField}
 											on:input={markUntested}
 											placeholder={sourceForm.provider === 'qdrant' ? $i18n.t('Default') : 'vector'}
@@ -946,14 +953,14 @@
 							<div class="flex gap-2 mt-2">
 								<div class="flex flex-col flex-1">
 									<div class="flex justify-between mb-0.5">
-										<label class="text-xs text-gray-500" for="external-source-metadata-field"
+										<label class="text-xs text-base-500" for="external-source-metadata-field"
 											>{$i18n.t('Metadata Field')}</label
 										>
 									</div>
 									<div class="flex flex-1 items-center">
 										<input
 											id="external-source-metadata-field"
-											class="w-full text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700"
+											class="w-full text-sm bg-transparent outline-hidden placeholder:text-base-300 dark:placeholder:text-base-700"
 											bind:value={sourceForm.metadataField}
 											on:input={markUntested}
 											placeholder={sourceForm.provider === 'pgvector'
@@ -965,14 +972,14 @@
 
 								<div class="flex flex-col flex-1">
 									<div class="flex justify-between mb-0.5">
-										<label class="text-xs text-gray-500" for="external-source-document-id-field"
+										<label class="text-xs text-base-500" for="external-source-document-id-field"
 											>{$i18n.t('Document ID Field')}</label
 										>
 									</div>
 									<div class="flex flex-1 items-center">
 										<input
 											id="external-source-document-id-field"
-											class="w-full text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700"
+											class="w-full text-sm bg-transparent outline-hidden placeholder:text-base-300 dark:placeholder:text-base-700"
 											bind:value={sourceForm.documentIdField}
 											on:input={markUntested}
 											placeholder="id"
@@ -983,7 +990,7 @@
 						{/if}
 
 						{#if connectionMode}
-							<div class="text-xs text-gray-500 mt-2">
+							<div class="text-xs text-base-500 mt-2">
 								{$i18n.t(
 									'Each store this connection lists appears as a knowledge base, read live from the endpoint. Access below applies to all of them.'
 								)}
@@ -992,14 +999,14 @@
 							<div class="flex gap-2 mt-2">
 								<div class="flex flex-col w-full">
 									<div class="flex justify-between mb-0.5">
-										<label class="text-xs text-gray-500" for="external-source-test-query"
+										<label class="text-xs text-base-500" for="external-source-test-query"
 											>{$i18n.t('Test Query')}</label
 										>
 									</div>
 									<div class="flex flex-1 items-center">
 										<input
 											id="external-source-test-query"
-											class="w-full flex-1 text-sm bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700"
+											class="w-full flex-1 text-sm bg-transparent outline-hidden placeholder:text-base-300 dark:placeholder:text-base-700"
 											bind:value={sourceForm.testQuery}
 											on:input={markUntested}
 											placeholder={$i18n.t('Ask a test question')}
@@ -1011,7 +1018,7 @@
 											className="shrink-0 flex items-center mr-1"
 										>
 											<button
-												class="self-center p-1 bg-transparent hover:bg-gray-50/70 dark:hover:bg-gray-850/50 rounded-lg transition"
+												class="self-center p-1 bg-transparent hover:bg-base-50/70 dark:hover:bg-base-850/50 rounded-lg transition"
 												type="button"
 												on:click={testSource}
 												disabled={testing}
@@ -1039,7 +1046,7 @@
 									</div>
 
 									{#if !textSearch}
-										<div class="text-xs text-gray-500 mt-1">
+										<div class="text-xs text-base-500 mt-1">
 											<!-- LICENSE covers this Open WebUI wordmark.
 										Do not alter, remove, obscure, or replace it except as LICENSE permits:
 										https://docs.openwebui.com/license. -->
@@ -1052,7 +1059,7 @@
 							</div>
 						{/if}
 
-						<hr class="border-gray-100/50 dark:border-gray-700/10 my-2.5 w-full" />
+						<hr class="border-base-100/50 dark:border-base-700/10 my-2.5 w-full" />
 
 						<AccessControl
 							bind:accessGrants
@@ -1083,7 +1090,7 @@
 						<div class="flex justify-between items-center pt-3 text-sm font-normal">
 							{#if connectionMode && editingConnection}
 								<button
-									class="text-xs text-gray-500 hover:text-red-600 dark:hover:text-red-400 transition"
+									class="text-xs text-base-500 hover:text-red-600 dark:hover:text-red-400 transition"
 									type="button"
 									on:click={deleteConnection}
 								>
@@ -1094,7 +1101,7 @@
 							{/if}
 
 							<button
-								class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white disabled:cursor-not-allowed"
+								class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-base-0 transition hover:bg-base-1000 disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-base-0 disabled:cursor-not-allowed"
 								type="submit"
 								disabled={creating ||
 									(connectionMode
@@ -1114,15 +1121,27 @@
 
 <div class="flex w-full flex-col justify-between text-xs">
 	<div class="mb-2 flex items-center justify-between">
-		<div class="flex items-center gap-2 leading-none text-gray-600 dark:text-gray-400">
-			<div>{$i18n.t('settings.admin.integrations.externalKnowledge.title')}</div>
+		<div class="flex items-center gap-2 leading-none text-base-600 dark:text-base-400">
+			<Tooltip
+				content={$i18n.t(
+					'Connect external knowledge sources. A source is created only after its test passes.'
+				)}
+				placement="top-start"
+				className="w-fit"
+			>
+				<div
+					class="underline decoration-dotted decoration-base-400/70 underline-offset-4 dark:decoration-base-500 cursor-help"
+				>
+					{$i18n.t('settings.admin.integrations.externalKnowledge.title')}
+				</div>
+			</Tooltip>
 			<ExperimentalBadge />
 		</div>
 
 		<Tooltip content={$i18n.t('settings.admin.integrations.externalKnowledge.addConnection.label')}>
 			<button
 				aria-label={$i18n.t('settings.admin.integrations.externalKnowledge.addConnection.label')}
-				class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-black/5 hover:text-gray-900 dark:text-gray-600 dark:hover:bg-white/5 dark:hover:text-white"
+				class="flex size-6 items-center justify-center rounded-lg text-base-400 transition-colors hover:bg-base-1000/5 hover:text-base-900 dark:text-base-600 dark:hover:bg-base-0/5 dark:hover:text-base-0"
 				on:click={openCreateSource}
 				type="button"
 			>
@@ -1143,13 +1162,14 @@
 						<DatabaseSettings className="size-4" strokeWidth="1.5" />
 					</Tooltip>
 					<div class="outline-hidden w-full bg-transparent text-xs min-w-0 line-clamp-1">
-						<label
-							for={`knowledge-connection-${connection.id}-control`}
-							class="text-gray-600 dark:text-gray-400 transition-colors duration-150 group-hover/setting-row:text-gray-900 dark:group-hover/setting-row:text-white"
-							>{connection.name}</label
+						<button
+							type="button"
+							on:click={() => openEditConnection(connection)}
+							class="text-left cursor-pointer text-base-600 dark:text-base-400 transition-colors duration-150 group-hover/setting-row:text-base-900 dark:group-hover/setting-row:text-white"
+							>{connection.name}</button
 						>
 						{' '}
-						<span class="text-gray-500">
+						<span class="text-base-500">
 							{connection.provider} ·
 							{connection.config?.store_ids?.length
 								? $i18n.t('{{COUNT}} stores', { COUNT: connection.config.store_ids.length })
@@ -1161,7 +1181,7 @@
 				<div class="flex gap-1 items-center">
 					<Tooltip content={$i18n.t('Configure')}>
 						<button
-							class="self-center p-1 bg-transparent hover:bg-gray-50/70 dark:hover:bg-gray-850/50 rounded-lg transition"
+							class="self-center p-1 bg-transparent hover:bg-base-50/70 dark:hover:bg-base-850/50 rounded-lg transition"
 							type="button"
 							aria-label={$i18n.t('Configure')}
 							on:click={() => openEditConnection(connection)}
@@ -1176,6 +1196,7 @@
 						<Switch
 							id={`knowledge-connection-${connection.id}-control`}
 							state={connection.enabled !== false}
+							ariaLabel={`${$i18n.t('Enabled')}: ${connection.name}`}
 							on:change={() => toggleConnection(connection)}
 						/>
 					</Tooltip>
@@ -1199,13 +1220,15 @@
 							</Tooltip>
 
 							<div class="outline-hidden w-full bg-transparent text-xs min-w-0 line-clamp-1">
-								<label
-									for={`knowledge-${item.id}-control`}
-									class="text-gray-600 dark:text-gray-400 transition-colors duration-150 group-hover/setting-row:text-gray-900 group-focus-within/setting-row:text-gray-900 dark:group-hover/setting-row:text-white dark:group-focus-within/setting-row:text-white group-has-[button[id$=-control]:enabled]/setting-row:cursor-pointer group-has-[button[id$=-control]:disabled]/setting-row:cursor-not-allowed"
-									>{item.name}</label
+								<button
+									type="button"
+									disabled={!connection}
+									on:click={() => openEditSource(item)}
+									class="text-left cursor-pointer disabled:cursor-default text-base-600 dark:text-base-400 transition-colors duration-150 group-hover/setting-row:text-base-900 group-focus-within/setting-row:text-base-900 dark:group-hover/setting-row:text-white dark:group-focus-within/setting-row:text-white"
+									>{item.name}</button
 								>
 								{' '}
-								<span class="text-gray-500">
+								<span class="text-base-500">
 									{item?.meta?.external?.provider ?? connection?.provider}
 									{item?.meta?.external?.source?.name ? `· ${item.meta.external.source.name}` : ''}
 								</span>
@@ -1217,7 +1240,7 @@
 				<div class="flex gap-1 items-center">
 					<Tooltip content={$i18n.t('Configure')}>
 						<button
-							class="self-center p-1 bg-transparent hover:bg-gray-50/70 dark:hover:bg-gray-850/50 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+							class="self-center p-1 bg-transparent hover:bg-base-50/70 dark:hover:bg-base-850/50 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
 							type="button"
 							disabled={!connection}
 							aria-label={$i18n.t('Configure')}
@@ -1235,6 +1258,7 @@
 						<Switch
 							id={`knowledge-${item.id}-control`}
 							state={connection?.enabled !== false}
+							ariaLabel={`${$i18n.t('Enabled')}: ${item.name}`}
 							on:change={() => {
 								toggleConnection(connection);
 							}}
@@ -1245,19 +1269,9 @@
 		{/each}
 	</div>
 
-	{#if loading}
-		<div class="py-2">
-			<Spinner />
-		</div>
-	{:else if items.length === 0 && !connections.some(hasStoreIds)}
-		<div class="text-[0.6875rem] text-gray-400 dark:text-gray-600">
-			{$i18n.t('No external knowledge sources configured.')}
-		</div>
-	{/if}
-
 	{#if items.length === 0 && !connections.some(hasStoreIds)}
-		<div class="text-[0.6875rem] text-gray-400 dark:text-gray-600">
-			{$i18n.t('Test must pass before a source is created.')}
+		<div class="text-[0.6875rem] text-base-400 dark:text-base-600">
+			{$i18n.t('No external knowledge sources configured.')}
 		</div>
 	{/if}
 </div>

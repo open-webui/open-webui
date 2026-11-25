@@ -61,37 +61,37 @@
 
 <Modal ariaLabel={model?.name ?? $i18n.t('Model')} size="md" bind:show>
 	{#if model}
-		<div class="flex justify-between dark:text-gray-300 px-4 pt-3 pb-1">
+		<div class="flex justify-between dark:text-base-300 px-4 pt-3 pb-1">
 			<Tooltip content={`${model.name} (${model.id})`} placement="top-start">
 				<div class="text-sm font-medium self-center line-clamp-1">
 					{model.name}
 				</div>
 			</Tooltip>
 			<button
-				class="self-center rounded-lg py-1 text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 px-0"
+				class="self-center rounded-lg py-1 text-base-500 transition hover:text-base-700 dark:text-base-400 dark:hover:text-base-200 px-0"
 				on:click={close}
 				aria-label={$i18n.t('Close')}
 			>
 				<XMark className={'size-4'} />
 			</button>
 		</div>
-		<div class="px-5 pb-4 dark:text-gray-200">
+		<div class="px-5 pb-4 dark:text-base-200">
 			<!-- Activity Chart -->
 			<div class="mb-4">
 				<div class="flex items-center justify-between mb-2">
-					<div class="text-xs text-gray-500 font-normal uppercase tracking-wide">
+					<div class="text-xs text-base-500 font-normal uppercase tracking-wide">
 						{$i18n.t('Activity')}
 					</div>
 					<div
-						class="inline-flex rounded-full bg-gray-100/80 p-0.5 dark:bg-gray-800/80 backdrop-blur-sm"
+						class="inline-flex rounded-full bg-base-100/80 p-0.5 dark:bg-base-800/80 backdrop-blur-sm"
 					>
 						{#each TIME_RANGES as range}
 							<button
 								type="button"
 								class="rounded-lg transition-all duration-200 px-2.5 py-0.5 text-xs font-normal {selectedRange ===
 								range.key
-									? 'bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white'
-									: 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}"
+									? 'bg-base-0 text-base-900 shadow-sm dark:bg-base-700 dark:text-base-0'
+									: 'text-base-500 hover:text-base-700 dark:text-base-400 dark:hover:text-base-200'}"
 								on:click={() => selectRange(range.key)}
 							>
 								{range.key === 'all' ? $i18n.t('All') : range.label}
@@ -107,25 +107,25 @@
 			</div>
 
 			<div class="mb-4">
-				<div class="text-xs text-gray-500 mb-2 font-normal uppercase tracking-wide">
+				<div class="text-xs text-base-500 mb-2 font-normal uppercase tracking-wide">
 					{$i18n.t('Tags')}
 				</div>
 				{#if topTags.length}
 					<div class="flex flex-wrap gap-1 -mx-1">
 						{#each topTags as tagInfo}
-							<span class="px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-850 text-xs">
-								{tagInfo.tag} <span class="text-gray-500 font-normal">{tagInfo.count}</span>
+							<span class="px-2 py-0.5 rounded-full bg-base-100 dark:bg-base-850 text-xs">
+								{tagInfo.tag} <span class="text-base-500 font-normal">{tagInfo.count}</span>
 							</span>
 						{/each}
 					</div>
 				{:else}
-					<span class="text-gray-500 text-sm">-</span>
+					<span class="text-base-500 text-sm">-</span>
 				{/if}
 			</div>
 
 			<div class="flex justify-end pt-2">
 				<button
-					class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
+					class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-base-0 transition hover:bg-base-1000 disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-base-0"
 					type="button"
 					on:click={close}
 				>

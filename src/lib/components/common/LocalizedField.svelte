@@ -55,17 +55,17 @@
 	{/if}
 	{#if locale && showControls && (translated || fallback)}
 		<div
-			class="mt-1 flex flex-wrap items-center gap-3 text-[0.6875rem] text-gray-400 dark:text-gray-600"
+			class="mt-1 flex flex-wrap items-center gap-3 text-[0.6875rem] text-base-400 dark:text-base-600"
 		>
 			{#if translated}<button
 					type="button"
-					class="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+					class="text-base-500 hover:text-base-700 dark:hover:text-base-300"
 					{disabled}
 					on:click={() => update('')}>{$i18n.t('Use default')}</button
 				>
 			{:else if fallback}<button
 					type="button"
-					class="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+					class="text-base-500 hover:text-base-700 dark:hover:text-base-300"
 					{disabled}
 					on:click={() => update(fallback)}>{$i18n.t('Copy default')}</button
 				>{/if}

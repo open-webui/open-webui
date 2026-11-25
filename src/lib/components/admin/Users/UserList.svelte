@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { withListFocus } from '$lib/utils/listFocus';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 	import { adminUserCount, config, user } from '$lib/stores';
 	import { getContext, onDestroy } from 'svelte';
@@ -35,6 +36,8 @@
 	import ProfilePreview from '$lib/components/channel/Messages/Message/ProfilePreview.svelte';
 	import UserPreviewModal from '$lib/components/admin/UserPreviewModal.svelte';
 
+	let searchInput: HTMLInputElement;
+	let listElement: HTMLElement;
 	const i18n: any = getContext('i18n');
 
 	let page = 1;
@@ -69,7 +72,7 @@
 		}
 
 		if (res) {
-			getUserList();
+			await getUserList();
 		}
 	};
 
@@ -92,7 +95,7 @@
 		if (role === 'user') {
 			return 'text-[#4f7a5a] dark:text-[#8db395]';
 		}
-		return 'text-gray-500 dark:text-gray-400';
+		return 'text-base-500 dark:text-base-400';
 	};
 
 	const getUserList = async () => {
@@ -141,9 +144,7 @@
 
 <ConfirmDialog
 	bind:show={showDeleteConfirmDialog}
-	on:confirm={() => {
-		deleteUserHandler(selectedUser.id);
-	}}
+	on:confirm={() => withListFocus(listElement, selectedUser.id, deleteUserHandler, searchInput)}
 />
 
 <AddUserModal
@@ -186,7 +187,7 @@
 		<Spinner className="size-5" />
 	</div>
 {:else}
-	<div class="sticky top-0 z-10 bg-white dark:bg-gray-900">
+	<div class="sticky top-0 z-10 bg-base-0 dark:bg-base-900">
 		<div class="flex h-8 flex-1 items-center w-full gap-2">
 			<div class="flex min-w-0 flex-1 items-center">
 				<div class="self-center ml-1 mr-3">
@@ -194,6 +195,7 @@
 				</div>
 				<input
 					class="w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
+					bind:this={searchInput}
 					bind:value={query}
 					on:input={handleSearchInput}
 					aria-label={$i18n.t('Search')}
@@ -203,7 +205,7 @@
 				{#if query}
 					<div class="self-center pl-1.5 translate-y-[0.5px] rounded-l-xl bg-transparent">
 						<button
-							class="py-0.5 rounded-full transition hover:text-gray-900 dark:hover:text-gray-100 text-gray-500 dark:text-gray-400 px-0"
+							class="py-0.5 rounded-full transition hover:text-base-900 dark:hover:text-base-100 text-base-500 dark:text-base-400 px-0"
 							aria-label={$i18n.t('Clear search')}
 							on:click={() => {
 								query = '';
@@ -217,7 +219,7 @@
 			</div>
 
 			<button
-				class="ml-1 shrink-0 rounded-lg bg-gray-50 px-2.5 py-1 text-xs text-gray-900 transition ring-1 ring-gray-200 hover:bg-gray-100 dark:bg-gray-850 dark:text-gray-100 dark:ring-gray-800 dark:hover:bg-gray-800"
+				class="ml-1 shrink-0 rounded-lg bg-base-50 px-2.5 py-1 text-xs text-base-900 transition ring-1 ring-base-200 hover:bg-base-100 dark:bg-base-850 dark:text-base-100 dark:ring-base-800 dark:hover:bg-base-800"
 				on:click={() => {
 					showAddUserModal = !showAddUserModal;
 				}}
@@ -228,9 +230,9 @@
 	</div>
 
 	<div class="scrollbar-hidden relative whitespace-nowrap overflow-x-auto max-w-full">
-		<table class="w-full text-sm text-left text-gray-500 dark:text-gray-400 table-auto max-w-full">
-			<thead class="text-xs text-gray-800 uppercase bg-transparent dark:text-gray-200">
-				<tr class=" border-b-[1.5px] border-gray-50 dark:border-gray-850/30">
+		<table class="w-full text-sm text-left text-base-500 dark:text-base-400 table-auto max-w-full">
+			<thead class="text-xs text-base-800 uppercase bg-transparent dark:text-base-200">
+				<tr class=" border-b-[1.5px] border-base-50 dark:border-base-850/30">
 					<th
 						scope="col"
 						class="font-normal select-none"
@@ -373,10 +375,10 @@
 					>
 				</tr>
 			</thead>
-			<tbody class="">
+			<tbody bind:this={listElement} class="">
 				{#each users as user (user.id)}
-					<tr class="dark:border-gray-850 text-xs">
-						<td class="px-3 py-1 font-normal text-gray-900 dark:text-white max-w-48">
+					<tr class="dark:border-base-850 text-xs">
+						<td class="px-3 py-1 font-normal text-base-900 dark:text-base-0 max-w-48">
 							<div class="flex items-center gap-2">
 								<ProfilePreview {user} side="right" align="center" sideOffset={6}>
 									<img
@@ -444,7 +446,7 @@
 								{#if $config.features.enable_admin_chat_access && user.role !== 'admin'}
 									<Tooltip content={$i18n.t('Chats')}>
 										<button
-											class="self-center w-fit p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg"
+											class="self-center w-fit p-1.5 hover:bg-base-1000/5 dark:hover:bg-base-0/5 rounded-lg"
 											aria-label={$i18n.t('Chats')}
 											on:click={async () => {
 												showUserChatsModal = !showUserChatsModal;
@@ -459,7 +461,7 @@
 								{#if user.role !== 'admin'}
 									<Tooltip content={$i18n.t('Preview Access')}>
 										<button
-											class="self-center w-fit p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg"
+											class="self-center w-fit p-1.5 hover:bg-base-1000/5 dark:hover:bg-base-0/5 rounded-lg"
 											aria-label={$i18n.t('Preview Access')}
 											on:click={() => {
 												selectedUser = user;
@@ -473,7 +475,7 @@
 
 								<Tooltip content={$i18n.t('Edit User')}>
 									<button
-										class="self-center w-fit p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg"
+										class="self-center w-fit p-1.5 hover:bg-base-1000/5 dark:hover:bg-base-0/5 rounded-lg"
 										aria-label={$i18n.t('Edit User')}
 										on:click={async () => {
 											showEditUserModal = !showEditUserModal;
@@ -487,7 +489,8 @@
 								{#if user.role !== 'admin'}
 									<Tooltip content={$i18n.t('Delete User')}>
 										<button
-											class="self-center w-fit p-1.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg"
+											class="self-center w-fit p-1.5 hover:bg-base-1000/5 dark:hover:bg-base-0/5 rounded-lg"
+											data-focus-row={user.id}
 											aria-label={$i18n.t('Delete User')}
 											on:click={async () => {
 												showDeleteConfirmDialog = true;
@@ -506,7 +509,7 @@
 		</table>
 	</div>
 
-	<div class=" text-gray-500 text-xs mt-1.5 text-right">
+	<div class=" text-base-500 text-xs mt-1.5 text-right">
 		ⓘ {$i18n.t("Click on the user role button to change a user's role.")}
 	</div>
 
@@ -520,9 +523,9 @@
 		<!-- LICENSE covers the Open WebUI branding narrative here.
 		Do not alter, remove, obscure, or replace it except as LICENSE permits:
 		https://docs.openwebui.com/license. -->
-		<div class="mt-3 mb-3 pb-1 text-gray-700 dark:text-gray-300">
+		<div class="mt-3 mb-3 pb-1 text-base-700 dark:text-base-300">
 			<div class="max-w-3xl text-xs leading-5">
-				<div class="text-gray-900 dark:text-gray-100">
+				<div class="text-base-900 dark:text-base-100">
 					<!-- LICENSE covers this Open WebUI wordmark.
 					Do not alter, remove, obscure, or replace it except as LICENSE permits:
 					https://docs.openwebui.com/license. -->
@@ -537,7 +540,7 @@
 							'You have more than 50 users, which often means this workspace is supporting organizational use. Open WebUI is free to use as-is, with no restrictions or hidden limits, and we want to keep it that way.'
 						)}
 					</p>
-					<p class="text-gray-500 dark:text-gray-400">
+					<p class="text-base-500 dark:text-base-400">
 						<!-- LICENSE covers this Open WebUI branding copy.
 						Do not alter, remove, obscure, or replace it except as LICENSE permits:
 						https://docs.openwebui.com/license. -->
@@ -545,7 +548,7 @@
 							'By supporting the project through sponsorship or an enterprise license, you help us stay independent, ship new features faster, improve stability, and grow Open WebUI for the long haul.'
 						)}
 					</p>
-					<p class="text-gray-500 dark:text-gray-400">
+					<p class="text-base-500 dark:text-base-400">
 						{$i18n.t(
 							'Enterprise licenses also include dedicated support, customization options, and more, at a fraction of the cost of building and maintaining this stack internally.'
 						)}
@@ -554,7 +557,7 @@
 
 				<div class="mt-2 flex items-center gap-3">
 					<a
-						class="text-xs text-gray-700 underline transition hover:text-gray-900 dark:text-gray-300 dark:hover:text-gray-100"
+						class="text-xs text-base-700 underline transition hover:text-base-900 dark:text-base-300 dark:hover:text-base-100"
 						href="https://docs.openwebui.com/enterprise"
 						target="_blank"
 						rel="noreferrer"
@@ -562,7 +565,7 @@
 						{$i18n.t('Enterprise licensing')}
 					</a>
 					<a
-						class="text-xs text-gray-500 underline transition hover:text-gray-900 dark:text-gray-500 dark:hover:text-gray-100"
+						class="text-xs text-base-500 underline transition hover:text-base-900 dark:text-base-500 dark:hover:text-base-100"
 						href="https://github.com/sponsors/open-webui"
 						target="_blank"
 						rel="noreferrer"

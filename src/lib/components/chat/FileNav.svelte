@@ -1,17 +1,17 @@
 <script lang="ts">
 	export let modelId: string | null = null;
-	export let target: TerminalTarget | null | undefined = undefined;
-	import { resolveTerminalTarget } from '$lib/apis/terminal';
+	export let target: MachineTarget | null | undefined = undefined;
+	import { resolveMachineTarget } from '$lib/apis/machines';
 	import { readDroppedFiles, type DroppedEntry } from '$lib/utils/drop';
-	import type { TerminalContext } from '$lib/types';
-	import type { TerminalTarget } from '$lib/apis/terminal';
-	import { gitRequest, type GitStatus, type GitFile } from '$lib/apis/terminal/git';
-	import { watchTerminalFiles } from '$lib/apis/terminal/events';
+	import type { MachineContext } from '$lib/types';
+	import type { MachineTarget } from '$lib/apis/machines';
+	import { gitRequest, type GitStatus, type GitFile } from '$lib/apis/machines/git';
+	import { watchMachineFiles } from '$lib/apis/machines/events';
 	import { reverseGitDiff } from './Messages/diff';
 	import FileGitDiff from './FileNav/FileGitDiff.svelte';
 	import CloneRepository from './FileNav/CloneRepository.svelte';
 	import { gitTreePath, gitTreeStatus } from './FileNav/gitTreeStatus';
-	import { filesystemFile, type FilesystemFile } from '$lib/apis/terminal';
+	import { filesystemFile, type FilesystemFile } from '$lib/apis/machines';
 	import { autoUpdate, computePosition, flip, offset, shift } from '@floating-ui/dom';
 	import ArrowRight from '$lib/components/icons/ArrowRight.svelte';
 	import { toast } from 'svelte-sonner';
@@ -19,33 +19,33 @@
 	import type { Readable } from 'svelte/store';
 	import type { i18n as I18n } from 'i18next';
 	import {
-		terminalServers,
+		machines,
 		settings,
 		showFileNavPath,
 		showFileNavDir,
 		selectedFolder,
-		selectedTerminalId
+		selectedMachineId
 	} from '$lib/stores';
 	import {
 		getCwd,
-		getTerminalFeatures,
+		getMachineFeatures,
 		getFileMatches,
 		listFiles,
 		readFile,
 		downloadFileBlob,
 		downloadFilePreview,
-		archiveFromTerminal,
-		uploadToTerminal,
+		archiveFromMachine,
+		uploadToMachine,
 		createDirectory,
 		deleteEntry,
 		moveEntry,
 		type FileEntry,
-		type TerminalContentMatch,
-		type TerminalFileMatch,
-		type TerminalFileRoot,
-		type TerminalCwd
-	} from '$lib/apis/terminal';
-	import { isSavedChatId, isTemporaryChatId } from '$lib/utils/chatId';
+		type MachineContentMatch,
+		type MachineFileMatch,
+		type MachineFileRoot,
+		type MachineCwd
+	} from '$lib/apis/machines';
+	import { isFolderSessionId, isSavedChatId, isTemporaryChatId } from '$lib/utils/chatId';
 	import { copyToClipboard } from '$lib/utils';
 	import { normalizeDocumentTargetPage } from '$lib/utils/documentPreview';
 
@@ -66,16 +66,19 @@
 	import FileGridIcon from './FileNav/FileGridIcon.svelte';
 	import BulkActionBar from './FileNav/BulkActionBar.svelte';
 	import TerminalDock from './TerminalDock.svelte';
+	import { machineIdOf } from '$lib/utils/machines';
 
-	// Directory and preview state belong to this tab, including its terminal connection.
+	// Directory and preview state belong to this tab, including its machine connection.
 	let savedPath = '/';
 	// savedPath is only a placeholder until a directory has loaded.
 	let savedPathLoaded = false;
 	$: folderDirectory =
-		!onSelectDirectory && !chatId && $selectedFolder?.data?.terminal_id === effectiveTerminalId
+		!onSelectDirectory &&
+		(!chatId || isFolderSessionId(chatId)) &&
+		machineIdOf($selectedFolder?.data) === effectiveMachineId
 			? $selectedFolder.data.working_directory
 			: null;
-	let savedFileRoot: TerminalFileRoot | null = null;
+	let savedFileRoot: MachineFileRoot | null = null;
 	const treeExpandedCache = new Map<string, string[]>();
 	const treeContentsCache = new Map<string, [string, FileEntry[]][]>();
 
@@ -134,10 +137,10 @@
 	export let overlay = false;
 	export let active = true;
 	export let gitStatus: GitStatus | null = null;
-	export let gitTarget: TerminalTarget | null = null;
+	export let gitTarget: MachineTarget | null = null;
 	export let gitDiffMode: 'unified' | 'split' = 'unified';
 	export let gitHideWhitespace = false;
-	export let terminalId: string | null = null;
+	export let machineId: string | null = null;
 	export let initialFile: { path: string; page?: number | null } | null = null;
 	export let initialDirectory: string | null = null;
 	export let onSelectDirectory: ((path: string) => void) | null = null;
@@ -145,27 +148,27 @@
 	let gitAvailable = false;
 	let cloneSupportVersion = 0;
 	async function checkCloneSupport(
-		terminal: TerminalTarget | null,
+		machine: MachineTarget | null,
 		session: string | null,
 		enabled: boolean
 	) {
 		const version = ++cloneSupportVersion;
 		gitAvailable = false;
 		showCloneRepository = false;
-		if (!terminal || !enabled) return;
-		const features = await getTerminalFeatures(terminal);
+		if (!machine || !enabled) return;
+		const features = await getMachineFeatures(machine);
 		if (!disposed && version === cloneSupportVersion) gitAvailable = features.git === true;
 	}
-	$: void checkCloneSupport(selectedTerminal, chatId, !!onSelectDirectory);
+	$: void checkCloneSupport(selectedMachine, chatId, !!onSelectDirectory);
 	export let manageFileRequests = true;
 	export let showTerminalDock = true;
 	export let onOpenFile: ((path: string, page?: number | null) => void) | null = null;
 	export let onBrowseDirectory: ((path: string) => void) | null = null;
 	export let onFilesMoved: (() => void) | null = null;
-	$: effectiveTerminalId = terminalId ?? $selectedTerminalId;
+	$: effectiveMachineId = machineId ?? $selectedMachineId;
 
 	export let chatId: string | null = null;
-	export let terminalContext: TerminalContext | null = null;
+	export let machineContext: MachineContext | null = null;
 	export let onAskFile: ((instruction: string, file: FilesystemFile) => Promise<void>) | null =
 		null;
 	let viewerRoot: HTMLDivElement;
@@ -235,7 +238,7 @@
 	export let dirty = false;
 	let diskChanged = false;
 	let overwriteChoice: ((replace: boolean) => void) | null = null;
-	let selectedFileLocation: (TerminalTarget & { path: string }) | null = null;
+	let selectedFileLocation: (MachineTarget & { path: string }) | null = null;
 	let dirtyChoice: {
 		sending: boolean;
 		resolve: (confirmed: boolean) => void;
@@ -272,8 +275,8 @@
 
 	const publishFile = () => {
 		if (!openedFile) return;
-		terminalContext = {
-			terminalId: openedFile.terminal_id!,
+		machineContext = {
+			machineId: machineIdOf(openedFile)!,
 			currentDirectory: currentPath,
 			file: openedFile
 		};
@@ -333,17 +336,17 @@
 		if (
 			!openedFile ||
 			openedFile.path !== target.path ||
-			openedFile.terminal_id !== effectiveTerminalId ||
+			machineIdOf(openedFile) !== effectiveMachineId ||
 			openedFile.session_id !== chatId
 		)
-			throw new Error('The file or terminal changed. Open it again before sending.');
+			throw new Error('The file or machine changed. Open it again before sending.');
 		if (diskChanged)
 			throw new Error('The file changed on disk. Reload and select the content again.');
 		return structuredClone(openedFile);
 	};
 
 	$: {
-		(selectedFile, effectiveTerminalId, chatId);
+		(selectedFile, effectiveMachineId, chatId);
 		fileAsk = null;
 	}
 	$: viewerLabel = selectedExcelSheet
@@ -362,7 +365,7 @@
 			}))
 		)
 			throw new Error('Save cancelled.');
-		const current = getTerminal();
+		const current = getMachine();
 		if (
 			!target ||
 			!current ||
@@ -374,7 +377,7 @@
 			throw new Error('File is not writable.');
 		const name = target.path.split('/').pop()!;
 		const dir = target.path.slice(0, target.path.lastIndexOf('/') + 1) || '/';
-		const result = await uploadToTerminal(
+		const result = await uploadToMachine(
 			current,
 			dir,
 			new File([content], name, { type: 'text/plain' })
@@ -383,6 +386,7 @@
 		if (selectedFileLocation === target) {
 			fileContent = content;
 			diskChanged = false;
+			selectedFileVersion = '';
 		}
 		await tick();
 		onFileSaved?.(content);
@@ -398,7 +402,7 @@
 	let pinnedComparison: ComparisonFile | null = null;
 	let comparison: {
 		files: [ComparisonFile, ComparisonFile];
-		terminal: TerminalTarget;
+		machine: MachineTarget;
 		chatId: string | null;
 		opener: HTMLElement | null;
 	} | null = null;
@@ -408,10 +412,10 @@
 		size: entry.size
 	});
 	const openComparison = (files: [ComparisonFile, ComparisonFile]) => {
-		if (!selectedTerminal || files[0].path === files[1].path) return;
+		if (!selectedMachine || files[0].path === files[1].path) return;
 		comparison = {
 			files: files.map((file) => ({ ...file })) as [ComparisonFile, ComparisonFile],
-			terminal: { ...selectedTerminal },
+			machine: { ...selectedMachine },
 			chatId,
 			opener: document.activeElement instanceof HTMLElement ? document.activeElement : null
 		};
@@ -449,7 +453,7 @@
 	// Directory state
 	let currentPath = savedPath;
 	let homeDirectory: string | null = null;
-	let fileRoot: TerminalFileRoot | null = savedFileRoot;
+	let fileRoot: MachineFileRoot | null = savedFileRoot;
 	let entries: FileEntry[] = [];
 	let currentWritable = true;
 	let loading = false;
@@ -490,7 +494,7 @@
 		if (showSearch) searchInput?.focus();
 		else containerEl?.querySelector<HTMLButtonElement>('[data-file-search-toggle]')?.focus();
 	};
-	let matchResults: TerminalFileMatch[] | null = null;
+	let matchResults: MachineFileMatch[] | null = null;
 	let matchLoading = false;
 	let matchLoadingMore = false;
 	let matchError: string | null = null;
@@ -693,8 +697,8 @@
 	let showGitDiff = false;
 	let gitFileKey = '';
 	$: treeGitStatuses = gitTreeStatus(gitStatus);
-	$: if (gitFileKey !== `${effectiveTerminalId}:${selectedFile}`) {
-		gitFileKey = `${effectiveTerminalId}:${selectedFile}`;
+	$: if (gitFileKey !== `${effectiveMachineId}:${selectedFile}`) {
+		gitFileKey = `${effectiveMachineId}:${selectedFile}`;
 		showGitDiff = false;
 	}
 	$: currentGitFile =
@@ -721,7 +725,7 @@
 	let gitBaseGeneration = 0;
 	let gitBaseKey = '';
 	const loadGitBase = async (
-		target: TerminalTarget | null,
+		target: MachineTarget | null,
 		session: string | null,
 		status: GitStatus | null,
 		file: GitFile | null,
@@ -828,45 +832,45 @@
 	let showDeleteConfirm = false;
 	let shiftKey = false;
 
-	// Terminal resolution
-	let selectedTerminal: TerminalTarget | null = null;
-	let terminalChatContextPending = false;
-	let terminalChatContextHidden = false;
-	let isPerChatTerminal = false;
+	// Machine resolution
+	let selectedMachine: MachineTarget | null = null;
+	let machineChatContextPending = false;
+	let machineChatContextHidden = false;
+	let isPerChatMachine = false;
 
-	const getTerminal = (): TerminalTarget | null => {
-		const systemTerminal = effectiveTerminalId
-			? (($terminalServers ?? []).find((t) => t.id === effectiveTerminalId) ?? null)
-			: ($terminalServers?.[0] ?? null);
-		isPerChatTerminal = !!systemTerminal && systemTerminal?.scope === 'chat';
-		terminalChatContextHidden = isPerChatTerminal && isTemporaryChatId(chatId);
-		terminalChatContextPending =
-			isPerChatTerminal && !terminalChatContextHidden && !isSavedChatId(chatId);
-		if (terminalChatContextHidden || terminalChatContextPending) return null;
+	const getMachine = (): MachineTarget | null => {
+		const systemMachine = effectiveMachineId
+			? (($machines ?? []).find((t) => t.id === effectiveMachineId) ?? null)
+			: ($machines?.[0] ?? null);
+		isPerChatMachine = !!systemMachine && systemMachine?.scope === 'chat';
+		machineChatContextHidden = isPerChatMachine && isTemporaryChatId(chatId);
+		machineChatContextPending =
+			isPerChatMachine && !machineChatContextHidden && !isSavedChatId(chatId);
+		if (machineChatContextHidden || machineChatContextPending) return null;
 
 		if (target !== undefined) return target;
-		return resolveTerminalTarget(
-			effectiveTerminalId ?? systemTerminal?.id ?? null,
-			$terminalServers ?? [],
+		return resolveMachineTarget(
+			effectiveMachineId ?? systemMachine?.id ?? null,
+			$machines ?? [],
 			localStorage.token,
 			{ chatId: chatId, modelId: modelId }
 		);
 	};
 
-	// Detect terminal or chat changes — the explicit store references ensure
+	// Detect machine or chat changes — the explicit store references ensure
 	// Svelte re-runs this block when any of them update.
 	// The `mounted` flag prevents the initial run from racing with onMount.
-	let prevTerminalUrl = '';
+	let prevMachineUrl = '';
 	let prevModelId: string | null | undefined;
-	let prevTerminalId = effectiveTerminalId;
+	let prevMachineId = effectiveMachineId;
 	let prevChatId = chatId;
 	let prevFolderDirectory: string | null = null;
 	let mounted = false;
 	let disposed = false;
 	$: {
-		(effectiveTerminalId, target, modelId, $terminalServers, $settings);
-		const terminal = getTerminal();
-		selectedTerminal = terminal;
+		(effectiveMachineId, target, modelId, $machines, $settings);
+		const machine = getMachine();
+		selectedMachine = machine;
 
 		const chatChanged = chatId !== prevChatId;
 		const oldChatId = prevChatId;
@@ -874,44 +878,44 @@
 		const folderChanged = folderDirectory !== prevFolderDirectory;
 		prevFolderDirectory = folderDirectory;
 
-		const terminalChanged =
-			terminal &&
-			(terminal.baseUrl !== prevTerminalUrl ||
-				terminal.context.modelId !== prevModelId ||
-				effectiveTerminalId !== prevTerminalId);
-		if (terminalChanged) {
-			prevTerminalUrl = terminal.baseUrl;
-			prevModelId = terminal.context.modelId;
-			prevTerminalId = effectiveTerminalId;
+		const machineChanged =
+			machine &&
+			(machine.baseUrl !== prevMachineUrl ||
+				machine.context.modelId !== prevModelId ||
+				effectiveMachineId !== prevMachineId);
+		if (machineChanged) {
+			prevMachineUrl = machine.baseUrl;
+			prevModelId = machine.context.modelId;
+			prevMachineId = effectiveMachineId;
 		}
 
-		if (chatChanged || terminalChanged || !terminal) {
+		if (chatChanged || machineChanged || !machine) {
 			comparison = null;
 			pinnedComparison = null;
 		}
 
-		if (mounted && terminal) {
-			if (chatChanged && chatId && !oldChatId && !terminalChanged) {
+		if (mounted && machine) {
+			if (chatChanged && chatId && !oldChatId && !machineChanged) {
 				if (selectedFileLocation)
-					selectedFileLocation = { ...terminal, path: selectedFileLocation.path };
+					selectedFileLocation = { ...machine, path: selectedFileLocation.path };
 				if (openedFile) {
 					openedFile = { ...openedFile, session_id: chatId };
 					publishFile();
 				}
 				// Keep the draft's browsed path; chat submission initializes the session cwd.
-			} else if (terminalChanged || chatChanged || folderChanged) {
+			} else if (machineChanged || chatChanged || folderChanged) {
 				const generation = ++loadGeneration;
 				savedPathLoaded = false;
 				openedFile = null;
-				if (terminalContext) terminalContext = { ...terminalContext, file: null };
-				// Terminal switched, new chat started, or switched between
+				if (machineContext) machineContext = { ...machineContext, file: null };
+				// Machine switched, new chat started, or switched between
 				// existing chats — re-fetch the session cwd.
 				loading = true;
 				error = null;
 				entries = [];
 				resetTreeState();
 				(async () => {
-					const cwd = await getCwd(terminal);
+					const cwd = await getCwd(machine);
 					if (disposed || generation !== loadGeneration) return;
 					const serverPath = applyCwd(cwd);
 					savedPath = folderDirectory || serverPath;
@@ -1018,7 +1022,7 @@
 
 	const queueFileSearch = (
 		query: string,
-		terminal: TerminalTarget | null,
+		machine: MachineTarget | null,
 		path: string,
 		hiddenVisible: boolean,
 		activeFile: string | null
@@ -1026,7 +1030,7 @@
 		clearMatchRequest();
 		matchRequestId += 1;
 		const requestId = matchRequestId;
-		if (!query || !terminal || activeFile) {
+		if (!query || !machine || activeFile) {
 			resetMatches();
 			return;
 		}
@@ -1044,7 +1048,7 @@
 		const controller = new AbortController();
 		matchController = controller;
 		matchTimer = setTimeout(async () => {
-			const data = await getFileMatches(terminal, query, path, hiddenVisible, 0, controller.signal);
+			const data = await getFileMatches(machine, query, path, hiddenVisible, 0, controller.signal);
 			if (requestId !== matchRequestId) return;
 			if (data) {
 				matchResults = data.results;
@@ -1057,22 +1061,22 @@
 		}, 200);
 	};
 
-	$: queueFileSearch(searchText, selectedTerminal, currentPath, showHidden, selectedFile);
+	$: queueFileSearch(searchText, selectedMachine, currentPath, showHidden, selectedFile);
 
 	const loadMoreMatches = async () => {
 		const offset = nextMatchOffset;
 		if (offset === null || !isSearching || matchLoading || matchLoadingMore || matchLoadMoreError) {
 			return;
 		}
-		const terminal = selectedTerminal;
-		if (!terminal) return;
+		const machine = selectedMachine;
+		if (!machine) return;
 
 		const requestId = matchRequestId;
 		matchLoadingMore = true;
 		const controller = new AbortController();
 		matchController = controller;
 		const data = await getFileMatches(
-			terminal,
+			machine,
 			searchText,
 			currentPath,
 			showHidden,
@@ -1106,7 +1110,7 @@
 		return parts.at(-1) ?? '/';
 	};
 
-	const setFileRoot = (root?: TerminalFileRoot) => {
+	const setFileRoot = (root?: MachineFileRoot) => {
 		const previousRoot = fileRoot?.path ?? null;
 		fileRoot = root?.path
 			? {
@@ -1129,12 +1133,12 @@
 		return isInsideFileRoot(path) ? asDirectoryPath(path) : fileRoot.path;
 	};
 
-	const rootFromCwd = (cwd: TerminalCwd | null) => {
+	const rootFromCwd = (cwd: MachineCwd | null) => {
 		const rootPath = cwd?.root?.path ? asDirectoryPath(cwd.root.path) : null;
 		return rootPath && rootPath !== '/' ? cwd?.root : undefined;
 	};
 
-	const applyCwd = (cwd: TerminalCwd | null) => {
+	const applyCwd = (cwd: MachineCwd | null) => {
 		homeDirectory = cwd?.home ? asDirectoryPath(cwd.home) : null;
 		const cwdPath = cwd?.cwd ? asDirectoryPath(cwd.cwd) : null;
 		setFileRoot(rootFromCwd(cwd));
@@ -1207,10 +1211,10 @@
 		if (disposed) return;
 		if (!(await protectBuffer())) return;
 		const generation = ++loadGeneration;
-		const selector = effectiveTerminalId,
+		const selector = effectiveMachineId,
 			session = chatId;
-		const terminal = selectedTerminal;
-		if (!terminal) return;
+		const machine = selectedMachine;
+		if (!machine) return;
 		const directory = clampToFileRoot(path);
 		if (options.restoreTree) {
 			restoreTreeState(directory);
@@ -1227,8 +1231,8 @@
 		selectedFileWritable = true;
 		clearFilePreview();
 		clearSelection();
-		if (!options.preserveTree || directory !== currentPath || !terminalContext) {
-			terminalContext = { terminalId: effectiveTerminalId, currentDirectory: directory };
+		if (!options.preserveTree || directory !== currentPath || !machineContext) {
+			machineContext = { machineId: effectiveMachineId, currentDirectory: directory };
 		}
 		currentPath = directory;
 		onViewChange?.(captureView());
@@ -1236,14 +1240,13 @@
 		savedPathLoaded = true;
 		pushNavHistory(directory);
 
-		const result = await listFiles(terminal, directory);
-		if (generation !== loadGeneration || selector !== effectiveTerminalId || session !== chatId)
+		const result = await listFiles(machine, directory);
+		if (generation !== loadGeneration || selector !== effectiveMachineId || session !== chatId)
 			return;
 		loading = false;
 
 		if (result === null) {
-			error =
-				'Failed to load directory. Check your Terminal connection in Settings → Integrations.';
+			error = 'Failed to load directory. Check the machine in Settings → Integrations.';
 			entries = [];
 		} else {
 			currentWritable = result.writable !== false;
@@ -1255,11 +1258,11 @@
 	};
 
 	const fetchExpandedDir = async (path: string) => {
-		const terminal = selectedTerminal;
-		if (!terminal) return null;
+		const machine = selectedMachine;
+		if (!machine) return null;
 		const directory = asDirectoryPath(path);
 		loadingDirs = new Set(loadingDirs).add(directory);
-		const result = await listFiles(terminal, directory);
+		const result = await listFiles(machine, directory);
 		const nextLoading = new Set(loadingDirs);
 		nextLoading.delete(directory);
 		loadingDirs = nextLoading;
@@ -1273,20 +1276,19 @@
 	// Re-lists the shown folders in place: no spinner, and selection and preview stay put.
 	let refreshes = 0;
 	const refreshBrowser = async () => {
-		const terminal = selectedTerminal;
-		if (!terminal || loading) return;
+		const machine = selectedMachine;
+		if (!machine || loading) return;
 		const refresh = ++refreshes;
 		const generation = loadGeneration;
 		const paths = [currentPath, ...expandedDirs];
-		const listings = await Promise.all(paths.map((path) => listFiles(terminal, path)));
+		const listings = await Promise.all(paths.map((path) => listFiles(machine, path)));
 		if (refresh !== refreshes || generation !== loadGeneration || loading) return;
 		if (listings[0]) {
 			error = null;
 			currentWritable = listings[0].writable !== false;
 			entries = normalizeEntries(listings[0].entries);
 		} else {
-			error =
-				'Failed to load directory. Check your Terminal connection in Settings → Integrations.';
+			error = 'Failed to load directory. Check the machine in Settings → Integrations.';
 			entries = [];
 			clearSelection();
 		}
@@ -1298,28 +1300,45 @@
 		saveTreeState();
 	};
 
-	// The terminal's watcher reports real changes, including ones made outside the chat.
+	// Watcher events name no files, so the open file reloads when its listing changes.
+	// Empty means "take the next listing as is" (unknown, or our own save).
+	let selectedFileVersion = '';
+	const entryVersion = (entry?: FileEntry) =>
+		entry?.modified === undefined ? '' : `${entry.modified}:${entry.size}`;
+	const refreshSelectedFile = async () => {
+		await refreshBrowser();
+		if (!selectedFile || saving) return;
+		const fileName = selectedFile.split('/').pop();
+		const entry = entries.find((item) => item.name === fileName);
+		const version = entryVersion(entry);
+		if (!entry || version === selectedFileVersion) return;
+		const previous = selectedFileVersion;
+		selectedFileVersion = version;
+		if (previous) await openEntry(entry, { refresh: true });
+	};
+
+	// The machine's watcher reports real changes, including ones made outside the chat.
 	let watchedFolder = '';
 	let stopWatching: (() => void) | undefined;
 	let watcherConnected = false;
-	const watchFolder = async (terminal: TerminalTarget | null, directory: string, on: boolean) => {
-		const folder = on && terminal ? `${terminal.baseUrl}:${directory}` : '';
+	const watchFolder = async (machine: MachineTarget | null, directory: string, on: boolean) => {
+		const folder = on && machine ? `${machine.baseUrl}:${directory}` : '';
 		if (folder === watchedFolder) return;
 		watchedFolder = folder;
 		stopWatching?.();
 		stopWatching = undefined;
 		watcherConnected = false;
-		if (!terminal || !folder || !(await getTerminalFeatures(terminal)).events) return;
+		if (!machine || !folder || !(await getMachineFeatures(machine)).events) return;
 		if (folder !== watchedFolder || disposed) return;
-		stopWatching = watchTerminalFiles(
-			terminal,
+		stopWatching = watchMachineFiles(
+			machine,
 			directory,
-			() => !selectedFile && refreshBrowser(),
+			() => (selectedFile ? refreshSelectedFile() : refreshBrowser()),
 			(message) => (watcherConnected = !message)
 		);
 	};
 	$: void watchFolder(
-		selectedTerminal,
+		selectedMachine,
 		currentPath,
 		mounted && active && savedPathLoaded && !onSelectDirectory
 	);
@@ -1335,7 +1354,7 @@
 		}
 
 		expandedDirs = new Set(expandedDirs).add(directory);
-		terminalContext = { terminalId: effectiveTerminalId, currentDirectory: directory };
+		machineContext = { machineId: effectiveMachineId, currentDirectory: directory };
 		saveTreeState();
 
 		const result = await fetchExpandedDir(directory);
@@ -1377,14 +1396,15 @@
 		if (parentPath !== currentPath) {
 			await loadDir(parentPath);
 		}
+		selectedFileVersion = entryVersion(entries.find((item) => item.name === entry.name) ?? entry);
 		selectedFileWritable = entry.writable !== false;
 		pushNavHistory(parentPath, filePath);
 
-		const terminal = selectedTerminal;
-		if (!terminal) return;
+		const machine = selectedMachine;
+		if (!machine) return;
 
 		const generation = ++loadGeneration;
-		const selector = effectiveTerminalId!,
+		const selector = effectiveMachineId!,
 			session = chatId;
 		const previousView =
 			openedFile?.path === filePath
@@ -1396,12 +1416,12 @@
 					}
 				: null;
 		const current = () =>
-			generation === loadGeneration && selector === effectiveTerminalId && session === chatId;
+			generation === loadGeneration && selector === effectiveMachineId && session === chatId;
 		openedFile = null;
-		if (terminalContext) terminalContext = { ...terminalContext, file: null };
+		if (machineContext) machineContext = { ...machineContext, file: null };
 		dirty = false;
 		diskChanged = false;
-		selectedFileLocation = { ...terminal, path: filePath };
+		selectedFileLocation = { ...machine, path: filePath };
 		pendingFile = filesystemFile(
 			{ path: filePath, name: entry.name, size: entry.size, modified: entry.modified },
 			selector,
@@ -1435,22 +1455,22 @@
 			fileContent: null
 		} as any;
 		if (isImage(filePath)) {
-			const result = await downloadFileBlob(terminal, filePath);
+			const result = await downloadFileBlob(machine, filePath);
 			if (result) next.fileImageUrl = URL.createObjectURL(result.blob);
 		} else if (isVideo(filePath)) {
-			const result = await downloadFileBlob(terminal, filePath);
+			const result = await downloadFileBlob(machine, filePath);
 			if (result) next.fileVideoUrl = URL.createObjectURL(result.blob);
 		} else if (isAudio(filePath)) {
-			const result = await downloadFileBlob(terminal, filePath);
+			const result = await downloadFileBlob(machine, filePath);
 			if (result) next.fileAudioUrl = URL.createObjectURL(result.blob);
 		} else if (isPdf(filePath)) {
-			const result = await downloadFileBlob(terminal, filePath);
+			const result = await downloadFileBlob(machine, filePath);
 			if (result) next.filePdfData = await result.blob.arrayBuffer();
 		} else if (
 			isSqlite(filePath) ||
 			['glb', 'gltf', 'stl', 'obj', 'ply'].includes(getFileExt(filePath))
 		) {
-			const result = await downloadFileBlob(terminal, filePath);
+			const result = await downloadFileBlob(machine, filePath);
 			if (result) {
 				const data = await result.blob.arrayBuffer();
 				if (['glb', 'gltf', 'stl', 'obj', 'ply'].includes(getFileExt(filePath)))
@@ -1461,21 +1481,21 @@
 			const ext = getFileExt(filePath);
 			try {
 				if (ext === 'docx') {
-					const preview = await downloadFilePreview(terminal, filePath);
+					const preview = await downloadFilePreview(machine, filePath);
 					if (preview) {
 						next.filePdfData = await preview.blob.arrayBuffer();
 					} else {
-						const result = await downloadFileBlob(terminal, filePath);
+						const result = await downloadFileBlob(machine, filePath);
 						if (!result) throw new Error('Preview failed');
 						const arrayBuffer = await result.blob.arrayBuffer();
 						next.fileDocxData = arrayBuffer;
 					}
 				} else if (ext === 'pptx') {
-					const preview = await downloadFilePreview(terminal, filePath);
+					const preview = await downloadFilePreview(machine, filePath);
 					if (preview) {
 						next.filePdfData = await preview.blob.arrayBuffer();
 					} else {
-						const result = await downloadFileBlob(terminal, filePath);
+						const result = await downloadFileBlob(machine, filePath);
 						if (!result) throw new Error('Preview failed');
 						const arrayBuffer = await result.blob.arrayBuffer();
 						const { pptxToImages } = await import('$lib/utils/pptxToHtml');
@@ -1491,7 +1511,7 @@
 				});
 			}
 		} else {
-			next.fileContent = await readFile(terminal, filePath);
+			next.fileContent = await readFile(machine, filePath);
 		}
 		if (!current()) {
 			[next.fileImageUrl, next.fileVideoUrl, next.fileAudioUrl]
@@ -1535,7 +1555,7 @@
 		}
 	};
 
-	const openFileMatch = async (match: TerminalFileMatch) => {
+	const openFileMatch = async (match: MachineFileMatch) => {
 		if (match.type === 'directory') {
 			searchQuery = '';
 			await loadDir(match.path);
@@ -1552,7 +1572,7 @@
 		} as BrowserRow);
 	};
 
-	const openContentMatch = async (match: TerminalFileMatch, contentMatch: TerminalContentMatch) => {
+	const openContentMatch = async (match: MachineFileMatch, contentMatch: MachineContentMatch) => {
 		await openFileMatch(match);
 		fileSearchTarget = {
 			line: contentMatch.line,
@@ -1565,8 +1585,8 @@
 	let downloading = false;
 
 	const downloadFile = async (path: string) => {
-		const terminal = selectedTerminal;
-		if (!terminal || downloading) return;
+		const machine = selectedMachine;
+		if (!machine || downloading) return;
 
 		downloading = true;
 		const toastId = toast.loading($i18n.t('Preparing download...'));
@@ -1574,8 +1594,8 @@
 			// Directories end with '/', downloaded as a ZIP archive
 			const isDir = path.endsWith('/');
 			const result = isDir
-				? await archiveFromTerminal(terminal, [path.replace(/\/$/, '')])
-				: await downloadFileBlob(terminal, path);
+				? await archiveFromMachine(machine, [path.replace(/\/$/, '')])
+				: await downloadFileBlob(machine, path);
 			if (!result) {
 				toast.error($i18n.t('Download failed'));
 				return;
@@ -1593,8 +1613,8 @@
 	};
 
 	$: dragContext = JSON.stringify([
-		selectedTerminal?.baseUrl,
-		selectedTerminal?.context.modelId,
+		selectedMachine?.baseUrl,
+		selectedMachine?.context.modelId,
 		chatId ?? null
 	]);
 
@@ -1605,7 +1625,7 @@
 		if (selectedFile) return;
 		if (!currentWritable) return;
 		const types = e.dataTransfer?.types;
-		if (!types?.includes('Files') && !types?.includes('application/x-terminal-file-move')) return;
+		if (!types?.includes('Files') && !types?.includes('application/x-machine-file-move')) return;
 		e.preventDefault();
 		e.stopPropagation();
 		isDragOver = types.includes('Files');
@@ -1616,10 +1636,10 @@
 		e.stopPropagation();
 		isDragOver = false;
 
-		const terminal = selectedTerminal;
-		if (selectedFile || !terminal || !currentWritable) return;
+		const machine = selectedMachine;
+		if (selectedFile || !machine || !currentWritable) return;
 
-		const rawMove = e.dataTransfer?.getData('application/x-terminal-file-move');
+		const rawMove = e.dataTransfer?.getData('application/x-machine-file-move');
 		if (rawMove) {
 			try {
 				const data = JSON.parse(rawMove);
@@ -1634,8 +1654,8 @@
 	};
 
 	const handleUploadEntries = async (input: UploadEntry[] | Promise<UploadEntry[]>) => {
-		const terminal = selectedTerminal;
-		if (!terminal || !currentWritable || uploading) return;
+		const machine = selectedMachine;
+		if (!machine || !currentWritable || uploading) return;
 		const destination = currentPath;
 		const sessionId = chatId ?? undefined;
 		uploading = true;
@@ -1650,19 +1670,15 @@
 				}
 				const path = `${destination.replace(/\/$/, '')}/${entry.path}`;
 				const result = entry.file
-					? await uploadToTerminal(
-							terminal,
-							path.slice(0, path.lastIndexOf('/')) || '/',
-							entry.file
-						)
-					: await createDirectory(terminal, path);
+					? await uploadToMachine(machine, path.slice(0, path.lastIndexOf('/')) || '/', entry.file)
+					: await createDirectory(machine, path);
 				if (!result) throw new Error(entry.path);
 			}
 		} catch (error) {
 			toast.error(`${$i18n.t('Upload failed')}: ${error instanceof Error ? error.message : error}`);
 		} finally {
 			uploading = false;
-			if (selectedTerminal?.baseUrl === terminal.baseUrl && (chatId ?? undefined) === sessionId) {
+			if (selectedMachine?.baseUrl === machine.baseUrl && (chatId ?? undefined) === sessionId) {
 				invalidateTreeCache(destination);
 				if (currentPath === destination && !selectedFile) await refreshBrowser();
 			}
@@ -1698,10 +1714,10 @@
 		newFolderName = '';
 		if (!name) return;
 
-		const terminal = selectedTerminal;
-		if (!terminal) return;
+		const machine = selectedMachine;
+		if (!machine) return;
 
-		const result = await createDirectory(terminal, `${currentPath}${name}`);
+		const result = await createDirectory(machine, `${currentPath}${name}`);
 		toast[result ? 'success' : 'error'](
 			result ? $i18n.t('Folder created') : $i18n.t('Failed to create folder')
 		);
@@ -1728,11 +1744,11 @@
 		newFileName = '';
 		if (!name) return;
 
-		const terminal = selectedTerminal;
-		if (!terminal || !currentWritable) return;
+		const machine = selectedMachine;
+		if (!machine || !currentWritable) return;
 
 		const emptyFile = new File([''], name, { type: 'application/octet-stream' });
-		const result = await uploadToTerminal(terminal, currentPath, emptyFile);
+		const result = await uploadToMachine(machine, currentPath, emptyFile);
 		toast[result ? 'success' : 'error'](
 			result ? $i18n.t('File created') : $i18n.t('Failed to create file')
 		);
@@ -1742,10 +1758,10 @@
 
 	// Delete
 	const handleDelete = async (path: string, name: string) => {
-		const terminal = selectedTerminal;
-		if (!terminal || !currentWritable) return;
+		const machine = selectedMachine;
+		if (!machine || !currentWritable) return;
 
-		const result = await deleteEntry(terminal, path);
+		const result = await deleteEntry(machine, path);
 		toast[result ? 'success' : 'error'](
 			result
 				? $i18n.t('{{name}} deleted', { name })
@@ -1769,8 +1785,8 @@
 	};
 
 	const moveOne = async (source: string, destFolder: string) => {
-		const terminal = selectedTerminal;
-		if (!terminal || !currentWritable) return false;
+		const machine = selectedMachine;
+		if (!machine || !currentWritable) return false;
 
 		const cleanSource = normalizePath(source).replace(/\/$/, '');
 		const fileName = cleanSource.split('/').pop() ?? '';
@@ -1782,7 +1798,7 @@
 		const sourceDir = asDirectoryPath(cleanSource);
 		if (asDirectoryPath(destFolder).startsWith(sourceDir)) return false;
 
-		const result = await moveEntry(terminal, cleanSource, destination);
+		const result = await moveEntry(machine, cleanSource, destination);
 		if ('error' in result) {
 			toast.error(result.error);
 			return false;
@@ -1820,15 +1836,15 @@
 
 	// Rename
 	const handleRename = async (oldPath: string, newName: string) => {
-		const terminal = selectedTerminal;
-		if (!terminal || !newName || !currentWritable) return;
+		const machine = selectedMachine;
+		if (!machine || !newName || !currentWritable) return;
 
 		const dir = oldPath.substring(0, oldPath.lastIndexOf('/') + 1) || currentPath;
 		const destination = `${dir}${newName}`;
 
 		if (oldPath === destination) return;
 
-		const result = await moveEntry(terminal, oldPath, destination);
+		const result = await moveEntry(machine, oldPath, destination);
 		if ('error' in result) {
 			toast.error(result.error);
 		} else {
@@ -2037,15 +2053,15 @@
 	};
 
 	const dragAttachments = (event: DragEvent, path: string) => {
-		if (!effectiveTerminalId) return;
+		if (!effectiveMachineId) return;
 		const paths = selectedEntries.has(path) ? selectedEntries : new Set([path]);
 		const attachments = visibleEntries
 			.filter((entry) => entry.type === 'file' && paths.has(entry.fullPath))
 			.map((entry) =>
-				filesystemFile({ ...entry, path: entry.fullPath }, effectiveTerminalId!, chatId ?? null)
+				filesystemFile({ ...entry, path: entry.fullPath }, effectiveMachineId!, chatId ?? null)
 			);
 		if (attachments.length)
-			event.dataTransfer?.setData('application/x-terminal-file', JSON.stringify(attachments));
+			event.dataTransfer?.setData('application/x-machine-file', JSON.stringify(attachments));
 	};
 
 	$: selectedCount = selectedEntries.size;
@@ -2098,13 +2114,13 @@
 	};
 
 	const bulkDelete = async () => {
-		const terminal = selectedTerminal;
-		if (!terminal || !selectedEntriesWritable) return;
+		const machine = selectedMachine;
+		if (!machine || !selectedEntriesWritable) return;
 
 		const paths = [...selectedEntries];
 		let ok = 0;
 		for (const p of paths) {
-			const result = await deleteEntry(terminal, p.replace(/\/$/, ''));
+			const result = await deleteEntry(machine, p.replace(/\/$/, ''));
 			if (result) ok++;
 		}
 		toast[ok > 0 ? 'success' : 'error'](
@@ -2116,8 +2132,8 @@
 	};
 
 	const bulkDownload = async () => {
-		const terminal = selectedTerminal;
-		if (!terminal || downloading) return;
+		const machine = selectedMachine;
+		if (!machine || downloading) return;
 
 		const paths = [...selectedEntries].map((p) => p.replace(/\/$/, ''));
 		if (paths.length === 0) return;
@@ -2132,7 +2148,7 @@
 		const toastId = toast.loading($i18n.t('Preparing download...'));
 		try {
 			// Archive everything into a single ZIP
-			const result = await archiveFromTerminal(terminal, paths);
+			const result = await archiveFromMachine(machine, paths);
 			if (!result) {
 				toast.error($i18n.t('Download failed'));
 				return;
@@ -2182,7 +2198,7 @@
 		document.addEventListener('spreadsheetselection', captureSelection);
 		showHidden = localStorage.getItem('fileNav:showHidden') === 'true';
 		viewMode = localStorage.getItem('fileNav:viewMode') === 'grid' ? 'grid' : 'list';
-		const terminal = getTerminal();
+		const machine = getMachine();
 
 		let handledDisplayFile = false;
 
@@ -2192,7 +2208,7 @@
 				!manageFileRequests ||
 				!active ||
 				!request ||
-				!selectedTerminal ||
+				!selectedMachine ||
 				comparison
 			)
 				return;
@@ -2212,10 +2228,10 @@
 
 			// Always reload directory to ensure entries are fresh
 			if (!(await protectBuffer())) return;
-			const selector = effectiveTerminalId,
+			const selector = effectiveMachineId,
 				session = chatId;
 			await loadDir(dir);
-			if (selector !== effectiveTerminalId || session !== chatId || currentPath !== dir || dirty)
+			if (selector !== effectiveMachineId || session !== chatId || currentPath !== dir || dirty)
 				return;
 			await tick();
 
@@ -2232,8 +2248,8 @@
 			if (
 				onSelectDirectory ||
 				!filePath ||
-				!selectedTerminal ||
-				effectiveTerminalId !== $selectedTerminalId
+				!selectedMachine ||
+				effectiveMachineId !== $selectedMachineId
 			)
 				return;
 			showFileNavDir.set(null);
@@ -2250,7 +2266,8 @@
 			if (comparison) return;
 
 			if (selectedFile) {
-				if (selectedFile === filePath) {
+				// A live watcher already reloads the open file when it changes.
+				if (selectedFile === filePath && !watcherConnected) {
 					const fileName = selectedFile.split('/').pop() ?? '';
 					await openEntry({ name: fileName, type: 'file', size: 0 }, { refresh: true });
 				}
@@ -2259,16 +2276,16 @@
 			}
 		});
 
-		if (!handledDisplayFile && terminal) {
+		if (!handledDisplayFile && machine) {
 			loading = true;
 
 			void (async () => {
-				const serverCwd = await getCwd(terminal);
+				const serverCwd = await getCwd(machine);
 				if (disposed) return;
 				const serverPath = applyCwd(serverCwd);
 				savedPath =
-					terminalContext && terminalContext.terminalId === effectiveTerminalId
-						? terminalContext.currentDirectory
+					machineContext && machineContext.machineId === effectiveMachineId
+						? machineContext.currentDirectory
 						: folderDirectory || serverPath;
 				savedPath = clampToFileRoot(savedPath);
 				if (initialFile) {
@@ -2308,8 +2325,8 @@
 				document.visibilityState === 'visible' &&
 				!comparison &&
 				!selectedFile &&
-				selectedTerminal &&
-				!terminalChatContextPending &&
+				selectedMachine &&
+				!machineChatContextPending &&
 				!loading
 			) {
 				loadDir(currentPath, { preserveTree: true });
@@ -2374,12 +2391,12 @@
 		}
 	}}
 >
-	<p class="mb-2 text-sm text-gray-700 dark:text-gray-300 [overflow-wrap:anywhere]">
+	<p class="mb-2 text-sm text-base-700 dark:text-base-300 [overflow-wrap:anywhere]">
 		{$i18n.t('Are you sure you want to delete "{{NAME}}"?', {
 			NAME: deleteTarget?.name ?? ''
 		})}
 	</p>
-	<p class="text-sm text-gray-500">
+	<p class="text-sm text-base-500">
 		{$i18n.t('This action cannot be undone. Do you wish to continue?')}
 	</p>
 </ConfirmDialog>
@@ -2426,38 +2443,38 @@
 	{#key comparison}
 		<FileComparisonModal
 			files={comparison.files}
-			target={comparison.terminal}
+			target={comparison.machine}
 			onClose={closeComparison}
 		/>
 	{/key}
 {/if}
 
-{#if terminalChatContextHidden}
+{#if machineChatContextHidden}
 	<div class="hidden"></div>
-{:else if terminalChatContextPending}
+{:else if machineChatContextPending}
 	<div class="flex-1 flex flex-col items-center justify-center p-6 text-center">
 		<Icon
 			name="terminal"
 			size={24}
 			strokeWidth={1.4}
-			class="text-gray-300 dark:text-gray-600 mb-2"
+			class="text-base-300 dark:text-base-600 mb-2"
 		/>
-		<div class="text-xs text-gray-500 dark:text-gray-400">
-			{$i18n.t('Start the chat to use this terminal.')}
+		<div class="text-xs text-base-500 dark:text-base-400">
+			{$i18n.t('Start the chat to use this machine.')}
 		</div>
 	</div>
-{:else if !selectedTerminal}
+{:else if !selectedMachine}
 	<div class="flex-1 flex flex-col items-center justify-center p-6 text-center">
 		<Icon
 			name="terminal"
 			size={24}
 			strokeWidth={1.4}
-			class="text-gray-300 dark:text-gray-600 mb-2"
+			class="text-base-300 dark:text-base-600 mb-2"
 		/>
-		<div class="text-xs text-gray-500 dark:text-gray-400 mb-1">
-			{$i18n.t('No Terminal connection configured.')}
+		<div class="text-xs text-base-500 dark:text-base-400 mb-1">
+			{$i18n.t('No machine configured.')}
 		</div>
-		<div class="text-[0.625rem] text-gray-400 dark:text-gray-500">
+		<div class="text-[0.625rem] text-base-400 dark:text-base-500">
 			{$i18n.t('Add your Open Terminal URL and API key in Settings → Integrations.')}
 		</div>
 	</div>
@@ -2478,11 +2495,11 @@
 	>
 		{#if isDragOver && !isSearching}
 			<div
-				class="pointer-events-none absolute inset-0 z-10 bg-black/[0.02] dark:bg-white/[0.02]"
+				class="pointer-events-none absolute inset-0 z-10 bg-base-1000/[0.02] dark:bg-base-0/[0.02]"
 				role="status"
 			>
 				<div
-					class="absolute left-1/2 top-1/2 flex max-w-[calc(100%-1rem)] -translate-x-1/2 -translate-y-1/2 items-center gap-1.5 rounded-lg bg-white/95 px-2.5 py-1.5 text-xs text-gray-600 shadow-sm ring-1 ring-black/5 dark:bg-gray-850/95 dark:text-gray-300 dark:ring-white/10"
+					class="absolute left-1/2 top-1/2 flex max-w-[calc(100%-1rem)] -translate-x-1/2 -translate-y-1/2 items-center gap-1.5 rounded-lg bg-base-0/95 px-2.5 py-1.5 text-xs text-base-600 shadow-sm ring-1 ring-base-1000/5 dark:bg-base-850/95 dark:text-base-300 dark:ring-base-0/10"
 				>
 					<Icon name="upload-tray" size={14} strokeWidth={1.5} />
 					<span class="truncate">{$i18n.t('Drop to upload')}</span>
@@ -2517,9 +2534,9 @@
 			onGoForward={goForward}
 			onNavigate={initialFile && onBrowseDirectory ? onBrowseDirectory : loadDir}
 			listFolders={async (path) => {
-				const terminal = selectedTerminal;
+				const machine = selectedMachine;
 				const entries =
-					treeCache.get(path) ?? (terminal ? (await listFiles(terminal, path))?.entries : null);
+					treeCache.get(path) ?? (machine ? (await listFiles(machine, path))?.entries : null);
 				return (entries ?? [])
 					.filter((entry) => entry.type === 'directory')
 					.map((entry) => cleanEntryName(entry.name));
@@ -2552,7 +2569,7 @@
 				{#each [{ label: 'Editor', icon: 'pencil', raw: false }, { label: 'Source', icon: 'code', raw: true }] as mode}
 					<Tooltip content={$i18n.t(mode.label)}>
 						<button
-							class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 aria-pressed:text-gray-900 dark:aria-pressed:text-white disabled:opacity-30"
+							class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-base-500 dark:text-base-400 hover:text-base-800 dark:hover:text-base-200 aria-pressed:text-base-900 dark:aria-pressed:text-base-0 disabled:opacity-30"
 							aria-label={$i18n.t(mode.label)}
 							aria-pressed={showRaw === mode.raw}
 							on:click={() => {
@@ -2568,7 +2585,7 @@
 						<Tooltip content={$i18n.t('Outline')}>
 							<button
 								type="button"
-								class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+								class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-base-500 dark:text-base-400 hover:text-base-800 dark:hover:text-base-200"
 								aria-label={$i18n.t('Outline')}
 							>
 								<Icon name="list" size={11} strokeWidth={1.4} />
@@ -2582,7 +2599,7 @@
 								{#each viewerRoot.querySelectorAll('h1, h2, h3, h4, h5, h6') as heading}
 									<button
 										type="button"
-										class="select-none flex h-7 w-full items-center rounded-lg px-2 text-xs hover:bg-gray-50/40 dark:hover:bg-white/4 transition"
+										class="select-none flex h-7 w-full items-center rounded-lg px-2 text-xs hover:bg-base-50/40 dark:hover:bg-base-0/4 transition"
 										on:click={() => heading.scrollIntoView()}
 									>
 										<span
@@ -2592,7 +2609,7 @@
 										>
 									</button>
 								{:else}
-									<div class="px-2 py-1.5 text-xs text-gray-500 dark:text-gray-400">
+									<div class="px-2 py-1.5 text-xs text-base-500 dark:text-base-400">
 										{$i18n.t('No results')}
 									</div>
 								{/each}
@@ -2603,7 +2620,7 @@
 			{:else if (isCsv || isHtml || isJson || isSvg || isNotebook) && fileContent !== null}
 				<Tooltip content={showRaw ? $i18n.t('Preview') : $i18n.t('Source')}>
 					<button
-						class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+						class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-base-500 dark:text-base-400 hover:text-base-800 dark:hover:text-base-200"
 						on:click={async () => {
 							if (!(await protectBuffer())) return;
 							showRaw = !showRaw;
@@ -2621,7 +2638,7 @@
 			{#if fileContent !== null}
 				<Tooltip content={$i18n.t('Copy')}>
 					<button
-						class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+						class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-base-500 dark:text-base-400 hover:text-base-800 dark:hover:text-base-200"
 						on:click={async () => {
 							if (await copyToClipboard(fileContent ?? '')) {
 								toast.success($i18n.t('Copied to clipboard'));
@@ -2635,7 +2652,7 @@
 			{/if}
 			<Tooltip content={$i18n.t('Download')}>
 				<button
-					class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+					class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-base-500 dark:text-base-400 hover:text-base-800 dark:hover:text-base-200"
 					on:click={() => selectedFile && downloadFile(selectedFile)}
 					aria-label={$i18n.t('Download')}
 				>
@@ -2643,11 +2660,11 @@
 				</button>
 			</Tooltip>
 
-			{#if getFileExt(selectedFile) === 'xlsx' && selectedTerminal}
+			{#if getFileExt(selectedFile) === 'xlsx' && selectedMachine}
 				<Tooltip content={$i18n.t('Save')}>
 					<button
 						type="button"
-						class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 disabled:opacity-30 disabled:hover:bg-transparent"
+						class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-base-500 dark:text-base-400 hover:text-base-800 dark:hover:text-base-200 disabled:opacity-30 disabled:hover:bg-transparent"
 						on:click={() => commentPreviewRef?.save().catch((error) => toast.error(String(error)))}
 						disabled={saving || !dirty || !selectedFileWritable}
 						aria-label={$i18n.t('Save')}
@@ -2665,7 +2682,7 @@
 				{#if isHtml && showRaw}
 					<Tooltip content={$i18n.t('Save')}>
 						<button
-							class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 disabled:opacity-30 disabled:hover:bg-transparent"
+							class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-base-500 dark:text-base-400 hover:text-base-800 dark:hover:text-base-200 disabled:opacity-30 disabled:hover:bg-transparent"
 							on:click={() =>
 								filePreviewRef?.saveCodeFile().catch((error) => toast.error(String(error)))}
 							disabled={saving || !selectedFileWritable}
@@ -2683,7 +2700,7 @@
 				{:else if isMarkdown}
 					<Tooltip content={$i18n.t('Save')}>
 						<button
-							class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 disabled:opacity-30 disabled:hover:bg-transparent"
+							class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-base-500 dark:text-base-400 hover:text-base-800 dark:hover:text-base-200 disabled:opacity-30 disabled:hover:bg-transparent"
 							on:click={() =>
 								filePreviewRef?.saveCodeFile().catch((error) => toast.error(String(error)))}
 							disabled={saving || !selectedFileWritable}
@@ -2699,7 +2716,7 @@
 				{:else if showRaw || (!isCsv && !isJson && !isSvg && !isNotebook) || dirty}
 					<Tooltip content={$i18n.t('Save')}>
 						<button
-							class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 disabled:opacity-30 disabled:hover:bg-transparent"
+							class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-base-500 dark:text-base-400 hover:text-base-800 dark:hover:text-base-200 disabled:opacity-30 disabled:hover:bg-transparent"
 							on:click={() =>
 								filePreviewRef?.saveCodeFile().catch((error) => toast.error(String(error)))}
 							disabled={saving || !selectedFileWritable}
@@ -2718,13 +2735,13 @@
 
 		{#if !selectedFile && showSearch}
 			<div
-				class="flex h-8 shrink-0 items-center gap-1.5 border-b border-gray-200/40 px-3 dark:border-gray-850/20"
+				class="flex h-8 shrink-0 items-center gap-1.5 border-b border-base-200/40 px-3 dark:border-base-850/20"
 			>
-				<Icon name="search" size={13} strokeWidth={1.5} class="shrink-0 text-gray-400" />
+				<Icon name="search" size={13} strokeWidth={1.5} class="shrink-0 text-base-400" />
 				<input
 					bind:this={searchInput}
 					type="text"
-					class="min-w-0 flex-1 border-none bg-transparent text-xs text-gray-800 outline-none placeholder:text-gray-400 dark:text-gray-200 dark:placeholder:text-gray-600"
+					class="min-w-0 flex-1 border-none bg-transparent text-xs text-base-800 outline-none placeholder:text-base-400 dark:text-base-200 dark:placeholder:text-base-600"
 					placeholder={$i18n.t('Search files and contents')}
 					aria-label={$i18n.t('Search files and contents')}
 					bind:value={searchQuery}
@@ -2738,7 +2755,7 @@
 				/>
 				{#if searchQuery}
 					<button
-						class="flex shrink-0 items-center text-gray-400 transition hover:text-gray-600 dark:hover:text-gray-300"
+						class="flex shrink-0 items-center text-base-400 transition hover:text-base-600 dark:hover:text-base-300"
 						on:click={() => (searchQuery = '')}
 						aria-label={$i18n.t('Clear search')}
 					>
@@ -2749,7 +2766,7 @@
 		{/if}
 
 		{#if pinnedComparison}
-			<div class="flex shrink-0 items-center gap-2 px-3 py-1.5 text-xs text-gray-500">
+			<div class="flex shrink-0 items-center gap-2 px-3 py-1.5 text-xs text-base-500">
 				<Tooltip content={pinnedComparison.path}>
 					<span class="block max-w-[16rem] truncate"
 						>{$i18n.t('Comparing with {{name}}', { name: pinnedComparison.name })}</span
@@ -2757,7 +2774,7 @@
 				</Tooltip>
 				<button
 					type="button"
-					class="shrink-0 hover:text-gray-900 dark:hover:text-white"
+					class="shrink-0 hover:text-base-900 dark:hover:text-base-0"
 					aria-label={$i18n.t('Clear comparison selection')}
 					on:click={() => (pinnedComparison = null)}><Icon name="xmark" size={12} /></button
 				>
@@ -2766,7 +2783,7 @@
 
 		{#if diskChanged}<div
 				role="status"
-				class="flex flex-wrap items-center gap-2 px-2 py-1.5 text-xs text-gray-500 dark:text-gray-400"
+				class="flex flex-wrap items-center gap-2 px-2 py-1.5 text-xs text-base-500 dark:text-base-400"
 			>
 				{$i18n.t('File updated on disk. Your local changes are preserved.')}
 				<button
@@ -2824,8 +2841,8 @@
 					/>
 				{/if}
 				<div class="h-full" class:hidden={showGitDiff}>
-					{#if supportsComments(selectedFile) && selectedTerminal}
-						{#key `${selectedTerminal.baseUrl}|${selectedTerminal.context.modelId}|${selectedTerminal.key}|${chatId}|${selectedFile}|${commentGeneration}`}
+					{#if supportsComments(selectedFile) && selectedMachine}
+						{#key `${selectedMachine.baseUrl}|${selectedMachine.context.modelId}|${selectedMachine.key}|${chatId}|${selectedFile}|${commentGeneration}`}
 							<CommentFilePreview
 								bind:this={commentPreviewRef}
 								bind:dirty
@@ -2833,10 +2850,11 @@
 								readOnly={!selectedFileWritable}
 								onSaved={(preview) => {
 									diskChanged = false;
+									selectedFileVersion = '';
 									onViewChange?.({ ...captureView(), preview, dirty: preview?.dirty ?? false });
 								}}
 								path={selectedFile}
-								target={selectedTerminal}
+								target={selectedMachine}
 								targetPage={documentTargetPage}
 								initialSheet={selectedExcelSheet}
 								onReady={() => {
@@ -2873,7 +2891,7 @@
 							{fileOfficeSlides}
 							targetPage={documentTargetPage}
 							searchTarget={fileSearchTarget}
-							target={selectedTerminal}
+							target={selectedMachine}
 							overlay={overlay || isDraggingHandle}
 							onSave={saveFile}
 						/>
@@ -2883,33 +2901,33 @@
 				{#if isSearching}
 					{#if matchLoading}
 						<div class="flex h-full items-center justify-center">
-							<Spinner className="size-3.5 text-gray-400 dark:text-gray-500" />
+							<Spinner className="size-3.5 text-base-400 dark:text-base-500" />
 						</div>
 					{:else if matchError}
 						<div class="flex h-full items-center justify-center p-6 text-center">
-							<div class="text-xs text-gray-400 dark:text-gray-500">{matchError}</div>
+							<div class="text-xs text-base-400 dark:text-base-500">{matchError}</div>
 						</div>
 					{:else if !matchResults?.length}
 						<div class="flex h-full items-center justify-center p-6 text-center">
-							<div class="text-xs text-gray-400 dark:text-gray-500">{$i18n.t('No matches')}</div>
+							<div class="text-xs text-base-400 dark:text-base-500">{$i18n.t('No matches')}</div>
 						</div>
 					{:else}
 						{#if filenameMatches.length > 0}
 							<div
-								class="px-2 pt-1 pb-0.5 text-[0.625rem] font-medium uppercase tracking-wide text-gray-400 dark:text-gray-600"
+								class="px-2 pt-1 pb-0.5 text-[0.625rem] font-medium uppercase tracking-wide text-base-400 dark:text-base-600"
 							>
 								{$i18n.t('Filename matches')}
 							</div>
 							{#each filenameMatches as match (match.path)}
 								<button
-									class="flex h-7 w-full items-center gap-2 rounded-lg px-2 text-left transition-colors duration-75 hover:bg-gray-50 dark:hover:bg-white/4"
+									class="flex h-7 w-full items-center gap-2 rounded-lg px-2 text-left transition-colors duration-75 hover:bg-base-50 dark:hover:bg-base-0/4"
 									on:click={() => openFileMatch(match)}
 								>
 									<FileTypeIcon name={match.name} type={match.type} />
-									<span class="min-w-0 flex-1 truncate text-xs text-gray-800 dark:text-gray-200">
+									<span class="min-w-0 flex-1 truncate text-xs text-base-800 dark:text-base-200">
 										{match.name}
 										{#if relativeParentPath(match.relative_path)}
-											<span class="ml-1.5 text-[0.6875rem] text-gray-400 dark:text-gray-600">
+											<span class="ml-1.5 text-[0.6875rem] text-base-400 dark:text-base-600">
 												{relativeParentPath(match.relative_path)}
 											</span>
 										{/if}
@@ -2918,19 +2936,19 @@
 								{#if match.content_matches.length > 0}
 									{@const preview = match.content_matches[0]}
 									<button
-										class="flex h-6 w-full items-center gap-2 rounded-lg pl-8 pr-2 text-left transition-colors duration-75 hover:bg-gray-50 dark:hover:bg-white/4"
+										class="flex h-6 w-full items-center gap-2 rounded-lg pl-8 pr-2 text-left transition-colors duration-75 hover:bg-base-50 dark:hover:bg-base-0/4"
 										on:click={() => openContentMatch(match, preview)}
 									>
 										<span
-											class="w-6 shrink-0 text-right font-mono text-[0.625rem] text-gray-400 dark:text-gray-600"
+											class="w-6 shrink-0 text-right font-mono text-[0.625rem] text-base-400 dark:text-base-600"
 											>{preview.line}</span
 										>
 										<span
-											class="min-w-0 flex-1 truncate font-mono text-[0.6875rem] text-gray-500 dark:text-gray-500"
+											class="min-w-0 flex-1 truncate font-mono text-[0.6875rem] text-base-500 dark:text-base-500"
 											>{preview.text}</span
 										>
 										{#if match.content_matches.length > 1}
-											<span class="shrink-0 text-[0.625rem] text-gray-400 dark:text-gray-600">
+											<span class="shrink-0 text-[0.625rem] text-base-400 dark:text-base-600">
 												+{match.content_matches.length - 1}
 											</span>
 										{/if}
@@ -2941,20 +2959,20 @@
 
 						{#if contentOnlyMatches.length > 0}
 							<div
-								class="px-2 pt-2 pb-0.5 text-[0.625rem] font-medium uppercase tracking-wide text-gray-400 dark:text-gray-600"
+								class="px-2 pt-2 pb-0.5 text-[0.625rem] font-medium uppercase tracking-wide text-base-400 dark:text-base-600"
 							>
 								{$i18n.t('Content matches')}
 							</div>
 							{#each contentOnlyMatches as match (match.path)}
 								<button
-									class="flex h-7 w-full items-center gap-2 rounded-lg px-2 text-left transition-colors duration-75 hover:bg-gray-50 dark:hover:bg-white/4"
+									class="flex h-7 w-full items-center gap-2 rounded-lg px-2 text-left transition-colors duration-75 hover:bg-base-50 dark:hover:bg-base-0/4"
 									on:click={() => openFileMatch(match)}
 								>
 									<FileTypeIcon name={match.name} type={match.type} />
-									<span class="min-w-0 flex-1 truncate text-xs text-gray-800 dark:text-gray-200">
+									<span class="min-w-0 flex-1 truncate text-xs text-base-800 dark:text-base-200">
 										{match.name}
 										{#if relativeParentPath(match.relative_path)}
-											<span class="ml-1.5 text-[0.6875rem] text-gray-400 dark:text-gray-600">
+											<span class="ml-1.5 text-[0.6875rem] text-base-400 dark:text-base-600">
 												{relativeParentPath(match.relative_path)}
 											</span>
 										{/if}
@@ -2963,19 +2981,19 @@
 								{#if match.content_matches.length > 0}
 									{@const preview = match.content_matches[0]}
 									<button
-										class="flex h-6 w-full items-center gap-2 rounded-lg pl-8 pr-2 text-left transition-colors duration-75 hover:bg-gray-50 dark:hover:bg-white/4"
+										class="flex h-6 w-full items-center gap-2 rounded-lg pl-8 pr-2 text-left transition-colors duration-75 hover:bg-base-50 dark:hover:bg-base-0/4"
 										on:click={() => openContentMatch(match, preview)}
 									>
 										<span
-											class="w-6 shrink-0 text-right font-mono text-[0.625rem] text-gray-400 dark:text-gray-600"
+											class="w-6 shrink-0 text-right font-mono text-[0.625rem] text-base-400 dark:text-base-600"
 											>{preview.line}</span
 										>
 										<span
-											class="min-w-0 flex-1 truncate font-mono text-[0.6875rem] text-gray-500 dark:text-gray-500"
+											class="min-w-0 flex-1 truncate font-mono text-[0.6875rem] text-base-500 dark:text-base-500"
 											>{preview.text}</span
 										>
 										{#if match.content_matches.length > 1}
-											<span class="shrink-0 text-[0.625rem] text-gray-400 dark:text-gray-600">
+											<span class="shrink-0 text-[0.625rem] text-base-400 dark:text-base-600">
 												+{match.content_matches.length - 1}
 											</span>
 										{/if}
@@ -2990,7 +3008,7 @@
 									<Spinner className="size-3" />
 								{:else if matchLoadMoreError}
 									<button
-										class="text-[0.6875rem] text-gray-400 transition-colors duration-75 hover:text-gray-600 dark:text-gray-600 dark:hover:text-gray-400"
+										class="text-[0.6875rem] text-base-400 transition-colors duration-75 hover:text-base-600 dark:text-base-600 dark:hover:text-base-400"
 										on:click={() => {
 											matchLoadMoreError = false;
 											void loadMoreMatches();
@@ -3002,26 +3020,26 @@
 					{/if}
 				{:else if uploading}
 					<div
-						class="flex h-full items-center justify-center gap-2 p-4 text-center text-xs text-gray-500"
+						class="flex h-full items-center justify-center gap-2 p-4 text-center text-xs text-base-500"
 					>
 						<Spinner className="size-4" />
 						{$i18n.t('Uploading...')}
 					</div>
-				{:else if loading || (effectiveTerminalId && $terminalServers === null)}
+				{:else if loading || (effectiveMachineId && $machines === null)}
 					<div class="flex h-full items-center justify-center">
-						<Spinner className="size-3.5 text-gray-400 dark:text-gray-500" />
+						<Spinner className="size-3.5 text-base-400 dark:text-base-500" />
 					</div>
 				{:else if error}
 					<div class="flex h-full items-center justify-center p-4 text-center text-xs">{error}</div>
 				{:else if visibleEntries.length === 0 && !creatingFolder && !creatingFile}
 					<div class="flex h-full items-center justify-center p-6 text-center">
-						<div class="text-xs text-gray-400 dark:text-gray-500">
+						<div class="text-xs text-base-400 dark:text-base-500">
 							{$i18n.t('This folder is empty')}
 						</div>
 					</div>
 				{/if}
 
-				{#if !isSearching && !loading && !error && !uploading && !(effectiveTerminalId && $terminalServers === null)}
+				{#if !isSearching && !loading && !error && !uploading && !(effectiveMachineId && $machines === null)}
 					{#if visibleEntries.length > 0 || creatingFolder || creatingFile}
 						<ul
 							data-file-list
@@ -3047,7 +3065,7 @@
 										bind:this={newFolderInput}
 										bind:value={newFolderName}
 										class={viewMode === 'grid'
-											? 'w-full min-w-0 rounded bg-transparent py-0.5 text-center text-xs text-gray-800 outline-hidden ring-1 ring-blue-500 dark:text-gray-200'
+											? 'w-full min-w-0 rounded bg-transparent py-0.5 text-center text-xs text-base-800 outline-hidden ring-1 ring-blue-500 dark:text-base-200'
 											: 'min-w-0 flex-1 bg-transparent py-0.5 text-xs outline-hidden'}
 										placeholder={$i18n.t('Folder name')}
 										aria-label={$i18n.t('Folder name')}
@@ -3077,7 +3095,7 @@
 										bind:this={newFileInput}
 										bind:value={newFileName}
 										class={viewMode === 'grid'
-											? 'w-full min-w-0 rounded bg-transparent py-0.5 text-center text-xs text-gray-800 outline-hidden ring-1 ring-blue-500 dark:text-gray-200'
+											? 'w-full min-w-0 rounded bg-transparent py-0.5 text-center text-xs text-base-800 outline-hidden ring-1 ring-blue-500 dark:text-base-200'
 											: 'min-w-0 flex-1 bg-transparent py-0.5 text-xs outline-hidden'}
 										placeholder={$i18n.t('File name')}
 										aria-label={$i18n.t('File name')}
@@ -3105,8 +3123,8 @@
 									expanded={expandedDirs.has(entry.fullPath)}
 									loadingChildren={loadingDirs.has(entry.fullPath)}
 									folderContentsVersion={loadGeneration}
-									target={selectedTerminal}
-									terminalSessionId={chatId ?? undefined}
+									target={selectedMachine}
+									machineSessionId={chatId ?? undefined}
 									selected={selectedEntries.has(entry.fullPath)}
 									{selectionMode}
 									selectedPaths={selectedEntries}
@@ -3151,7 +3169,7 @@
 		<!-- Float above the list footer without moving the rows. -->
 		{#if !selectedFile && !isSearching && (selectingFiles ? keepSelectionToolbar : selectedCount > 0)}
 			<div class="relative z-10 h-0 shrink-0">
-				<div class="absolute inset-x-0 bottom-0 bg-white dark:bg-gray-900">
+				<div class="absolute inset-x-0 bottom-0 bg-base-0 dark:bg-base-900">
 					<BulkActionBar
 						count={selectedCount}
 						{canCompare}
@@ -3176,20 +3194,20 @@
 		{/if}
 
 		{#if onSelectDirectory}
-			<div class="shrink-0 border-t border-gray-200/40 pt-3 dark:border-gray-850/20">
-				{#if gitAvailable && showCloneRepository && selectedTerminal}
-					{#key `${effectiveTerminalId}:${chatId}`}
+			<div class="shrink-0 border-t border-base-200/40 pt-3 dark:border-base-850/20">
+				{#if gitAvailable && showCloneRepository && selectedMachine}
+					{#key `${effectiveMachineId}:${chatId}`}
 						<CloneRepository
-							terminal={selectedTerminal}
+							machine={selectedMachine}
 							directory={currentPath}
 							disabled={loading || !!error || !savedPathLoaded || !currentWritable}
 							onCancel={() => (showCloneRepository = false)}
 							onCloned={async (path) => {
-								const selector = effectiveTerminalId,
+								const selector = effectiveMachineId,
 									session = chatId;
 								showCloneRepository = false;
 								await loadDir(path);
-								if (!disposed && selector === effectiveTerminalId && session === chatId)
+								if (!disposed && selector === effectiveMachineId && session === chatId)
 									onSelectDirectory?.(path);
 							}}
 						/>
@@ -3199,7 +3217,7 @@
 						{#if gitAvailable}
 							<button
 								type="button"
-								class="mr-auto flex h-7 items-center gap-1.5 rounded-lg px-2 text-xs hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-gray-850"
+								class="mr-auto flex h-7 items-center gap-1.5 rounded-lg px-2 text-xs hover:bg-base-100 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-base-850"
 								disabled={loading ||
 									!!error ||
 									!savedPathLoaded ||
@@ -3213,7 +3231,7 @@
 						{/if}
 						<button
 							type="button"
-							class="flex h-7 items-center rounded-lg bg-gray-900 px-2 text-xs text-white hover:bg-black disabled:cursor-not-allowed disabled:opacity-50 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
+							class="flex h-7 items-center rounded-lg bg-base-900 px-2 text-xs text-base-0 hover:bg-base-1000 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-base-100 dark:text-base-900 dark:hover:bg-base-0"
 							disabled={loading || !!error || !savedPathLoaded || !!selectedFile}
 							on:click={() => onSelectDirectory?.(currentPath)}
 							>{$i18n.t('Use this directory')}</button
@@ -3227,23 +3245,23 @@
 		{#if showTerminalDock && !onSelectDirectory}
 			<div
 				class:hidden={!hasSessions}
-				class="shrink-0 border-t border-gray-200/40 dark:border-gray-850/20"
+				class="shrink-0 border-t border-base-200/40 dark:border-base-850/20"
 			>
 				{#if terminalExpanded}
 					<!-- Drag handle (at top of panel) -->
 					<!-- svelte-ignore a11y-no-static-element-interactions -->
 					<div class="relative cursor-row-resize group" on:mousedown={onHandleMouseDown}>
 						<div
-							class="h-px bg-transparent group-hover:bg-black/10 dark:group-hover:bg-white/10 transition"
+							class="h-px bg-transparent group-hover:bg-base-1000/10 dark:group-hover:bg-base-0/10 transition"
 						/>
 						<div class="absolute inset-x-0 -top-1.5 -bottom-1.5" />
 					</div>
 				{/if}
 
-				{#key JSON.stringify([chatId, effectiveTerminalId, modelId])}
+				{#key JSON.stringify([chatId, effectiveMachineId, modelId])}
 					<TerminalDock
 						{modelId}
-						terminalId={effectiveTerminalId}
+						machineId={effectiveMachineId}
 						{active}
 						bind:hasSessions
 						overlay={overlay || isDraggingHandle}
@@ -3276,7 +3294,7 @@
 				<DropdownMenu className="min-w-[9.375rem]">
 					<button
 						type="button"
-						class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-gray-50/40 dark:hover:bg-white/4 transition"
+						class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-base-50/40 dark:hover:bg-base-0/4 transition"
 						on:click={() => {
 							closeDirectoryMenu();
 							refreshBrowser();
@@ -3287,7 +3305,7 @@
 					</button>
 					<button
 						type="button"
-						class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-xs hover:text-gray-900 dark:hover:text-gray-100 disabled:opacity-40"
+						class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-xs hover:text-base-900 dark:hover:text-base-100 disabled:opacity-40"
 						disabled={!currentWritable}
 						on:click={() => {
 							closeDirectoryMenu();
@@ -3299,7 +3317,7 @@
 					</button>
 					<button
 						type="button"
-						class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-xs hover:text-gray-900 dark:hover:text-gray-100 disabled:opacity-40"
+						class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-xs hover:text-base-900 dark:hover:text-base-100 disabled:opacity-40"
 						disabled={!currentWritable}
 						on:click={() => {
 							closeDirectoryMenu();
@@ -3311,7 +3329,7 @@
 					</button>
 					<button
 						type="button"
-						class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-gray-50/40 dark:hover:bg-white/4 transition disabled:opacity-40 disabled:hover:bg-transparent"
+						class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-base-50/40 dark:hover:bg-base-0/4 transition disabled:opacity-40 disabled:hover:bg-transparent"
 						disabled={!currentWritable}
 						on:click={() => {
 							closeDirectoryMenu();
@@ -3323,7 +3341,7 @@
 					</button>
 					<button
 						type="button"
-						class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-gray-50/40 dark:hover:bg-white/4 transition disabled:opacity-40 disabled:hover:bg-transparent"
+						class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-base-50/40 dark:hover:bg-base-0/4 transition disabled:opacity-40 disabled:hover:bg-transparent"
 						disabled={!currentWritable}
 						on:click={() => {
 							closeDirectoryMenu();
@@ -3335,7 +3353,7 @@
 					</button>
 					<button
 						type="button"
-						class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-gray-50/40 dark:hover:bg-white/4 transition"
+						class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-base-50/40 dark:hover:bg-base-0/4 transition"
 						on:click={() => {
 							closeDirectoryMenu();
 							downloadFile(currentPath);
@@ -3346,7 +3364,7 @@
 					</button>
 					<button
 						type="button"
-						class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-gray-50/40 dark:hover:bg-white/4 transition"
+						class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-base-50/40 dark:hover:bg-base-0/4 transition"
 						on:click={() => {
 							closeDirectoryMenu();
 							toggleHidden();
@@ -3366,13 +3384,13 @@
 		<form
 			use:positionFileAsk={fileAsk.anchor}
 			data-file-ask
-			class="fixed z-50 w-80 max-w-[calc(100vw-1.5rem)] rounded-2xl bg-white pt-3 pl-3 pr-2 pb-2 shadow-[0_16px_40px_-28px_rgba(0,0,0,0.55)] ring-1 ring-black/5 dark:bg-gray-850 dark:text-white dark:ring-white/10"
+			class="fixed z-50 w-80 max-w-[calc(100vw-1.5rem)] rounded-2xl bg-base-0 pt-3 pl-3 pr-2 pb-2 shadow-[0_16px_40px_-28px_rgba(0,0,0,0.55)] ring-1 ring-base-1000/5 dark:bg-base-850 dark:text-base-0 dark:ring-base-0/10"
 			aria-label={$i18n.t('Ask about this file')}
 			on:submit|preventDefault={submitFileAsk}
 		>
 			{#if fileAsk.text}
 				<blockquote
-					class="mb-2 border-l-2 border-gray-200 pl-2 text-xs leading-4 text-gray-500 dark:border-gray-700 dark:text-gray-400"
+					class="mb-2 border-l-2 border-base-200 pl-2 text-xs leading-4 text-base-500 dark:border-base-700 dark:text-base-400"
 				>
 					<span class="line-clamp-3 whitespace-pre-wrap break-words">{fileAsk.text}</span>
 				</blockquote>
@@ -3381,7 +3399,7 @@
 				<textarea
 					id="file-ask-input"
 					rows="1"
-					class="min-w-0 flex-1 resize-none border-0 bg-transparent p-0 text-sm leading-5 text-gray-700 outline-none placeholder:text-gray-400 focus:ring-0 dark:text-gray-300 dark:placeholder:text-gray-500"
+					class="min-w-0 flex-1 resize-none border-0 bg-transparent p-0 text-sm leading-5 text-base-700 outline-none placeholder:text-base-400 focus:ring-0 dark:text-base-300 dark:placeholder:text-base-500"
 					placeholder={$i18n.t('Ask or edit…')}
 					aria-label={$i18n.t('Ask or edit…')}
 					bind:value={fileAskInput}
@@ -3401,8 +3419,8 @@
 					disabled={asking || !fileAskInput.trim()}
 					aria-label={$i18n.t('Send')}
 					class="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full transition-colors {fileAskInput.trim()
-						? 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100'
-						: 'bg-gray-200 text-white dark:bg-gray-700 dark:text-gray-900'}"
+						? 'bg-base-1000 text-base-0 hover:bg-base-900 dark:bg-base-0 dark:text-base-1000 dark:hover:bg-base-100'
+						: 'bg-base-200 text-base-0 dark:bg-base-700 dark:text-base-900'}"
 				>
 					{#if asking}<Spinner className="size-3.5" />{:else}<ArrowRight
 							className="size-3.5 -rotate-90"

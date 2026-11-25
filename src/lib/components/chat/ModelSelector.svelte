@@ -50,9 +50,9 @@
 		await updateUserSettings(localStorage.token, { ui: { pinnedModels: $settings.pinnedModels } });
 	};
 
-	$: if (selectedModels.length > 0 && $models.length > 0) {
+	$: if (selectedModels.length > 0 && ($models ?? []).length > 0) {
 		const _selectedModels = selectedModels.map((model) =>
-			model.startsWith('agent:') || $models.map((m) => m.id).includes(model) ? model : ''
+			model.startsWith('agent:') || ($models ?? []).map((m) => m.id).includes(model) ? model : ''
 		);
 
 		if (!equal(_selectedModels, selectedModels)) {
@@ -86,7 +86,7 @@
 					bind:this={selector}
 					id="model"
 					placeholder={$i18n.t('Select a model')}
-					items={$models.map((model) => ({
+					items={($models ?? []).map((model) => ({
 						value: model.id,
 						label: resolveLocalizedModelName(model, $i18n.language),
 						model: model

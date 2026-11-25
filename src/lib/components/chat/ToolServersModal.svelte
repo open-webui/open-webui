@@ -67,10 +67,10 @@
 
 <Modal ariaLabel={$i18n.t('Available Tools')} bind:show size="md">
 	<div>
-		<div class=" flex justify-between dark:text-gray-300 px-4 pt-3 pb-1">
+		<div class=" flex justify-between dark:text-base-300 px-4 pt-3 pb-1">
 			<div class=" text-sm font-medium self-center">{$i18n.t('Available Tools')}</div>
 			<button
-				class="self-center rounded-lg py-1 text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 px-0"
+				class="self-center rounded-lg py-1 text-base-500 transition hover:text-base-700 dark:text-base-400 dark:hover:text-base-200 px-0"
 				aria-label={$i18n.t('Close')}
 				on:click={() => {
 					show = false;
@@ -82,13 +82,13 @@
 
 		{#if selectedTools.length > 0}
 			{#if selectedToolServers.length > 0}
-				<div class=" flex justify-between dark:text-gray-300 px-5 pb-1">
-					<div class=" text-base font-normal self-center">{$i18n.t('Tools')}</div>
+				<div class=" flex justify-between dark:text-base-300 px-4 pb-1">
+					<div class="text-xs text-base-500 self-center">{$i18n.t('Tools')}</div>
 				</div>
 			{/if}
 
 			<div class="px-3 pb-3 w-full flex flex-col justify-center">
-				<div class=" text-sm dark:text-gray-300 mb-1">
+				<div class=" text-sm dark:text-base-300 mb-1">
 					{#each selectedTools as tool (tool.id)}
 						{@const isMcp = tool.id.startsWith('server:mcp:')}
 						{@const state = discovery[tool.id]}
@@ -105,7 +105,7 @@
 						>
 							<button type="button" class="min-w-0 flex-1 text-left" aria-expanded={open}>
 								<div class="flex items-center gap-2 min-w-0">
-									<div class="text-sm font-normal dark:text-gray-100 text-gray-800 truncate">
+									<div class="text-sm font-normal dark:text-base-100 text-base-800 truncate">
 										{resolveLocalizedResource(tool, $i18n.language)}
 									</div>
 									{#if status}
@@ -122,7 +122,7 @@
 											>{$i18n.t('Auth required')}</span
 										>
 									{:else if toolSpecs !== undefined}
-										<span class="text-[0.6875rem] text-gray-500 dark:text-gray-400 shrink-0">
+										<span class="text-[0.6875rem] text-base-500 dark:text-base-400 shrink-0">
 											{toolSpecs.length === 1
 												? $i18n.t('1 tool')
 												: $i18n.t('{{COUNT}} tools', { COUNT: toolSpecs.length })}
@@ -130,15 +130,15 @@
 									{/if}
 								</div>
 								{#if resolveLocalizedResource(tool, $i18n.language, 'description')}
-									<div class="text-xs text-gray-500 truncate">
+									<div class="text-xs text-base-500 truncate">
 										{resolveLocalizedResource(tool, $i18n.language, 'description')}
 									</div>
 								{/if}
 							</button>
-							<div slot="content" class="px-2 pb-2 text-xs text-gray-500 dark:text-gray-400">
+							<div slot="content" class="px-2 pb-2 text-xs text-base-500 dark:text-base-400">
 								{#if needsAuth}
 									<button
-										class="my-1 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition underline"
+										class="my-1 text-base-500 hover:text-base-700 dark:hover:text-base-300 transition underline"
 										on:click={() => reconnect(tool)}>{$i18n.t('Reconnect')}</button
 									>
 								{:else if state?.loading}
@@ -147,7 +147,7 @@
 									<div class="flex items-center justify-between gap-2 my-1" role="status">
 										<span>{$i18n.t('Unable to load tools')}</span>
 										<button
-											class="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition underline"
+											class="text-base-500 hover:text-base-700 dark:hover:text-base-300 transition underline"
 											on:click={() => loadSpecs(tool)}>{$i18n.t('Retry')}</button
 										>
 									</div>
@@ -156,12 +156,12 @@
 										{#each toolSpecs as toolSpec}
 											<div class="min-w-0">
 												<div
-													class="text-xs font-normal leading-4 text-gray-700 dark:text-gray-300 break-words"
+													class="text-xs font-normal leading-4 text-base-700 dark:text-base-300 break-words"
 												>
 													{toolSpec?.name ?? toolSpec?.function?.name}
 												</div>
 												{#if toolSpec?.description ?? toolSpec?.function?.description}
-													<div class="text-[0.6875rem] leading-4 text-gray-500 break-words">
+													<div class="text-[0.6875rem] leading-4 text-base-500 break-words">
 														{toolSpec?.description ?? toolSpec?.function?.description}
 													</div>
 												{/if}
@@ -179,12 +179,12 @@
 		{/if}
 
 		{#if selectedToolServers.length > 0}
-			<div class=" flex justify-between dark:text-gray-300 px-5 pb-0.5">
-				<div class=" text-base font-normal self-center">{$i18n.t('Tool Servers')}</div>
+			<div class=" flex justify-between dark:text-base-300 px-4 pb-0.5">
+				<div class="text-xs text-base-500 self-center">{$i18n.t('Tool Servers')}</div>
 			</div>
 
-			<div class="px-5 pb-5 w-full flex flex-col justify-center">
-				<div class=" text-xs text-gray-600 dark:text-gray-300 mb-2">
+			<div class="px-4 pb-4 w-full flex flex-col justify-center">
+				<div class=" text-xs text-base-600 dark:text-base-300 mb-2">
 					<!-- LICENSE covers this Open WebUI wordmark.
 					Do not alter, remove, obscure, or replace it except as LICENSE permits:
 					https://docs.openwebui.com/license. -->
@@ -194,19 +194,19 @@
 						target="_blank">{$i18n.t('Learn more about OpenAPI tool servers.')}</a
 					>
 				</div>
-				<div class=" text-sm dark:text-gray-300 mb-1">
+				<div class=" text-sm dark:text-base-300 mb-1">
 					{#each selectedToolServers as toolServer}
 						<Collapsible buttonClassName="w-full" chevron let:open>
 							<button type="button" class="text-left" aria-expanded={open}>
-								<div class="text-sm font-normal dark:text-gray-100 text-gray-800">
+								<div class="text-sm font-normal dark:text-base-100 text-base-800">
 									{toolServer?.openapi?.info?.title} - v{toolServer?.openapi?.info?.version}
 								</div>
 
-								<div class="text-xs text-gray-500">
+								<div class="text-xs text-base-500">
 									{toolServer?.openapi?.info?.description}
 								</div>
 
-								<div class="text-xs text-gray-500">
+								<div class="text-xs text-base-500">
 									{toolServer?.url}
 								</div>
 							</button>
@@ -218,12 +218,12 @@
 								{#each toolServer?.specs ?? [] as tool_spec}
 									<div class="min-w-0">
 										<div
-											class="text-xs font-normal leading-4 text-gray-700 dark:text-gray-300 break-words"
+											class="text-xs font-normal leading-4 text-base-700 dark:text-base-300 break-words"
 										>
 											{tool_spec?.name}
 										</div>
 
-										<div class="text-[0.6875rem] leading-4 text-gray-500 break-words">
+										<div class="text-[0.6875rem] leading-4 text-base-500 break-words">
 											{tool_spec?.description}
 										</div>
 									</div>

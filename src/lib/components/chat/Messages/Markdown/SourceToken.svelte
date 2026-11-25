@@ -1,15 +1,33 @@
 <script lang="ts">
+	import { getContext } from 'svelte';
+	import type { Readable } from 'svelte/store';
+	import type { Tokens } from 'marked';
 	import { LinkPreview } from 'bits-ui';
 	import { decodeString } from '$lib/utils';
+	import ArrowLeft from '$lib/components/icons/ArrowLeft.svelte';
+	import ArrowRight from '$lib/components/icons/ArrowRight.svelte';
 	import Source from './Source.svelte';
 
-	export let id;
-	export let token;
-	export let sourceIds = [];
+	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
+	const citations = getContext<Readable<any[]>>('citations');
+
+	export let token: Tokens.Generic;
 	export let onClick: Function = () => {};
 
-	let containerElement;
 	let openPreview = false;
+	let sourceIdx = 0;
+
+	$: if (!openPreview) sourceIdx = 0;
+
+	// The sources this marker cites, each under the identifier it is cited by ("2" or "2#page")
+	$: sources = [...new Set<string>(token.citationIdentifiers)]
+		.map((id) => ({
+			id,
+			citation: $citations.find((citation) => citation.number === parseInt(id.split('#')[0]))
+		}))
+		.filter(({ citation }) => citation && citation.title !== 'N/A');
+
+	$: label = sources.length > 0 ? formattedTitle(decodeString(sources[0].citation.title)) : '';
 
 	// Helper function to return only the domain from a URL
 	function getDomain(url: string): string {
@@ -37,44 +55,106 @@
 		}
 		return title;
 	};
+
+	const showSource = (idx: number) => {
+		sourceIdx = (idx + sources.length) % sources.length;
+	};
+
+	// Left and right page the card wherever the focus is, as the chat input usually holds it.
+	const arrowKeys = (_node: HTMLElement) => {
+		const keydownHandler = (e: KeyboardEvent) => {
+			if (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey || e.isComposing) return;
+			if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+
+			e.preventDefault();
+			e.stopPropagation();
+			showSource(sourceIdx + (e.key === 'ArrowLeft' ? -1 : 1));
+		};
+
+		window.addEventListener('keydown', keydownHandler, true);
+		return { destroy: () => window.removeEventListener('keydown', keydownHandler, true) };
+	};
+
+	const openSource = (id: string) => {
+		openPreview = false;
+		onClick(id);
+	};
 </script>
 
-{#if sourceIds}
-	{#if (token?.ids ?? []).length == 1}
-		{@const id = token.ids[0]}
-		{@const identifier = token.citationIdentifiers ? token.citationIdentifiers[0] : id - 1}
-		<Source id={identifier} title={sourceIds[id - 1]} {onClick} />
-	{:else}
-		<LinkPreview.Root openDelay={0} bind:open={openPreview}>
-			<LinkPreview.Trigger>
+{#if sources.length > 0}
+	<LinkPreview.Root openDelay={200} closeDelay={100} bind:open={openPreview}>
+		<LinkPreview.Trigger>
+			{#snippet child({ props })}
 				<button
-					aria-label={`${getDisplayTitle(formattedTitle(decodeString(sourceIds[token.ids[0] - 1])))} +${(token?.ids ?? []).length - 1} more sources`}
-					class="text-[0.625rem] w-fit translate-y-[2px] px-2 py-0.5 dark:bg-white/5 dark:text-white/80 dark:hover:text-white bg-gray-50 text-black/80 hover:text-black transition rounded-xl"
-					on:click={() => {
-						openPreview = !openPreview;
+					{...props}
+					aria-label={sources.length === 1
+						? $i18n.t('View source: {{title}}', { title: label })
+						: `${getDisplayTitle(label)} +${sources.length - 1} more sources`}
+					class="text-[0.625rem] w-fit translate-y-[2px] px-2 py-0.5 dark:bg-base-0/5 dark:text-base-0/80 dark:hover:text-base-0 bg-base-50 text-base-1000/80 hover:text-base-1000 transition rounded-xl"
+					on:click={(e) => {
+						// From the keyboard, the marker opens the source its card shows.
+						if (sources.length === 1 || (openPreview && e.detail === 0)) {
+							openSource(sources[sourceIdx].id);
+						} else {
+							openPreview = !openPreview;
+						}
 					}}
 				>
 					<span class="line-clamp-1">
-						{getDisplayTitle(formattedTitle(decodeString(sourceIds[token.ids[0] - 1])))}
-						<span class="dark:text-white/50 text-black/50">+{(token?.ids ?? []).length - 1}</span>
+						{getDisplayTitle(label)}
+						{#if sources.length > 1}
+							<span class="dark:text-base-0/50 text-base-1000/50">+{sources.length - 1}</span>
+						{/if}
 					</span>
 				</button>
-			</LinkPreview.Trigger>
-			<LinkPreview.Portal>
-				<LinkPreview.Content class="z-[999]" align="start" strategy="fixed" sideOffset={6}>
-					<div class="bg-gray-50 dark:bg-gray-850 rounded-xl p-1 cursor-pointer">
-						{#each token.citationIdentifiers ?? token.ids as identifier}
-							{@const id =
-								typeof identifier === 'string' ? parseInt(identifier.split('#')[0]) : identifier}
-							<div class="">
-								<Source id={identifier} title={sourceIds[id - 1]} {onClick} />
-							</div>
-						{/each}
+			{/snippet}
+		</LinkPreview.Trigger>
+		<LinkPreview.Portal>
+			<LinkPreview.Content
+				class="z-[9999] w-[20rem] max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-2xl bg-base-0 shadow-[0_16px_40px_-28px_rgba(0,0,0,0.55)] ring-1 ring-base-1000/5 dark:bg-base-850 dark:text-base-0 dark:ring-base-0/10"
+				side="bottom"
+				align="start"
+				sideOffset={6}
+				collisionPadding={12}
+			>
+				{#if sources.length > 1}
+					<!-- Focus stays on the marker, as losing it is what closes the card on touch. -->
+					<!-- svelte-ignore a11y-no-static-element-interactions -->
+					<div
+						use:arrowKeys
+						on:mousedown|preventDefault
+						class="relative z-10 -mb-1.5 flex items-center gap-1 px-3 pt-2 text-[0.625rem] leading-none text-base-400 dark:text-base-500"
+					>
+						<button
+							type="button"
+							aria-label={$i18n.t('Previous')}
+							class="p-0.5 transition hover:text-base-900 dark:hover:text-base-100"
+							on:click={() => showSource(sourceIdx - 1)}
+						>
+							<ArrowLeft className="size-3" strokeWidth="2" />
+						</button>
+						<button
+							type="button"
+							aria-label={$i18n.t('Next')}
+							class="p-0.5 transition hover:text-base-900 dark:hover:text-base-100"
+							on:click={() => showSource(sourceIdx + 1)}
+						>
+							<ArrowRight className="size-3" strokeWidth="2" />
+						</button>
+						<div class="ml-auto px-0.5 tabular-nums" aria-live="polite">
+							{sourceIdx + 1}/{sources.length}
+						</div>
 					</div>
-				</LinkPreview.Content>
-			</LinkPreview.Portal>
-		</LinkPreview.Root>
-	{/if}
-{:else}
-	<span>{token.raw}</span>
+				{/if}
+				<!-- Every source shares one cell, so the card keeps its size while paging. -->
+				<div class="grid">
+					{#each sources as { id, citation }, idx (id)}
+						<div class="col-start-1 row-start-1 min-w-0 {idx === sourceIdx ? '' : 'invisible'}">
+							<Source {citation} onClick={() => openSource(id)} />
+						</div>
+					{/each}
+				</div>
+			</LinkPreview.Content>
+		</LinkPreview.Portal>
+	</LinkPreview.Root>
 {/if}

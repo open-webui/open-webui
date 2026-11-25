@@ -168,7 +168,9 @@ class ModelMeta(BaseModel):
         if v is None:
             return v
         try:
-            return validate_image_url(v, file_only=info.field_name == 'background_image_url')
+            return validate_image_url(
+                v, file_only=info.field_name == 'background_image_url' or str(v).startswith('/api/v1/files/')
+            )
         except ValueError:
             if info.field_name == 'background_image_url':
                 raise
@@ -429,7 +431,7 @@ class ModelsTable:
     async def get_model_owner_ids_by_file_id(
         self, file_id: str, db: AsyncSession | None = None, include_background: bool = False
     ) -> dict[str, str]:
-        """Find file references; include_background adds read-only background/avatar assets."""
+        """Find file references; include_background adds read-only background/profile/avatar assets."""
         async with get_async_db_context(db) as db:
             # File ids are server-generated uuids, so the text match can only over-match.
             result = await db.execute(
@@ -448,7 +450,8 @@ class ModelsTable:
                 or (
                     include_background
                     and (
-                        meta.get('background_image_url') == f'/api/v1/files/{file_id}/content'
+                        f'/api/v1/files/{file_id}/content'
+                        in (meta.get('background_image_url'), meta.get('profile_image_url'))
                         or (meta.get('voice_avatar') or {}).get('file_id') == file_id
                         or any(
                             asset.get('file_id') == file_id

@@ -8,6 +8,7 @@ from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
 from open_webui.models.access_grants import AccessGrants
 from open_webui.models.config import Config
 from open_webui.utils.access_control import has_permission
+from open_webui.utils.access_control.notes import has_note_access
 from sqlalchemy import select
 
 
@@ -74,7 +75,11 @@ async def comment_resource(resource_type, resource_id, user, db, *, lock=False, 
         allowed = (
             allowed
             or (user.role == 'admin' and (resource_type == 'note' or BYPASS_ADMIN_ACCESS_CONTROL))
-            or await AccessGrants.has_access(user.id, resource_type, resource_id, 'read', db=db)
+            or (
+                await has_note_access(user.id, resource, 'read', db)
+                if resource_type == 'note'
+                else await AccessGrants.has_access(user.id, resource_type, resource_id, 'read', db=db)
+            )
         )
     if not allowed:
         raise HTTPException(404, 'Resource not found')
@@ -101,7 +106,7 @@ def note_comment_text(content):
     return text(content['json']) if isinstance(content.get('json'), dict) else content.get('md') or ''
 
 
-def validate_comment_target(resource_type, resource, form):
+async def validate_comment_target(resource_type, resource, form):
     if bool(form.target_type) != bool(form.target_id) or (form.anchor and not form.target_id):
         raise HTTPException(422, 'A selection requires a target')
     if not form.target_id:
@@ -111,7 +116,9 @@ def validate_comment_target(resource_type, resource, form):
 
         target = next((p for p in normalize_pages(resource.data)['pages'] if p['id'] == form.target_id), None)
     elif resource_type == 'chat' and form.target_type == 'chat_message':
-        target = (resource.chat.get('history', {}).get('messages') or {}).get(form.target_id)
+        from open_webui.models.chats import Chats
+
+        target = await Chats.get_message_by_id_and_message_id(resource.id, form.target_id)
         if target and target.get('role') == 'assistant' and target.get('done') is False:
             raise HTTPException(409, 'Wait for the message to finish')
     else:

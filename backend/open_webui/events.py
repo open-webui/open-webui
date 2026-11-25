@@ -19,6 +19,8 @@ log = logging.getLogger(__name__)
 
 MAX_STRING_LENGTH = 1000
 EVENT_WEBHOOKS_CONFIG_KEY = 'events.webhooks'
+# Renamed events, so saved webhook filters that name the old event keep working (and are not skipped as invalid).
+LEGACY_EVENT_NAMES = {'config.terminal_servers.updated': 'config.machines.updated'}
 LEGACY_WEBHOOK_CONFIG_KEY = 'webhook_url'
 DEFAULT_WEBHOOK_ID = 'default'
 
@@ -83,10 +85,10 @@ class EventDefinitions(BaseModel):
         description='Tool server configuration was updated.',
         message='Config Tool Servers updated',
     )
-    CONFIG_TERMINAL_SERVERS_UPDATED: EventDefinition = EventDefinition(
-        name='config.terminal_servers.updated',
-        description='Terminal server configuration was updated.',
-        message='Config Terminal Servers updated',
+    CONFIG_MACHINES_UPDATED: EventDefinition = EventDefinition(
+        name='config.machines.updated',
+        description='Machine configuration was updated.',
+        message='Config Machines updated',
     )
     CONFIG_CODE_EXECUTION_UPDATED: EventDefinition = EventDefinition(
         name='config.code_execution.updated',
@@ -362,6 +364,9 @@ class EventDefinitions(BaseModel):
     )
     NOTE_ACCESS_UPDATED: EventDefinition = EventDefinition(
         name='note.access_updated', description='Note access was updated.', message='Note access updated'
+    )
+    NOTE_FOLDER_UPDATED: EventDefinition = EventDefinition(
+        name='note.folder_updated', description='A note folder assignment was updated.', message='Note folder updated'
     )
     NOTE_PINNED: EventDefinition = EventDefinition(
         name='note.pinned', description='A note was pinned.', message='Note pinned'
@@ -668,6 +673,11 @@ class EventDefinitions(BaseModel):
     AUTOMATION_DELETED: EventDefinition = EventDefinition(
         name='automation.deleted', description='An automation was deleted.', message='Automation deleted'
     )
+    AUTOMATION_ACCESS_UPDATED: EventDefinition = EventDefinition(
+        name='automation.access_updated',
+        description='Automation access was updated.',
+        message='Automation access updated',
+    )
     AUTOMATION_RUN_STARTED: EventDefinition = EventDefinition(
         name='automation.run_started', description='An automation run started.', message='Automation run started'
     )
@@ -769,6 +779,7 @@ def normalize_event_webhook(webhook: dict[str, Any], *, create: bool = False) ->
     url = str(webhook.get('url') or '').strip()
 
     events = [str(event).strip() for event in (webhook.get('events') or ['*']) if str(event).strip()]
+    events = [LEGACY_EVENT_NAMES.get(event, event) for event in events]
     events = events or ['*']
     for event_filter in events:
         if event_filter == '*':
@@ -1148,7 +1159,7 @@ class NotificationEventSink:
 
 class SocketSessionEventSink:
     async def handle_event(self, request: Request, event: Event) -> None:
-        from open_webui.socket.main import refresh_chat_access
+        from open_webui.socket.main import refresh_chat_access, refresh_note_access
 
         if event.event in {
             EVENTS.FOLDER_ACCESS_UPDATED.name,
@@ -1158,6 +1169,10 @@ class SocketSessionEventSink:
             EVENTS.CHAT_DELETED_ALL.name,
         }:
             await refresh_chat_access()
+            if event.event != EVENTS.CHAT_DELETED_ALL.name:
+                await refresh_note_access()
+        elif event.event == EVENTS.NOTE_FOLDER_UPDATED.name:
+            await refresh_note_access((event.subject or {}).get('id'))
         elif event.event in {
             EVENTS.CHAT_SHARED.name,
             EVENTS.CHAT_UNSHARED.name,

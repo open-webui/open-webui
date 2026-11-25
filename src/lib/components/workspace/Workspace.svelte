@@ -144,7 +144,7 @@
 							>
 								<button
 									id="sidebar-toggle-button"
-									class=" cursor-pointer flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 transition cursor-"
+									class=" cursor-pointer flex rounded-lg hover:bg-base-100 dark:hover:bg-base-850 transition cursor-"
 									aria-label={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
 									on:click={() => {
 										showSidebar.set(!$showSidebar);
@@ -175,8 +175,8 @@
 									aria-current={activeWorkspaceSection === 'models' ? 'page' : null}
 									class="min-w-fit px-1 text-sm inline-flex items-center gap-1 {activeWorkspaceSection ===
 									'models'
-										? 'text-gray-900 dark:text-gray-100'
-										: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition select-none"
+										? 'text-base-900 dark:text-base-100'
+										: 'text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-base-0'} transition select-none"
 									href="/workspace/models"
 								>
 									<span>{$i18n.t('Models')}</span>
@@ -193,8 +193,8 @@
 									aria-current={activeWorkspaceSection === 'knowledge' ? 'page' : null}
 									class="min-w-fit px-1 text-sm inline-flex items-center gap-1 {activeWorkspaceSection ===
 									'knowledge'
-										? 'text-gray-900 dark:text-gray-100'
-										: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition select-none"
+										? 'text-base-900 dark:text-base-100'
+										: 'text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-base-0'} transition select-none"
 									href="/workspace/knowledge"
 								>
 									<span>{$i18n.t('Knowledge')}</span>
@@ -211,8 +211,8 @@
 									aria-current={activeWorkspaceSection === 'prompts' ? 'page' : null}
 									class="min-w-fit px-1 text-sm inline-flex items-center gap-1 {activeWorkspaceSection ===
 									'prompts'
-										? 'text-gray-900 dark:text-gray-100'
-										: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition select-none"
+										? 'text-base-900 dark:text-base-100'
+										: 'text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-base-0'} transition select-none"
 									href="/workspace/prompts"
 								>
 									<span>{$i18n.t('Prompts')}</span>
@@ -229,8 +229,8 @@
 									aria-current={activeWorkspaceSection === 'skills' ? 'page' : null}
 									class="min-w-fit px-1 text-sm inline-flex items-center gap-1 {activeWorkspaceSection ===
 									'skills'
-										? 'text-gray-900 dark:text-gray-100'
-										: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition select-none"
+										? 'text-base-900 dark:text-base-100'
+										: 'text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-base-0'} transition select-none"
 									href="/workspace/skills"
 								>
 									<span>{$i18n.t('Skills')}</span>
@@ -247,8 +247,8 @@
 									aria-current={activeWorkspaceSection === 'tools' ? 'page' : null}
 									class="min-w-fit px-1 text-sm inline-flex items-center gap-1 {activeWorkspaceSection ===
 									'tools'
-										? 'text-gray-900 dark:text-gray-100'
-										: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition select-none"
+										? 'text-base-900 dark:text-base-100'
+										: 'text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-base-0'} transition select-none"
 									href="/workspace/tools"
 								>
 									<span>{$i18n.t('Tools')}</span>

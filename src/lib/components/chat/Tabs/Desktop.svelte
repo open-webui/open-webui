@@ -5,11 +5,11 @@
 	import { toast } from 'svelte-sonner';
 	import type RFB from '@novnc/novnc';
 	import Icon from '../FileNav/Icon.svelte';
-	import { terminalRequest, type TerminalTarget } from '$lib/apis/terminal';
-	import { openTerminalSocket } from '$lib/apis/terminal/socket';
+	import { machineRequest, type MachineTarget } from '$lib/apis/machines';
+	import { openMachineSocket } from '$lib/apis/machines/socket';
 
 	const i18n = getContext<any>('i18n');
-	export let target: TerminalTarget;
+	export let target: MachineTarget;
 	export let chatId: string | null = null;
 	export let active = true;
 	export let overlay = false;
@@ -67,7 +67,7 @@
 		error = '';
 		status = $i18n.t('Connecting…');
 		try {
-			const info = await terminalRequest<{
+			const info = await machineRequest<{
 				transport?: string;
 				audio?: boolean;
 				clipboard?: boolean;
@@ -79,7 +79,7 @@
 			await tick();
 			if (version !== generation) return;
 			if (transport === 'frames') {
-				socket = openTerminalSocket(target, '/desktop/stream');
+				socket = openMachineSocket(target, '/desktop/stream');
 				let framePending = Promise.resolve();
 				socket.onmessage = async (event) => {
 					if (version !== generation) return;
@@ -100,7 +100,7 @@
 			} else {
 				const { default: RFB } = await import('@novnc/novnc');
 				if (version !== generation) return;
-				socket = openTerminalSocket(target, '/desktop/stream', (channel) => {
+				socket = openMachineSocket(target, '/desktop/stream', (channel) => {
 					if (version !== generation) return;
 					viewer = new RFB(surface, channel);
 					const cursor = viewer._cursor;
@@ -174,7 +174,7 @@
 
 <svelte:document on:fullscreenchange={fullscreenChanged} />
 
-<div bind:this={container} class="relative h-full w-full min-h-0 bg-white dark:bg-gray-900">
+<div bind:this={container} class="relative h-full w-full min-h-0 bg-base-0 dark:bg-base-900">
 	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 	<div
 		bind:this={surface}
@@ -204,11 +204,11 @@
 	</div>
 	{#if status || error}
 		<div
-			class="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-white/90 px-4 text-center text-xs text-gray-500 dark:bg-gray-900/90 dark:text-gray-400"
+			class="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-base-0/90 px-4 text-center text-xs text-base-500 dark:bg-base-900/90 dark:text-base-400"
 		>
-			<span class={error ? '' : 'text-xs text-gray-400 dark:text-gray-500'}>{error || status}</span>
+			<span class={error ? '' : 'text-xs text-base-400 dark:text-base-500'}>{error || status}</span>
 			{#if error}<button
-					class="text-gray-700 hover:text-black dark:text-gray-300 dark:hover:text-white"
+					class="text-base-700 hover:text-base-1000 dark:text-base-300 dark:hover:text-base-0"
 					on:click={connect}>{$i18n.t('Retry')}</button
 				>{/if}
 		</div>
@@ -219,7 +219,7 @@
 	{#if fullscreenEnabled}
 		<button
 			type="button"
-			class="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-md text-gray-400/70 hover:bg-white/80 hover:text-gray-700 focus-visible:bg-white/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 dark:hover:bg-gray-900/80 dark:hover:text-gray-200 dark:focus-visible:bg-gray-900/80"
+			class="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-md text-base-400/70 hover:bg-base-0/80 hover:text-base-700 focus-visible:bg-base-0/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 dark:hover:bg-base-900/80 dark:hover:text-base-200 dark:focus-visible:bg-base-900/80"
 			aria-label={fullscreen ? $i18n.t('Exit full screen') : $i18n.t('Open in full screen')}
 			title={fullscreen ? $i18n.t('Exit full screen') : $i18n.t('Open in full screen')}
 			on:click={toggleFullscreen}

@@ -9,7 +9,7 @@
 
 	$: iconName = fileIconName(name, type);
 	$: tone =
-		type === 'directory' ? 'text-gray-500 dark:text-gray-400' : 'text-gray-400 dark:text-gray-500';
+		type === 'directory' ? 'text-base-500 dark:text-base-400' : 'text-base-400 dark:text-base-500';
 </script>
 
 <Icon name={iconName} {size} {strokeWidth} class={`shrink-0 ${tone}`} />

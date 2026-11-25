@@ -21,8 +21,10 @@ from open_webui.events import EVENTS, publish_event
 from open_webui.env import SCIM_AUTH_PROVIDER
 from open_webui.internal.db import get_async_session
 from open_webui.models.auths import Auths
+from open_webui.models.chats import Chats
 from open_webui.models.groups import GroupModel, Groups, GroupHierarchyError
 from open_webui.models.users import UserModel, Users
+from open_webui.tasks import stop_item_tasks
 from open_webui.utils.auth import (
     decode_token,
     get_admin_user,
@@ -876,6 +878,9 @@ async def delete_user(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=ERROR_MESSAGES.ACTION_PROHIBITED,
         )
+
+    for chat_id in await Chats.get_chat_ids_by_user_id(user_id, db=db):
+        await stop_item_tasks(request.app.state.redis, chat_id)
 
     success = await Auths.delete_auth_by_id(user_id, db=db)
     if not success:

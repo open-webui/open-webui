@@ -6,8 +6,11 @@
 	import { refreshChatList, setChatTitle } from '$lib/stores/chatList';
 	import type { AppLayoutContext } from '$lib/types';
 	import { openFolderChat } from './folderChat';
+	import type { Readable } from 'svelte/store';
 	import {
+		type CanEditChat,
 		type FolderStatus,
+		type FolderPriority,
 		type WorkspaceChat,
 		type WorkspacePage,
 		isChatUnread
@@ -20,28 +23,42 @@
 	import FolderChatLink from './FolderChatLink.svelte';
 	import Icon from '$lib/components/chat/FileNav/Icon.svelte';
 	import FolderStatusControl from './FolderStatus.svelte';
+	import FolderPriorityControl from './FolderPriority.svelte';
 	import StatusIcon from './FolderStatusIcon.svelte';
+	import PriorityIcon from './FolderPriorityIcon.svelte';
 	import FolderStatusTime from './FolderStatusTime.svelte';
 	import { formatDateDetails, formatShortDate } from '$lib/utils';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
 	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
+	const canEdit = getContext<Readable<CanEditChat> | undefined>('folder-can-edit');
 
 	export let groups: {
 		id: string;
 		label: string;
 		status?: FolderStatus;
+		priority?: FolderPriority;
 		dot?: string;
 		spinner?: boolean;
 		page?: WorkspacePage;
 	}[] = [];
+	export let showPriority = true;
 	export let saving = '';
 	export let loading = false;
 	export let loadingGroup = '';
 	export let onMore: (id: string) => Promise<void>;
 	export let onMove: (chat: WorkspaceChat, status: FolderStatus) => Promise<void>;
+	export let onPriority: (chat: WorkspaceChat, priority: FolderPriority) => Promise<void>;
 	export let onTagsChange: () => Promise<void>;
-	export let ownsFolder = false;
+
+	// Same payload as the sidebar chat item, so a row can be dropped into split view
+	// or onto the composer.
+	const chatDragStartHandler = (event: DragEvent, chat: WorkspaceChat) => {
+		if (!event.dataTransfer) return;
+		event.dataTransfer.setData('text/plain', JSON.stringify({ type: 'chat', id: chat.id }));
+		event.dataTransfer.setData('application/x-open-webui-drag', '');
+		event.dataTransfer.setData('application/x-open-webui-chat', chat.id);
+	};
 
 	let collapsed: Record<string, boolean> = {};
 	let menuOpen: Record<string, boolean> = {};
@@ -139,7 +156,7 @@
 				<div class="group-header flex h-8 items-center gap-2 rounded-xl pl-2 pr-3 backdrop-blur-md">
 					<button
 						type="button"
-						class="flex size-5 items-center justify-center rounded-md text-gray-400 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-200"
+						class="flex size-5 items-center justify-center rounded-md text-base-400 hover:text-base-700 dark:text-base-500 dark:hover:text-base-200"
 						aria-expanded={!collapsed[group.id]}
 						aria-label={collapsed[group.id]
 							? $i18n.t('Expand {{name}}', { name: group.label })
@@ -153,6 +170,8 @@
 					</button>
 					{#if group.status}
 						<StatusIcon status={group.status} />
+					{:else if group.priority}
+						<PriorityIcon priority={group.priority} />
 					{:else if group.spinner}
 						<span class="flex size-3.5 shrink-0 items-center justify-center"
 							><Spinner className="size-3" /></span
@@ -162,10 +181,10 @@
 							><span class="size-2 rounded-full {group.dot}"></span></span
 						>
 					{/if}
-					<h3 class="text-xs text-gray-700 dark:text-gray-200">
+					<h3 class="text-xs text-base-700 dark:text-base-200">
 						{group.label}
 					</h3>
-					<span class="text-xs tabular-nums text-gray-400 dark:text-gray-500"
+					<span class="text-xs tabular-nums text-base-400 dark:text-base-500"
 						>{group.page?.total ?? ''}</span
 					>
 				</div>
@@ -179,18 +198,30 @@
 					<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
 					<li
 						data-folder-item
-						class="group flex cursor-pointer items-center gap-1.5 rounded-xl px-3 py-1.5 transition-colors hover:bg-gray-50 focus-within:bg-gray-50 dark:hover:bg-gray-850/50 dark:focus-within:bg-gray-850/50 {saving ===
+						class="group flex cursor-pointer items-center gap-1.5 rounded-xl px-3 py-1.5 transition-colors hover:bg-base-50 focus-within:bg-base-50 dark:hover:bg-base-850/50 dark:focus-within:bg-base-850/50 {saving ===
 						chat.id
 							? 'opacity-60'
 							: ''}"
+						draggable={renaming !== chat.id}
+						on:dragstart={(event) => chatDragStartHandler(event, chat)}
 						on:click={(event) => open(event, chat)}
 					>
-						<div class="flex shrink-0 items-center gap-2">
-							<FolderStatusControl {chat} disabled={!!saving || loading} onChange={onMove} />
-							{#if showStatusTime}
-								<!-- Time in status; fixed width keeps titles aligned across rows. -->
-								<span class="-ml-1 flex w-6 shrink-0"><FolderStatusTime {chat} /></span>
-							{/if}
+						<!-- Status, its time, priority, then the marker dot a little apart. -->
+						<div class="flex shrink-0 items-center gap-1">
+							<div class="flex items-center gap-0.5">
+								<FolderStatusControl {chat} disabled={!!saving || loading} onChange={onMove} />
+								{#if showStatusTime}
+									<!-- Time in status; fixed width keeps priorities and titles aligned across rows. -->
+									<span class="flex w-6 shrink-0"><FolderStatusTime {chat} /></span>
+								{/if}
+								{#if showPriority}
+									<FolderPriorityControl
+										{chat}
+										disabled={!!saving || loading}
+										onChange={onPriority}
+									/>
+								{/if}
+							</div>
 							<!-- Same marker as the sidebar chat item; takes no space when absent. -->
 							{#if chat.pending_approval || chat.active || unread}
 								<span class="flex size-3 shrink-0 items-center justify-center">
@@ -221,7 +252,7 @@
 							{#if renaming === chat.id}
 								<input
 									data-rename-input
-									class="min-w-0 flex-1 bg-transparent text-[0.8125rem] leading-5 text-gray-900 outline-none dark:text-white"
+									class="min-w-0 flex-1 bg-transparent text-[0.8125rem] leading-5 text-base-900 outline-none dark:text-base-0"
 									aria-label={$i18n.t('Rename')}
 									bind:value={renameValue}
 									on:blur={() => saveRename(chat)}
@@ -243,14 +274,14 @@
 									title={chat.title}
 									disabled={!!menuOpen[chat.id]}
 									className="min-w-0 shrink truncate rounded text-[0.8125rem] leading-5 outline-none focus-visible:underline {unread
-										? 'text-gray-900 dark:text-white'
-										: 'text-gray-700 dark:text-gray-200'}"
+										? 'text-base-900 dark:text-base-0'
+										: 'text-base-700 dark:text-base-200'}"
 									onclick={(event) => openFolderChat(chat, appLayout, event)}
 								/>
 							{/if}
 							{#if chat.automation_id}
 								<span
-									class="flex shrink-0 text-gray-400 dark:text-gray-500"
+									class="flex shrink-0 text-base-400 dark:text-base-500"
 									title={$i18n.t('Made by an automation')}
 									aria-label={$i18n.t('Made by an automation')}
 									><Icon name="clock" size={12} /></span
@@ -258,7 +289,7 @@
 							{/if}
 							{#if chat.search_snippet}
 								<span
-									class="hidden min-w-0 flex-1 truncate text-xs text-gray-400 @lg:block dark:text-gray-500"
+									class="hidden min-w-0 flex-1 truncate text-xs text-base-400 @lg:block dark:text-base-500"
 									>{chat.search_snippet}</span
 								>
 							{/if}
@@ -276,7 +307,7 @@
 							</div>
 							<!-- The menu takes the date's place on hover, so nothing shifts. -->
 							<div
-								class="{ownsFolder || chat.can_edit_tags
+								class="{$canEdit?.(chat)
 									? 'date-slot'
 									: ''} relative flex w-14 shrink-0 items-center justify-end"
 								class:open={menuOpen[chat.id]}
@@ -288,12 +319,12 @@
 									content={formatDateDetails(chat.updated_at, $i18n.language)}
 								>
 									<time
-										class="w-14 text-right text-[0.6875rem] tabular-nums text-gray-400 dark:text-gray-500"
+										class="w-14 text-right text-[0.6875rem] tabular-nums text-base-400 dark:text-base-500"
 										datetime={new Date(chat.updated_at * 1000).toISOString()}
 										>{formatShortDate(chat.updated_at, $i18n.language)}</time
 									>
 								</Tooltip>
-								{#if ownsFolder || chat.can_edit_tags}
+								{#if $canEdit?.(chat)}
 									<div class="chat-menu absolute inset-y-0 right-0 flex items-center">
 										<FolderChatMenu
 											{chat}
@@ -313,7 +344,7 @@
 				{#if group.label}
 					<button
 						type="button"
-						class="flex w-full items-center rounded-xl py-1.5 pl-9.5 text-xs text-gray-400 transition-colors hover:bg-gray-50 hover:text-gray-700 disabled:pointer-events-none dark:text-gray-500 dark:hover:bg-gray-850/50 dark:hover:text-gray-300"
+						class="flex w-full items-center rounded-xl py-1.5 pl-9.5 text-xs text-base-400 transition-colors hover:bg-base-50 hover:text-base-700 disabled:pointer-events-none dark:text-base-500 dark:hover:bg-base-850/50 dark:hover:text-base-300"
 						disabled={loading || !!loadingGroup}
 						on:click={() => onMore(group.id)}
 					>
@@ -336,10 +367,10 @@
 <style>
 	/* A translucent tint, so the frosted header picks up the page background. */
 	.group-header {
-		background: color-mix(in oklab, var(--color-gray-50) 80%, transparent);
+		background: color-mix(in oklab, var(--color-base-50) 80%, transparent);
 	}
 	:global(.dark) .group-header {
-		background: color-mix(in oklab, var(--color-gray-850) 60%, transparent);
+		background: color-mix(in oklab, var(--color-base-850) 60%, transparent);
 	}
 
 	/* The menu replaces the date on hover, focus, or while open; touch shows the menu. */

@@ -194,7 +194,7 @@
 	bind:show
 >
 	<div>
-		<div class=" flex justify-between dark:text-gray-100 px-4 pt-3 mb-1">
+		<div class=" flex justify-between dark:text-base-100 px-4 pt-3 mb-1">
 			<div class=" text-sm font-medium self-center">
 				{#if custom}
 					{#if edit}
@@ -208,7 +208,7 @@
 			</div>
 			<button
 				aria-label={$i18n.t('Close')}
-				class="self-center rounded-lg py-1 text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 px-0"
+				class="self-center rounded-lg py-1 text-base-500 transition hover:text-base-700 dark:text-base-400 dark:hover:text-base-200 px-0"
 				on:click={() => {
 					show = false;
 				}}
@@ -217,7 +217,7 @@
 			</button>
 		</div>
 
-		<div class="flex flex-col md:flex-row w-full px-4 pb-4 md:space-x-4 dark:text-gray-200">
+		<div class="flex flex-col md:flex-row w-full px-4 pb-4 md:space-x-4 dark:text-base-200">
 			<div class=" flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6">
 				<form
 					class="flex flex-col w-full"
@@ -229,14 +229,14 @@
 					<div class="flex flex-col lg:flex-row w-full h-full pb-2 lg:space-x-4">
 						<div
 							id="admin-settings-tabs-container"
-							class="tabs flex flex-row overflow-x-auto gap-2.5 max-w-full lg:gap-1 lg:flex-col lg:flex-none lg:w-40 dark:text-gray-200 text-sm font-normal text-left scrollbar-none"
+							class="tabs flex flex-row overflow-x-auto gap-2.5 max-w-full lg:gap-1 lg:flex-col lg:flex-none lg:w-40 dark:text-base-200 text-sm font-normal text-left scrollbar-none"
 						>
 							{#if tabs.includes('general')}
 								<button
 									class="px-0.5 py-1 max-w-fit w-fit rounded-lg shrink-0 whitespace-nowrap flex text-right transition {selectedTab ===
 									'general'
 										? ''
-										: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+										: ' text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-base-0'}"
 									on:click={() => {
 										selectedTab = 'general';
 									}}
@@ -265,7 +265,7 @@
 									class="px-0.5 py-1 max-w-fit w-fit rounded-lg shrink-0 whitespace-nowrap flex text-right transition {selectedTab ===
 									'permissions'
 										? ''
-										: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+										: ' text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-base-0'}"
 									on:click={() => {
 										selectedTab = 'permissions';
 									}}
@@ -283,7 +283,7 @@
 									class="px-0.5 py-1 max-w-fit w-fit rounded-lg shrink-0 whitespace-nowrap flex text-right transition {selectedTab ===
 									'users'
 										? ''
-										: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+										: ' text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-base-0'}"
 									on:click={() => {
 										selectedTab = 'users';
 									}}
@@ -301,7 +301,7 @@
 									class="px-0.5 py-1 max-w-fit w-fit rounded-lg shrink-0 whitespace-nowrap flex text-right transition {selectedTab ===
 									'preview'
 										? ''
-										: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+										: ' text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-base-0'}"
 									on:click={() => {
 										selectedTab = 'preview';
 									}}
@@ -344,7 +344,7 @@
 									/>
 								{:else if selectedTab == 'permissions'}
 									{#if custom && parent_group_id}
-										<p class="text-xs text-gray-500 mb-3">
+										<p class="text-xs text-base-500 mb-3">
 											{$i18n.t(
 												'Parent permissions are inherited. Disabling a local permission does not revoke inherited access.'
 											)}
@@ -364,7 +364,7 @@
 													{ value: 'inherited', label: $i18n.t('Inherited') }
 												]}
 												align="end"
-												triggerClass="flex items-center gap-1 rounded-lg px-1 py-0.5 text-xs font-normal text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+												triggerClass="flex items-center gap-1 rounded-lg px-1 py-0.5 text-xs font-normal text-base-500 transition hover:text-base-700 dark:text-base-400 dark:hover:text-base-200"
 											>
 												<svelte:fragment slot="trigger" let:selectedLabel>
 													<span>{selectedLabel}</span>
@@ -403,7 +403,7 @@
 													: $i18n.t('Reset all permissions to their initial configuration values')}
 											>
 												<button
-													class="text-sm font-normal text-gray-500 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300 transition hover:underline"
+													class="text-xs font-normal text-base-500 hover:text-base-700 dark:text-base-500 dark:hover:text-base-300 transition hover:underline"
 													type="button"
 													on:click={() => {
 														showResetConfirmDialog = true;
@@ -416,7 +416,7 @@
 									</div>
 
 									<button
-										class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white disabled:cursor-not-allowed"
+										class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-base-0 transition hover:bg-base-1000 disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-base-0 disabled:cursor-not-allowed"
 										type="submit"
 										disabled={loading || (custom && !name?.trim())}
 									>
@@ -434,14 +434,14 @@
 					</div>
 
 					<!-- <div
-						class=" tabs flex flex-row overflow-x-auto gap-2.5 text-sm font-normal border-b border-b-gray-800 scrollbar-hidden"
+						class=" tabs flex flex-row overflow-x-auto gap-2.5 text-sm font-normal border-b border-b-base-800 scrollbar-hidden"
 					>
 						{#if tabs.includes('display')}
 							<button
 								class="px-0.5 pb-1.5 min-w-fit flex text-right transition border-b-2 {selectedTab ===
 								'display'
-									? ' dark:border-white'
-									: 'border-transparent text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+									? ' dark:border-base-0'
+									: 'border-transparent text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-base-0'}"
 								on:click={() => {
 									selectedTab = 'display';
 								}}
@@ -455,8 +455,8 @@
 							<button
 								class="px-0.5 pb-1.5 min-w-fit flex text-right transition border-b-2 {selectedTab ===
 								'permissions'
-									? '  dark:border-white'
-									: 'border-transparent text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+									? '  dark:border-base-0'
+									: 'border-transparent text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-base-0'}"
 								on:click={() => {
 									selectedTab = 'permissions';
 								}}
@@ -470,8 +470,8 @@
 							<button
 								class="px-0.5 pb-1.5 min-w-fit flex text-right transition border-b-2 {selectedTab ===
 								'users'
-									? ' dark:border-white'
-									: ' border-transparent text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+									? ' dark:border-base-0'
+									: ' border-transparent text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-base-0'}"
 								on:click={() => {
 									selectedTab = 'users';
 								}}

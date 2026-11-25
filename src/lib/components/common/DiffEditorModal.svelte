@@ -509,7 +509,7 @@
 		ariaLabel={session.title || $i18n.t('Compare revision')}
 		size="full"
 		containerClassName="p-2 sm:p-4"
-		className="h-[calc(100dvh-2rem)] overflow-hidden rounded-2xl bg-white dark:bg-gray-900 !border-0"
+		className="h-[calc(100dvh-2rem)] overflow-hidden rounded-2xl bg-base-0 dark:bg-base-900 !border-0"
 		onRequestClose={requestClose}
 	>
 		<!-- svelte-ignore a11y-no-static-element-interactions -->
@@ -540,7 +540,7 @@
 				{#if comparing}
 					<div class="comparison-controls flex flex-wrap items-center gap-1.5">
 						<div class="mr-1 flex items-center gap-1.5">
-							<span class="whitespace-nowrap text-gray-500" role="status" aria-live="polite"
+							<span class="whitespace-nowrap text-base-500" role="status" aria-live="polite"
 								>{loading
 									? $i18n.t('Loading...')
 									: chunkCount
@@ -552,7 +552,7 @@
 							>
 							{#if approximate}<span
 									role="img"
-									class="text-gray-500"
+									class="text-base-500"
 									aria-label={$i18n.t('Approximate comparison')}
 									title={$i18n.t(
 										'Comparison reached its time limit; some changes are grouped together.'
@@ -629,7 +629,7 @@
 					<Dropdown bind:this={optionsDropdown} bind:show={showOptions} align="end">
 						<button
 							type="button"
-							class="comparison-options shrink-0 text-gray-500 hover:text-gray-900 dark:hover:text-white"
+							class="comparison-options shrink-0 text-base-500 hover:text-base-900 dark:hover:text-base-0"
 							disabled={loading}
 							aria-label={$i18n.t('Comparison options')}
 							aria-haspopup="menu"
@@ -698,7 +698,7 @@
 				{/if}
 				<button
 					type="button"
-					class="comparison-close shrink-0 text-gray-500 hover:text-gray-900 dark:hover:text-white"
+					class="comparison-close shrink-0 text-base-500 hover:text-base-900 dark:hover:text-base-0"
 					aria-label={$i18n.t('Close')}
 					on:click|stopPropagation={requestClose}><XMark className="size-4" /></button
 				>
@@ -713,7 +713,7 @@
 									{@const lines = (side === 'a' ? working : proposal).split(/\r\n|\r|\n/).length}
 									{@const file = (side === 'a') !== swapped ? session.leftFile : session.rightFile}
 									<div
-										class="pane-header flex min-w-0 items-center gap-2 rounded-lg bg-gray-50/70 px-3 py-2 text-gray-500 dark:bg-white/[0.03]"
+										class="pane-header flex min-w-0 items-center gap-2 rounded-lg bg-base-50/70 px-3 py-2 text-base-500 dark:bg-base-0/[0.03]"
 									>
 										<Tooltip content={file?.path ?? ''} allowHTML={false} className="min-w-0">
 											<span class="block truncate font-medium"
@@ -753,7 +753,7 @@
 										>
 										<button
 											type="button"
-											class="shrink-0 rounded px-1 hover:text-gray-900 dark:hover:text-white"
+											class="shrink-0 rounded px-1 hover:text-base-900 dark:hover:text-base-0"
 											aria-label={file
 												? $i18n.t('Copy {{name}} to clipboard', { name: file.name })
 												: side === 'a'
@@ -845,7 +845,7 @@
 			{/if}
 			{#if session.mode === 'edit'}
 				<footer class="flex shrink-0 flex-wrap items-center gap-2 px-5 py-3">
-					<p class="mr-auto text-gray-500">
+					<p class="mr-auto text-base-500">
 						{applyDescription ??
 							$i18n.t('Apply uses the proposed revision on the right. Save your draft afterward.')}
 					</p>
@@ -882,7 +882,7 @@
 		border-radius: 4px;
 	}
 	.diff-overview:focus-visible {
-		outline: 2px solid var(--color-gray-500);
+		outline: 2px solid var(--color-base-500);
 		outline-offset: 2px;
 	}
 	.diff-overview svg {
@@ -934,14 +934,14 @@
 			color 150ms;
 	}
 	.secondary {
-		background: var(--color-gray-100);
-		color: var(--color-gray-800);
+		background: var(--color-base-100);
+		color: var(--color-base-800);
 	}
 	.secondary:hover {
-		background: color-mix(in oklab, var(--color-gray-100) 70%, transparent);
+		background: color-mix(in oklab, var(--color-base-100) 70%, transparent);
 	}
 	.primary {
-		background: var(--color-gray-900);
+		background: var(--color-base-900);
 		color: white;
 	}
 	.primary:hover {
@@ -955,19 +955,19 @@
 		opacity: 0.6;
 	}
 	button:focus-visible {
-		outline: 2px solid var(--color-gray-500);
+		outline: 2px solid var(--color-base-500);
 		outline-offset: 2px;
 	}
 	:global(.dark) .secondary {
-		background: var(--color-gray-850);
+		background: var(--color-base-850);
 		color: white;
 	}
 	:global(.dark) .secondary:hover {
-		background: color-mix(in oklab, var(--color-gray-850) 60%, transparent);
+		background: color-mix(in oklab, var(--color-base-850) 60%, transparent);
 	}
 	:global(.dark) .primary {
-		background: var(--color-gray-100);
-		color: var(--color-gray-900);
+		background: var(--color-base-100);
+		color: var(--color-base-900);
 	}
 	:global(.dark) .primary:hover {
 		background: white;
@@ -1033,10 +1033,10 @@
 		background: #3e9c89;
 	}
 	:global(.dark) .merge-container :global(.cm-editor) {
-		background: #101413;
+		background: var(--color-base-950);
 	}
 	:global(.dark) .merge-container :global(.cm-gutters) {
-		background: #101413 !important;
+		background: var(--color-base-950) !important;
 	}
 	.merge-container :global(.cm-mergeViewEditors) {
 		height: 100%;

@@ -16,7 +16,7 @@
 	$: bridge.animationPlayer = (name) =>
 		showAvatar ? (avatarView?.playAnimation(name) ?? 'unavailable') : 'unavailable';
 	let readyAvatar = '';
-	$: avatar = $models.find((model) => model.id === modelId)?.info?.meta?.voice_avatar;
+	$: avatar = ($models ?? []).find((model) => model.id === modelId)?.info?.meta?.voice_avatar;
 	$: showAvatar = avatar?.file_id && failedAvatar !== avatar.file_id;
 
 	const i18n = getContext<any>('i18n');
@@ -99,7 +99,7 @@
 				{/key}
 				{#if readyAvatar !== selectedAvatar.file_id}
 					<div class="avatar-loading" role="status">
-						<Spinner className="size-6 text-gray-400 dark:text-gray-500" />
+						<Spinner className="size-6 text-base-400 dark:text-base-500" />
 						<span class="sr-only">{$i18n.t('Loading avatar...')}</span>
 					</div>
 				{/if}
@@ -201,10 +201,10 @@
 		width: 100%;
 		min-height: 100%;
 		padding: 0 16px max(24px, env(safe-area-inset-bottom));
-		color: var(--color-gray-900);
+		color: var(--color-base-900);
 	}
 	:global(.dark) .bridge-call {
-		color: var(--color-gray-100);
+		color: var(--color-base-100);
 	}
 	.call-stage {
 		flex: 1;
@@ -281,12 +281,12 @@
 	.status-hint {
 		min-height: 18px;
 		margin-top: 8px;
-		color: var(--color-gray-600);
+		color: var(--color-base-600);
 		font-size: 12px;
 		line-height: 18px;
 	}
 	:global(.dark) .status-hint {
-		color: var(--color-gray-400);
+		color: var(--color-base-400);
 	}
 	.connecting-dot {
 		flex-shrink: 0;
@@ -350,24 +350,24 @@
 		flex-shrink: 0;
 	}
 	.mute-control {
-		background: var(--color-gray-100);
+		background: var(--color-base-100);
 	}
 	.mute-control:hover {
-		background: var(--color-gray-200);
+		background: var(--color-base-200);
 	}
 	:global(.dark) .mute-control {
-		background: var(--color-gray-800);
+		background: var(--color-base-800);
 	}
 	:global(.dark) .mute-control:hover {
-		background: var(--color-gray-700);
+		background: var(--color-base-700);
 	}
 	.mute-control.is-muted {
-		background: var(--color-gray-900);
+		background: var(--color-base-900);
 		color: white;
 	}
 	:global(.dark) .mute-control.is-muted {
-		background: var(--color-gray-100);
-		color: var(--color-gray-900);
+		background: var(--color-base-100);
+		color: var(--color-base-900);
 	}
 	.end-control {
 		background: #fff0ef;

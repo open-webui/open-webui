@@ -11,7 +11,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from open_webui.internal.db import Base, get_async_db_context
 from open_webui.utils.response import normalize_usage
 from open_webui.utils.session_records import has_pending_tool_approval, normalize_tool_output, recorded_timestamp
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 from sqlalchemy import (
     JSON,
     BigInteger,
@@ -21,6 +21,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    Row,
     Text,
     case,
     cast,
@@ -28,6 +29,7 @@ from sqlalchemy import (
     distinct,
     func,
     literal,
+    or_,
     select,
 )
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -68,8 +70,9 @@ def _date_key(timestamp: int, tz: ZoneInfo) -> str:
 
 def get_usage(data: dict) -> Optional[dict]:
     """Extract and normalize usage from message data."""
-    usage = data.get('usage') or (data.get('info') or {}).get('usage')
-    return normalize_usage(usage) if usage else None
+    info = data.get('info')
+    usage = data.get('usage') or (info.get('usage') if isinstance(info, dict) else None)
+    return normalize_usage(usage) if isinstance(usage, dict) and usage else None
 
 
 def _token_columns(dialect: str):
@@ -184,7 +187,7 @@ class ChatMessage(Base):
     meta = Column(JSON, nullable=True)
 
     # Status
-    done = Column(Boolean, default=True)
+    done = Column(Boolean, nullable=True)
     status_history = Column(JSON, nullable=True)
     error = Column(JSON, nullable=True)
 
@@ -193,6 +196,8 @@ class ChatMessage(Base):
 
     # Context compaction checkpoint
     context_summary = Column(Text, nullable=True)
+
+    data = Column(JSON, nullable=True)
 
     # Timestamps
     created_at = Column(BigInteger, index=True)
@@ -232,6 +237,11 @@ class ChatMessageModel(BaseModel):
     created_at: int
     updated_at: int
 
+    @field_validator('done', mode='before')
+    @classmethod
+    def normalize_done(cls, value: Optional[bool]) -> bool:
+        return value is not False
+
 
 # Table Operations
 
@@ -239,63 +249,70 @@ class ChatMessageModel(BaseModel):
 class ChatMessageTable:
     @staticmethod
     def _apply_message_data(message: ChatMessage, data: dict, now: int) -> None:
-        """Overwrite only the fields the payload carries."""
-        if 'role' in data:
-            message.role = data['role']
-        if 'parent_id' in data or 'parentId' in data:
-            message.parent_id = data.get('parent_id') or data.get('parentId')
-        if 'content' in data:
-            message.content = data.get('content')
-        if 'output' in data:
-            message.output = normalize_tool_output(data.get('output'))
-        if 'model_id' in data or 'model' in data:
-            message.model_id = data.get('model_id') or data.get('model')
-        if 'files' in data:
-            message.files = data.get('files')
-        if 'sources' in data:
-            message.sources = data.get('sources')
-        if 'embeds' in data:
-            message.embeds = data.get('embeds')
-        if 'meta' in data:
-            message.meta = data.get('meta')
-        if 'done' in data:
-            message.done = data['done']
-        if 'status_history' in data or 'statusHistory' in data:
-            message.status_history = data.get('status_history') or data.get('statusHistory')
-        if 'error' in data:
-            message.error = data.get('error')
-        if 'context_summary' in data or 'contextSummary' in data:
-            message.context_summary = data.get('context_summary') or data.get('contextSummary')
-
-        usage = get_usage(data)
-        if usage:
-            # The caller saves a cumulative message snapshot; accumulation belongs to the model-call loop.
-            message.usage = usage
-        message.updated_at = now
+        """Overwrite only the columns the payload carries, keeping the message's author."""
+        replacement = ChatMessageTable._build_message(message.id, message.chat_id, message.user_id, data, now)
+        kept = {'id', 'chat_id', 'user_id'}
+        if 'timestamp' not in data:
+            kept.add('created_at')
+        for column in ChatMessage.__table__.columns:
+            json_key = ChatMessageTable.DB_TO_JSON_KEY_MAP.get(column.key, column.key)
+            # Usage may come under the legacy `info` key.
+            is_sent = (
+                column.key in data or json_key in data or (column.key == 'usage' and replacement.usage is not None)
+            )
+            if column.key not in kept and (is_sent or column.key in ('data', 'updated_at')):
+                setattr(message, column.key, getattr(replacement, column.key))
 
     @staticmethod
     def _build_message(composite_id: str, chat_id: str, user_id: str, data: dict, now: int) -> ChatMessage:
-        return ChatMessage(
+        def as_text(*keys: str) -> Optional[str]:
+            value = next((data[key] for key in keys if data.get(key)), None)
+            return value if isinstance(value, str) else None
+
+        message = ChatMessage(
             id=composite_id,
             chat_id=chat_id,
             user_id=user_id,
-            role=data.get('role', 'user'),
-            parent_id=data.get('parent_id') or data.get('parentId'),
+            role=as_text('role') or '',
+            parent_id=as_text('parent_id', 'parentId'),
             content=data.get('content'),
             output=normalize_tool_output(data.get('output')),
-            model_id=data.get('model_id') or data.get('model'),
+            model_id=as_text('model_id', 'model'),
             files=data.get('files'),
             sources=data.get('sources'),
             embeds=data.get('embeds'),
             meta=data.get('meta'),
-            done=data.get('done', True),
+            done=data['done'] if isinstance(data.get('done'), bool) else None,
             status_history=data.get('status_history') or data.get('statusHistory'),
             error=data.get('error'),
             usage=get_usage(data),
-            context_summary=data.get('context_summary') or data.get('contextSummary'),
+            context_summary=as_text('context_summary', 'contextSummary'),
             created_at=(recorded_timestamp(data.get('timestamp')) or 0) if 'timestamp' in data else now,
             updated_at=now,
         )
+        from_columns = ChatMessageTable._message_to_dict(message)
+        message.data = {
+            key: value
+            for key, value in data.items()
+            if key not in ('id', 'user_id', 'output') and (key not in from_columns or from_columns[key] != value)
+        }
+        return message
+
+    @classmethod
+    def _message_to_dict(cls, message: ChatMessage | Row) -> dict:
+        """Convert a row to the chat.history.messages shape, keeping only the fields it has set."""
+        message_dict = {
+            'id': message.id.removeprefix(f'{message.chat_id}-'),
+            **{
+                cls.DB_TO_JSON_KEY_MAP.get(column.key, column.key): getattr(message, column.key)
+                for column in ChatMessage.__table__.columns
+                if column.key not in cls.EXCLUDED_COLUMNS and getattr(message, column.key) is not None
+            },
+        }
+        if message_dict.get('role') == '':
+            del message_dict['role']
+        message_dict.setdefault('content', '')
+        return message_dict
 
     async def upsert_message(
         self,
@@ -304,8 +321,8 @@ class ChatMessageTable:
         user_id: str,
         data: dict,
         db: Optional[AsyncSession] = None,
-    ) -> Optional[ChatMessageModel]:
-        """Insert or update a chat message."""
+    ) -> None:
+        """Insert a chat message or update the stored one."""
         async with nullcontext(db) if db is not None else get_async_db_context() as session:
             now = int(time.time())
             # Use composite ID: {chat_id}-{message_id}
@@ -322,34 +339,14 @@ class ChatMessageTable:
                 await session.commit()
             else:
                 await session.flush()
-            return ChatMessageModel.model_validate(message)
 
-    async def upsert_messages(
-        self, chat_id: str, user_id: str, messages: dict[str, dict], db: AsyncSession | None = None
-    ) -> None:
-        """Backfill missing rows without overwriting newer message data."""
-        from sqlalchemy.dialects.postgresql import insert as pg_insert
-        from sqlalchemy.dialects.sqlite import insert as sqlite_insert
-
-        if not messages:
-            return
-        async with get_async_db_context(db) as db:
-            insert = sqlite_insert if db.bind.dialect.name == 'sqlite' else pg_insert
-            rows = [
-                self._build_message(
-                    f'{chat_id}-{mid}',
-                    chat_id,
-                    data.get('user_id') or user_id,
-                    {**data, 'timestamp': data.get('timestamp')},
-                    int(time.time()),
-                )
-                for mid, data in messages.items()
-            ]
-            await db.execute(
-                insert(ChatMessage).on_conflict_do_nothing(index_elements=['id']),
-                [{column.name: getattr(row, column.name) for column in ChatMessage.__table__.columns} for row in rows],
-            )
-            await db.commit()
+    def insert_messages(self, chat_id: str, messages: dict[str, dict], db: AsyncSession) -> None:
+        """Add a new chat's messages in the caller's transaction."""
+        now = int(time.time())
+        db.add_all(
+            self._build_message(f'{chat_id}-{message_id}', chat_id, message['user_id'], message, now)
+            for message_id, message in messages.items()
+        )
 
     async def get_message_by_id(self, id: str, db: Optional[AsyncSession] = None) -> Optional[ChatMessageModel]:
         async with get_async_db_context(db) as db:
@@ -383,8 +380,10 @@ class ChatMessageTable:
             )
             return result.scalar_one_or_none() is not None
 
-    async def has_queued_message(self, chat_id: str, message_id: str, db: Optional[AsyncSession] = None) -> bool:
-        """Whether the user sent a message while this reply was still running."""
+    async def get_pending_message_metas(
+        self, chat_id: str, message_id: str, db: Optional[AsyncSession] = None
+    ) -> list[dict]:
+        """The messages waiting to be answered after this reply."""
         async with get_async_db_context(db) as db:
             result = await db.execute(
                 select(ChatMessage.meta)
@@ -392,10 +391,14 @@ class ChatMessageTable:
                 .where(ChatMessage.parent_id == message_id)
                 .where(ChatMessage.role == 'user')
             )
-            return any(
-                (meta or {}).get('status') == 'pending' and (meta or {}).get('internal') is not True
-                for meta in result.scalars()
-            )
+            return [meta for meta in result.scalars() if (meta or {}).get('status') == 'pending']
+
+    async def has_queued_message(self, chat_id: str, message_id: str, db: Optional[AsyncSession] = None) -> bool:
+        """Whether the user or another chat sent a message while this reply was still running."""
+        return any(
+            meta.get('internal') is not True or meta.get('type') == 'message'
+            for meta in await self.get_pending_message_metas(chat_id, message_id, db)
+        )
 
     async def get_messages_by_chat_id(self, chat_id: str, db: Optional[AsyncSession] = None) -> list[ChatMessageModel]:
         async with get_async_db_context(db) as db:
@@ -414,70 +417,125 @@ class ChatMessageTable:
         'created_at': 'timestamp',
     }
     # DB-internal columns excluded from the reconstructed message dict.
-    EXCLUDED_COLUMNS = frozenset({'id', 'chat_id', 'updated_at'})
+    EXCLUDED_COLUMNS = frozenset({'id', 'chat_id', 'updated_at', 'data'})
+
+    @staticmethod
+    def _child_ids(message: dict) -> list[str]:
+        """The message's saved childrenIds, strings only."""
+        child_ids = message.get('childrenIds')
+        return [child_id for child_id in child_ids if isinstance(child_id, str)] if isinstance(child_ids, list) else []
+
+    def to_message(self, row: ChatMessage | Row) -> dict:
+        """The message dict a row was saved from, in the shape of chat.history.messages."""
+        return {**self._message_to_dict(row), **(row.data or {})}
 
     async def get_messages_map_by_chat_id(self, chat_id: str, db: Optional[AsyncSession] = None) -> Optional[dict]:
         """Build a {message_id: message_dict} map from chat_message rows.
 
         Returns the same shape as chat.history.messages so callers
         (get_message_list, middleware) work unchanged.  Returns None if
-        no rows exist for the chat (caller should fall back to the
-        embedded JSON blob for legacy chats).
+        no rows exist for the chat.
         """
-        async with get_async_db_context(db) as db:
-            result = await db.execute(select(ChatMessage).filter_by(chat_id=chat_id))
-            rows = result.scalars().all()
+        return (await self.get_messages_maps_by_chat_ids([chat_id], db=db)).get(chat_id)
 
-        if not rows:
-            return None
+    async def get_messages_maps_by_chat_ids(
+        self, chat_ids: list[str], db: Optional[AsyncSession] = None
+    ) -> dict[str, dict]:
+        """get_messages_map_by_chat_id for many chats in one query; chats without rows are left out."""
+        rows = []
+        async with nullcontext(db) if db is not None else get_async_db_context() as db:
+            # Databases limit how many values one query may bind.
+            for start in range(0, len(chat_ids), 500):
+                # Plain rows, not session objects: callers change the returned messages and save them back.
+                result = await db.execute(
+                    select(ChatMessage.__table__).where(ChatMessage.chat_id.in_(chat_ids[start : start + 500]))
+                )
+                rows.extend(result.all())
+        rows_by_chat_id: dict[str, list[Row]] = {}
+        for row in sorted(rows, key=lambda row: (row.created_at or 0, row.id)):
+            rows_by_chat_id.setdefault(row.chat_id, []).append(row)
+        return {chat_id: self._messages_map(chat_id, rows) for chat_id, rows in rows_by_chat_id.items()}
 
-        # Strip the composite-id prefix ("{chat_id}-") to recover the
-        # original message_id used as map key.
-        prefix = f'{chat_id}-'
-        prefix_len = len(prefix)
-        col_keys = [c.key for c in ChatMessage.__table__.columns]
+    def _messages_map(self, chat_id: str, rows: list[Row]) -> dict:
+        """The {message_id: message} map of one chat's rows."""
+        messages_map = {message['id']: message for message in map(self.to_message, rows)}
 
-        messages_map: dict[str, dict] = {}
-        for row in rows:
-            msg_id = row.id[prefix_len:] if row.id.startswith(prefix) else row.id
-
-            msg: dict = {'id': msg_id}
-            for key in col_keys:
-                if key in self.EXCLUDED_COLUMNS:
-                    continue
-                val = getattr(row, key)
-                if val is None:
-                    continue
-                json_key = self.DB_TO_JSON_KEY_MAP.get(key, key)
-                msg[json_key] = val
-
-            # Ensure content always has a value
-            msg.setdefault('content', '')
-
-            # Mirror usage into info.usage for callers that read it there
-            if 'usage' in msg:
-                msg['info'] = {'usage': msg['usage']}
-
-            messages_map[msg_id] = msg
+        # A partial save can move a child away without saving its old parent.
+        parent_ids = {msg_id: msg.get('parentId') for msg_id, msg in messages_map.items()}
+        for msg_id, msg in messages_map.items():
+            msg['childrenIds'] = [
+                child_id for child_id in self._child_ids(msg) if parent_ids.get(child_id, msg_id) == msg_id
+            ]
 
         # Reconstruct childrenIds from parentId links so that the map
         # is fully navigable (callers like the frontend rely on this).
         for msg_id, msg in messages_map.items():
             parent_id = msg.get('parentId')
             if parent_id and parent_id in messages_map:
-                parent = messages_map[parent_id]
-                children = parent.get('childrenIds')
-                if children is None:
-                    parent['childrenIds'] = [msg_id]
-                elif msg_id not in children:
+                children = messages_map[parent_id]['childrenIds']
+                if msg_id not in children:
                     children.append(msg_id)
 
-        # Ensure every message has a childrenIds list (leaf nodes get [])
-        for msg in messages_map.values():
-            if 'childrenIds' not in msg:
-                msg['childrenIds'] = []
+        # Siblings saved within the same second keep the order their parent lists them in.
+        created_at = {row.id.removeprefix(f'{chat_id}-'): row.created_at or 0 for row in rows}
+        position = {
+            child_id: index for msg in messages_map.values() for index, child_id in enumerate(msg['childrenIds'])
+        }
+        return {
+            msg_id: messages_map[msg_id]
+            for msg_id in sorted(messages_map, key=lambda msg_id: (created_at[msg_id], position.get(msg_id, 0)))
+        }
 
+    async def get_messages_map_by_message_ids(
+        self, chat_id: str, message_ids: list[str], db: Optional[AsyncSession] = None
+    ) -> dict:
+        """The given messages of a chat, with all their children's ids, in the shape of chat.history.messages."""
+        async with nullcontext(db) if db is not None else get_async_db_context() as session:
+            result = await session.execute(
+                select(ChatMessage.__table__).where(
+                    ChatMessage.id.in_([f'{chat_id}-{message_id}' for message_id in message_ids])
+                )
+            )
+            messages_map = {message['id']: message for message in map(self.to_message, result.all())}
+            listed_ids = {child_id for message in messages_map.values() for child_id in self._child_ids(message)}
+            children = await session.execute(
+                select(ChatMessage.id, ChatMessage.parent_id)
+                .where(
+                    ChatMessage.chat_id == chat_id,
+                    or_(
+                        ChatMessage.parent_id.in_(message_ids),
+                        ChatMessage.id.in_([f'{chat_id}-{child_id}' for child_id in listed_ids]),
+                    ),
+                )
+                .order_by(ChatMessage.created_at, ChatMessage.id)
+            )
+            parent_ids = {row_id.removeprefix(f'{chat_id}-'): parent_id for row_id, parent_id in children.all()}
+
+        for message_id, message in messages_map.items():
+            message['childrenIds'] = [
+                child_id for child_id in self._child_ids(message) if parent_ids.get(child_id, message_id) == message_id
+            ]
+        for child_id, parent_id in parent_ids.items():
+            parent = messages_map.get(parent_id)
+            if parent is not None and child_id not in parent['childrenIds']:
+                parent['childrenIds'].append(child_id)
         return messages_map
+
+    async def get_message_metadata_map_by_chat_id(
+        self, chat_id: str, db: Optional[AsyncSession] = None
+    ) -> Optional[dict]:
+        """Build a {message_id: {parentId, meta}} map, without loading message content."""
+        async with get_async_db_context(db) as db:
+            result = await db.execute(
+                select(ChatMessage.id, ChatMessage.parent_id, ChatMessage.meta).filter_by(chat_id=chat_id)
+            )
+            rows = result.all()
+
+        if not rows:
+            return None
+
+        prefix = f'{chat_id}-'
+        return {row.id.removeprefix(prefix): {'parentId': row.parent_id, 'meta': row.meta} for row in rows}
 
     async def get_messages_by_user_id(
         self,

@@ -1,0 +1,130 @@
+<script lang="ts">
+	import { getContext } from 'svelte';
+
+	import type { MachineServer } from '$lib/apis/machines/index';
+
+	import Dropdown from '$lib/components/common/Dropdown.svelte';
+	import Cloud from '$lib/components/icons/Cloud.svelte';
+
+	const i18n = getContext('i18n');
+
+	export let machines: MachineServer[] = [];
+	export let machineServerId = '';
+	export let machineCwd = '';
+
+	export let side: 'top' | 'bottom' = 'top';
+	export let align: 'start' | 'end' = 'start';
+	/** Render the trigger as a bare value, for label | value rows. */
+	export let plain = false;
+
+	/** Optional callback when selection changes */
+	export let onChange: () => void = () => {};
+
+	let showDropdown = false;
+
+	$: machineLabel = machineServerId
+		? machines.find((s) => s.id === machineServerId)?.name || 'Machine'
+		: $i18n.t('Machine');
+</script>
+
+{#if machines.length > 0}
+	<Dropdown bind:show={showDropdown} {side} {align}>
+		<button
+			type="button"
+			aria-label={machineLabel}
+			title={machineLabel}
+			class={plain
+				? 'flex w-full min-w-0 items-center text-left text-xs font-normal leading-6 text-base-700 dark:text-base-300'
+				: `flex items-center gap-1.5 px-2.5 py-1.5 rounded-2xl text-xs transition ${machineServerId ? 'text-base-1000 dark:text-base-100' : 'text-base-600 dark:text-base-400'} hover:text-base-900 dark:hover:text-base-100`}
+		>
+			{#if plain}
+				<span class="truncate {machineServerId ? '' : 'text-base-400 dark:text-base-500'}"
+					>{machineServerId ? machineLabel : $i18n.t('None')}</span
+				>
+			{:else}
+				<Cloud className="size-3.5 shrink-0" strokeWidth="2" />
+				{#if machineServerId}
+					<span class="whitespace-nowrap max-w-32 truncate">{machineLabel}</span>
+				{/if}
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					fill="none"
+					viewBox="0 0 24 24"
+					stroke-width="2"
+					stroke="currentColor"
+					class="size-2.5"
+				>
+					<path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+				</svg>
+			{/if}
+		</button>
+
+		<div
+			slot="content"
+			class="rounded-xl shadow-lg border border-base-200 dark:border-base-800 flex flex-col bg-base-0 dark:bg-base-850 min-w-56 max-w-56 p-0.5"
+		>
+			<div class="px-2 text-[0.6875rem] text-base-500 py-0.5">
+				{$i18n.t('Machine')}
+			</div>
+
+			{#each machines as server (server.id)}
+				<button
+					class="flex w-full h-[1.6875rem] justify-between gap-2 items-center px-2 text-[0.8125rem] cursor-pointer rounded-xl {machineServerId ===
+					server.id
+						? 'text-base-900 dark:text-base-100'
+						: 'text-base-700 hover:text-base-900 dark:text-base-300 dark:hover:text-base-100'}"
+					type="button"
+					on:click={() => {
+						if (machineServerId === server.id) {
+							machineServerId = '';
+							machineCwd = '';
+						} else {
+							machineServerId = server.id;
+						}
+						showDropdown = false;
+						onChange();
+					}}
+				>
+					<div class="flex flex-1 gap-2 items-center truncate">
+						<Cloud className="size-3.5 shrink-0" strokeWidth="2" />
+						<span class="truncate">{server.name || server.id}</span>
+					</div>
+					{#if machineServerId === server.id}
+						<div class="shrink-0 text-base-500 dark:text-base-400">
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								viewBox="0 0 20 20"
+								fill="currentColor"
+								class="size-3.5"
+							>
+								<path
+									fill-rule="evenodd"
+									d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z"
+									clip-rule="evenodd"
+								/>
+							</svg>
+						</div>
+					{/if}
+				</button>
+			{/each}
+
+			{#if machineServerId}
+				<div class="border-t border-base-100 dark:border-base-800 mt-1 pt-1">
+					<div class="px-2 py-0.5 text-[0.6875rem] text-base-500">
+						{$i18n.t('Working Directory')}
+					</div>
+					<div class="px-2">
+						<input
+							type="text"
+							bind:value={machineCwd}
+							placeholder="/home/user/project"
+							class="w-full bg-transparent outline-hidden text-[0.8125rem] py-1 placeholder:text-base-400 dark:placeholder:text-base-600"
+							on:click={(e) => e.stopPropagation()}
+							on:input={onChange}
+						/>
+					</div>
+				</div>
+			{/if}
+		</div>
+	</Dropdown>
+{/if}

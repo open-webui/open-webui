@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { getContext, onMount, onDestroy } from 'svelte';
-	import { gitRequest } from '$lib/apis/terminal/git';
-	import type { TerminalTarget } from '$lib/apis/terminal';
+	import { gitRequest } from '$lib/apis/machines/git';
+	import type { MachineTarget } from '$lib/apis/machines';
 	import Icon from '../FileNav/Icon.svelte';
 	import GitListDivider from './GitListDivider.svelte';
 	import Dropdown from '../../common/Dropdown.svelte';
@@ -16,7 +16,7 @@
 		relativeTime,
 		issuePrompt
 	} from './gitPanel';
-	export let target: TerminalTarget;
+	export let target: MachineTarget;
 
 	export let directory: string;
 	export let listWidth = 240;
@@ -216,17 +216,17 @@
 		style:--git-list-width={`${listWidth}px`}
 	>
 		<div
-			class="flex min-w-0 items-center gap-1.5 h-7 pl-2.5 pr-1 shrink-0 border-b border-gray-100/50 dark:border-white/2"
+			class="flex min-w-0 items-center gap-1.5 h-7 pl-2.5 pr-1 shrink-0 border-b border-base-100/50 dark:border-base-0/2"
 		>
-			<Icon name="search" size={12} class="shrink-0 text-gray-300 dark:text-gray-600" /><input
-				class="min-w-0 flex-1 bg-transparent text-[0.6875rem] text-gray-700 dark:text-gray-300 placeholder:text-gray-400 dark:placeholder:text-gray-600 outline-none"
+			<Icon name="search" size={12} class="shrink-0 text-base-300 dark:text-base-600" /><input
+				class="min-w-0 flex-1 bg-transparent text-[0.6875rem] text-base-700 dark:text-base-300 placeholder:text-base-400 dark:placeholder:text-base-600 outline-none"
 				aria-label={$i18n.t('Search issues')}
 				placeholder={$i18n.t('Search issues')}
 				bind:value={search}
 			/>
 			<Dropdown align="end" closeOnSelect>
 				<button
-					class="flex shrink-0 items-center gap-1 h-6 px-1.5 rounded-md text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors duration-75"
+					class="flex shrink-0 items-center gap-1 h-6 px-1.5 rounded-md text-base-400 dark:text-base-500 hover:text-base-700 dark:hover:text-base-300 transition-colors duration-75"
 					aria-label={$i18n.t('Filter issues')}
 					><span class="text-[0.6875rem]"
 						>{states.find((option) => option.value === state)?.label}</span
@@ -249,7 +249,7 @@
 			</Dropdown>
 			<Tooltip content={$i18n.t('New issue')}>
 				<button
-					class="flex items-center justify-center w-5 h-5 rounded shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+					class="flex items-center justify-center w-5 h-5 rounded shrink-0 text-base-400 hover:text-base-600 dark:hover:text-base-300"
 					aria-label={$i18n.t('New issue')}
 					on:click={startCreate}><Icon name="plus" size={12} /></button
 				>
@@ -257,27 +257,27 @@
 		</div>
 		{#if listError}<div
 				role="alert"
-				class="px-2.5 py-1.5 text-[0.6875rem] text-gray-500 dark:text-gray-400 break-words"
+				class="px-2.5 py-1.5 text-[0.6875rem] text-base-500 dark:text-base-400 break-words"
 			>
 				{listError}
 			</div>{/if}
 		<div class="min-h-0 flex-1 overflow-y-auto scrollbar-hidden">
 			{#each filtered as issue (issue.number)}<button
-					class="flex w-full min-w-0 flex-col px-2.5 py-1.5 text-left border-b border-gray-50/50 dark:border-white/2 transition-colors duration-75 {selected?.number ===
+					class="flex w-full min-w-0 flex-col px-2.5 py-1.5 text-left border-b border-base-50/50 dark:border-base-0/2 transition-colors duration-75 {selected?.number ===
 					issue.number
-						? 'bg-gray-100/40 dark:bg-gray-800/25'
-						: 'hover:bg-gray-100/30 dark:hover:bg-gray-800/20'}"
+						? 'bg-base-100/40 dark:bg-base-800/25'
+						: 'hover:bg-base-100/30 dark:hover:bg-base-800/20'}"
 					on:click={() => select(issue)}
-					><span class="w-full truncate text-xs text-gray-800 dark:text-gray-200"
+					><span class="w-full truncate text-xs text-base-800 dark:text-base-200"
 						>{issue.title}</span
-					><span class="w-full truncate text-[0.625rem] font-mono text-gray-400 dark:text-gray-600"
+					><span class="w-full truncate text-[0.625rem] font-mono text-base-400 dark:text-base-600"
 						>#{issue.number}{issue.author?.login ? ` · ${issue.author.login}` : ''}{issue.updatedAt
 							? ` · ${relativeTime(issue.updatedAt)}`
 							: ''}{issue.state !== 'OPEN' ? ` · ${status(issue)}` : ''}</span
 					></button
 				>{/each}
 			{#if !filtered.length}<div
-					class="flex h-full items-center justify-center p-3 text-center text-[0.6875rem] text-gray-400 dark:text-gray-600"
+					class="flex h-full items-center justify-center p-3 text-center text-[0.6875rem] text-base-400 dark:text-base-600"
 				>
 					{$i18n.t(listLoading ? 'Loading...' : search.trim() ? 'No results found' : 'No issues')}
 				</div>{/if}
@@ -291,7 +291,7 @@
 	>
 		{#if showingDetail}
 			<div
-				class="flex items-center gap-2 px-2 h-6 shrink-0 border-b border-gray-100/50 dark:border-white/2 text-[0.625rem] font-mono text-gray-400 dark:text-gray-600"
+				class="flex items-center gap-2 px-2 h-6 shrink-0 border-b border-base-100/50 dark:border-base-0/2 text-[0.625rem] font-mono text-base-400 dark:text-base-600"
 			>
 				<button class="@min-[560px]:hidden" aria-label={$i18n.t('Back to issues')} on:click={back}
 					><Icon name="chevron-left" size={12} /></button
@@ -301,13 +301,13 @@
 						: $i18n.t('New issue')}</span
 				>
 				{#if onDraft && selected && !creating && !editing && !loading}<button
-						class="flex shrink-0 items-center gap-1 h-5 px-1.5 rounded-md font-sans text-[0.625rem] text-gray-500 dark:text-gray-400 hover:bg-gray-100/50 hover:text-gray-800 dark:hover:bg-white/5 dark:hover:text-gray-200 transition-colors duration-75"
+						class="flex shrink-0 items-center gap-1 h-5 px-1.5 rounded-md font-sans text-[0.625rem] text-base-500 dark:text-base-400 hover:bg-base-100/50 hover:text-base-800 dark:hover:bg-base-0/5 dark:hover:text-base-200 transition-colors duration-75"
 						on:click={() => selected && onDraft?.(issuePrompt($i18n.t, selected))}
 						><Icon name="chat-plus" size={11} />{$i18n.t('Work on this')}</button
 					>{/if}
 				{#if selected && !creating && !editing}<Dropdown side="top" align="end" closeOnSelect
 						><button
-							class="flex items-center justify-center w-5 h-5 rounded shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+							class="flex items-center justify-center w-5 h-5 rounded shrink-0 text-base-400 hover:text-base-600 dark:hover:text-base-300"
 							aria-label={$i18n.t('Issue actions')}><Icon name="three-dots" size={12} /></button
 						>
 						<div slot="content">
@@ -342,7 +342,7 @@
 		{/if}
 		{#if error && showingDetail}<div
 				role="alert"
-				class="px-2.5 py-1.5 text-[0.6875rem] text-gray-500 dark:text-gray-400 break-words"
+				class="px-2.5 py-1.5 text-[0.6875rem] text-base-500 dark:text-base-400 break-words"
 			>
 				{error}
 			</div>{/if}
@@ -353,14 +353,14 @@
 			>
 				<div class="min-h-0 flex-1 overflow-y-auto scrollbar-hidden px-2">
 					<input
-						class="w-full h-7 px-1 bg-transparent text-[0.6875rem] text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600 outline-none"
+						class="w-full h-7 px-1 bg-transparent text-[0.6875rem] text-base-900 dark:text-base-0 placeholder:text-base-400 dark:placeholder:text-base-600 outline-none"
 						aria-label={$i18n.t('Issue title')}
 						placeholder={$i18n.t('Title')}
 						bind:value={title}
 						required
 					/>
 					<textarea
-						class="block w-full px-1 py-1 bg-transparent text-[0.6875rem] text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600 outline-none resize-none border-t border-gray-100/50 dark:border-white/2"
+						class="block w-full px-1 py-1 bg-transparent text-[0.6875rem] text-base-900 dark:text-base-0 placeholder:text-base-400 dark:placeholder:text-base-600 outline-none resize-none border-t border-base-100/50 dark:border-base-0/2"
 						aria-label={$i18n.t('Issue description')}
 						placeholder={$i18n.t('Description')}
 						rows="8"
@@ -368,7 +368,7 @@
 					></textarea>
 				</div>
 				<div
-					class="flex items-center justify-end gap-1 px-2 py-1.5 shrink-0 border-t border-gray-100/50 dark:border-white/2"
+					class="flex items-center justify-end gap-1 px-2 py-1.5 shrink-0 border-t border-base-100/50 dark:border-base-0/2"
 				>
 					<button
 						type="button"
@@ -386,7 +386,7 @@
 			</form>
 		{:else if selected}
 			{#if loading}<div
-					class="flex flex-1 items-center justify-center p-3 text-center text-[0.6875rem] text-gray-400 dark:text-gray-600"
+					class="flex flex-1 items-center justify-center p-3 text-center text-[0.6875rem] text-base-400 dark:text-base-600"
 				>
 					{$i18n.t('Loading...')}
 				</div>
@@ -394,34 +394,34 @@
 				<div class="min-h-0 flex-1 overflow-y-auto scrollbar-hidden">
 					<div class="px-2.5 py-2">
 						<dl class="grid grid-cols-[5rem_minmax(0,1fr)] gap-x-3 gap-y-1">
-							<dt class="text-gray-400 dark:text-gray-600">{$i18n.t('Author')}</dt>
-							<dd class="truncate text-gray-700 dark:text-gray-300">
+							<dt class="text-base-400 dark:text-base-600">{$i18n.t('Author')}</dt>
+							<dd class="truncate text-base-700 dark:text-base-300">
 								{selected.author?.login ?? $i18n.t('Unknown')}
 							</dd>
-							<dt class="text-gray-400 dark:text-gray-600">{$i18n.t('Status')}</dt>
-							<dd class="truncate text-gray-700 dark:text-gray-300">{status(selected)}</dd>
-							<dt class="text-gray-400 dark:text-gray-600">{$i18n.t('Assignees')}</dt>
-							<dd class="truncate text-gray-700 dark:text-gray-300">
+							<dt class="text-base-400 dark:text-base-600">{$i18n.t('Status')}</dt>
+							<dd class="truncate text-base-700 dark:text-base-300">{status(selected)}</dd>
+							<dt class="text-base-400 dark:text-base-600">{$i18n.t('Assignees')}</dt>
+							<dd class="truncate text-base-700 dark:text-base-300">
 								{people(selected.assignees)}
 							</dd>
-							<dt class="text-gray-400 dark:text-gray-600">{$i18n.t('Labels')}</dt>
-							<dd class="truncate text-gray-700 dark:text-gray-300">
+							<dt class="text-base-400 dark:text-base-600">{$i18n.t('Labels')}</dt>
+							<dd class="truncate text-base-700 dark:text-base-300">
 								{selected.labels?.map((item) => item.name).join(', ') || $i18n.t('None')}
 							</dd>
-							{#if selected.createdAt}<dt class="text-gray-400 dark:text-gray-600">
+							{#if selected.createdAt}<dt class="text-base-400 dark:text-base-600">
 									{$i18n.t('Opened')}
 								</dt>
-								<dd class="truncate font-mono text-[0.625rem] text-gray-700 dark:text-gray-300">
+								<dd class="truncate font-mono text-[0.625rem] text-base-700 dark:text-base-300">
 									{relativeTime(selected.createdAt)}
 								</dd>{/if}
 						</dl>
 						<div
-							class="mt-3 pb-1 text-[0.625rem] leading-none uppercase text-gray-400 dark:text-gray-600"
+							class="mt-3 pb-1 text-[0.625rem] leading-none uppercase text-base-400 dark:text-base-600"
 						>
 							{$i18n.t('Description')}
 						</div>
 						{#if selected.body?.trim()}<div
-								class="markdown-prose-xs max-w-none break-words text-gray-800 dark:text-gray-200"
+								class="markdown-prose-xs max-w-none break-words text-base-800 dark:text-base-200"
 							>
 								<Markdown
 									id={`issue-${selected.number}-body`}
@@ -430,32 +430,32 @@
 									allowEmbeds={false}
 									editCodeBlock={false}
 								/>
-							</div>{:else}<div class="text-xs text-gray-400 dark:text-gray-600">
+							</div>{:else}<div class="text-xs text-base-400 dark:text-base-600">
 								{$i18n.t('No description')}
 							</div>{/if}
 					</div>
 					{#if selected.comments?.length}<div
-							class="px-2.5 pt-2 pb-1 border-t border-gray-100/50 dark:border-white/2 text-[0.625rem] leading-none uppercase text-gray-400 dark:text-gray-600"
+							class="px-2.5 pt-2 pb-1 border-t border-base-100/50 dark:border-base-0/2 text-[0.625rem] leading-none uppercase text-base-400 dark:text-base-600"
 						>
 							{$i18n.t('Comments')}
 						</div>
 						{#each selected.comments as item, index}<div
-								class="group px-2.5 py-1.5 border-b border-gray-50/50 dark:border-white/2"
+								class="group px-2.5 py-1.5 border-b border-base-50/50 dark:border-base-0/2"
 							>
 								<div class="flex min-w-0 items-center gap-1.5 h-5">
 									<span
-										class="min-w-0 flex-1 truncate font-mono text-[0.625rem] text-gray-400 dark:text-gray-600"
+										class="min-w-0 flex-1 truncate font-mono text-[0.625rem] text-base-400 dark:text-base-600"
 										>{item.author?.login ?? $i18n.t('Unknown')}{item.createdAt
 											? ` · ${relativeTime(item.createdAt)}`
 											: ''}</span
 									>{#if onDraft && item.body?.trim()}<button
-											class="opacity-0 group-hover:opacity-100 focus:opacity-100 flex shrink-0 items-center gap-1 h-5 px-1.5 rounded-md font-sans text-[0.625rem] text-gray-500 dark:text-gray-400 hover:bg-gray-100/50 hover:text-gray-800 dark:hover:bg-white/5 dark:hover:text-gray-200 transition-colors duration-75"
+											class="opacity-0 group-hover:opacity-100 focus:opacity-100 flex shrink-0 items-center gap-1 h-5 px-1.5 rounded-md font-sans text-[0.625rem] text-base-500 dark:text-base-400 hover:bg-base-100/50 hover:text-base-800 dark:hover:bg-base-0/5 dark:hover:text-base-200 transition-colors duration-75"
 											on:click={() => selected && onDraft?.(commentPrompt(selected, item))}
 											><Icon name="chat-plus" size={11} />{$i18n.t('Add to chat')}</button
 										>{/if}
 								</div>
 								<div
-									class="markdown-prose-xs max-w-none break-words text-gray-800 dark:text-gray-200"
+									class="markdown-prose-xs max-w-none break-words text-base-800 dark:text-base-200"
 								>
 									<Markdown
 										id={`issue-${selected.number}-comment-${index}`}
@@ -468,11 +468,11 @@
 							</div>{/each}{/if}
 				</div>
 				<form
-					class="border-t border-gray-100/50 dark:border-white/2 px-2 pb-1.5 shrink-0"
+					class="border-t border-base-100/50 dark:border-base-0/2 px-2 pb-1.5 shrink-0"
 					on:submit|preventDefault={() => mutate('comment')}
 				>
 					<textarea
-						class="block w-full px-1 py-1.5 bg-transparent text-[0.6875rem] text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600 outline-none resize-none"
+						class="block w-full px-1 py-1.5 bg-transparent text-[0.6875rem] text-base-900 dark:text-base-0 placeholder:text-base-400 dark:placeholder:text-base-600 outline-none resize-none"
 						aria-label={$i18n.t('Comment')}
 						placeholder={$i18n.t('Leave a comment')}
 						rows="2"
@@ -506,7 +506,7 @@
 				</form>
 			{/if}
 		{:else}<div
-				class="flex h-full items-center justify-center p-3 text-center text-[0.6875rem] text-gray-400 dark:text-gray-600"
+				class="flex h-full items-center justify-center p-3 text-center text-[0.6875rem] text-base-400 dark:text-base-600"
 			>
 				{$i18n.t('Select an issue')}
 			</div>{/if}

@@ -6,8 +6,7 @@
 
 	import { formatFileSize, getLineCount, safeLinkUrl } from '$lib/utils';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
-	import { config, settings } from '$lib/stores';
-	import { getBackendConfig } from '$lib/apis';
+	import { settings } from '$lib/stores';
 	import { getKnowledgeById } from '$lib/apis/knowledge';
 	import { getFileById, getFileContentById } from '$lib/apis/files';
 
@@ -21,7 +20,7 @@
 
 	import Modal from './Modal.svelte';
 	import XMark from '../icons/XMark.svelte';
-	import Switch from './Switch.svelte';
+	import FileContextSwitch from './FileContextSwitch.svelte';
 	import Tooltip from './Tooltip.svelte';
 	import dayjs from 'dayjs';
 	import Spinner from './Spinner.svelte';
@@ -31,15 +30,12 @@
 	import PptxPreview from './PptxPreview.svelte';
 	import Reset from '../icons/Reset.svelte';
 
-	export let item;
+	export let item: any;
 	export let show = false;
 	export let edit = false;
 
-	let enableFullContent = false;
 	let loading = false;
 	let externalKnowledge = false;
-
-	const getCharacterCount = (text: string) => Array.from(text).length;
 
 	let isPDF = false;
 	let isAudio = false;
@@ -187,11 +183,6 @@
 		expandedContent = false;
 		docxData = null;
 		externalKnowledge = false;
-		if ($config?.file?.full_text_char_threshold === undefined) {
-			await getBackendConfig()
-				.then((value) => config.set(value))
-				.catch((error) => console.error('Error fetching file context settings:', error));
-		}
 		if (item?.type === 'collection') {
 			loading = true;
 
@@ -238,28 +229,17 @@
 		loadContent();
 	}
 
-	$: fullTextCharThreshold = $config?.file?.full_text_char_threshold ?? 0;
-	$: contentLength = getCharacterCount(item?.file?.data?.content ?? '');
-	$: automaticFullContent =
-		!externalKnowledge &&
-		(Boolean($config?.file?.full_context) ||
-			((item?.type === 'file' || item?.type === 'text') &&
-				fullTextCharThreshold > 0 &&
-				contentLength > 0 &&
-				contentLength <= fullTextCharThreshold));
-	$: enableFullContent = automaticFullContent || item?.context === 'full';
-
 	onMount(() => {
 		console.log(item);
 	});
 </script>
 
 <Modal ariaLabel={item?.name ?? $i18n.t('File')} bind:show size="lg">
-	<div class=" px-4.5 py-3.5 w-full flex flex-col justify-center dark:text-gray-400">
+	<div class=" px-4 py-3 w-full flex flex-col justify-center dark:text-base-400">
 		<div class=" pb-2">
 			<div class="flex items-start justify-between">
 				<div>
-					<div class=" font-normal text-lg dark:text-gray-100">
+					<div class="text-sm font-medium dark:text-base-100">
 						<a
 							href={item?.type === 'file'
 								? item?.url?.startsWith('http')
@@ -291,7 +271,7 @@
 
 			<div>
 				<div class="flex flex-col items-center md:flex-row gap-1 justify-between w-full">
-					<div class=" flex flex-wrap text-xs gap-1 text-gray-500">
+					<div class=" flex flex-wrap text-xs gap-1 text-base-500">
 						{#if item?.type === 'collection'}
 							{#if item?.type}
 								<div class="capitalize shrink-0">{$i18n.t('Knowledge Base')}</div>
@@ -342,40 +322,9 @@
 						{/if}
 					</div>
 
-					{#if edit && !loading && $config?.file?.full_text_char_threshold !== undefined}
+					{#if edit && !loading}
 						<div class=" self-end">
-							<Tooltip
-								content={automaticFullContent
-									? $config?.file?.full_context
-										? $i18n.t('Full text is always enabled by your administrator.')
-										: $i18n.t(
-												'This attachment fits within the full text threshold, so its entire text is included automatically.'
-											)
-									: enableFullContent
-										? $i18n.t(
-												'Inject the entire content as context for comprehensive processing, this is recommended for complex queries.'
-											)
-										: $i18n.t(
-												'Default to segmented retrieval for focused and relevant content extraction, this is recommended for most cases.'
-											)}
-							>
-								<div class="flex items-center gap-1.5 text-xs">
-									{#if enableFullContent}
-										{$i18n.t('Using Entire Document')}
-									{:else}
-										{$i18n.t('Using Focused Retrieval')}
-									{/if}
-									{#if !automaticFullContent}
-										<Switch
-											bind:state={enableFullContent}
-											ariaLabel={$i18n.t('Using Entire Document')}
-											on:change={(e) => {
-												item.context = e.detail ? 'full' : undefined;
-											}}
-										/>
-									{/if}
-								</div>
-							</Tooltip>
+							<FileContextSwitch bind:item {externalKnowledge} />
 						</div>
 					{/if}
 				</div>
@@ -398,12 +347,12 @@
 
 				{#if isAudio || isPDF || isExcel || isCode || isMarkdown || isDocx || isPptx}
 					<div
-						class="flex mb-2.5 scrollbar-none overflow-x-auto w-full border-b border-gray-50 dark:border-gray-850/30 text-center text-sm font-normal bg-transparent dark:text-gray-200"
+						class="flex mb-2.5 scrollbar-none overflow-x-auto w-full border-b border-base-50 dark:border-base-850/30 text-center text-sm font-normal bg-transparent dark:text-base-200"
 					>
 						<button
 							class="min-w-fit py-1.5 px-4 border-b {selectedTab === ''
 								? ' '
-								: ' border-transparent text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+								: ' border-transparent text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-base-0'} transition"
 							type="button"
 							on:click={() => {
 								selectedTab = '';
@@ -413,7 +362,7 @@
 						<button
 							class="min-w-fit py-1.5 px-4 border-b {selectedTab === 'preview'
 								? ' '
-								: ' border-transparent text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+								: ' border-transparent text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-base-0'} transition"
 							type="button"
 							on:click={() => {
 								selectedTab = 'preview';
@@ -428,7 +377,7 @@
 							<Tooltip content={$i18n.t('Reset view')}>
 								<button
 									aria-label={$i18n.t('Reset view')}
-									class="p-1.5 rounded-lg bg-white/80 dark:bg-gray-850/80 backdrop-blur-sm shadow-sm hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-500 dark:text-gray-400"
+									class="p-1.5 rounded-lg bg-base-0/80 dark:bg-base-850/80 backdrop-blur-sm shadow-sm hover:bg-base-100 dark:hover:bg-base-800 transition text-base-500 dark:text-base-400"
 									on:click={resetImageView}
 								>
 									<Reset className="size-4" />
@@ -461,7 +410,7 @@
 							</div>
 							{#if isTruncated}
 								<button
-									class="mt-1 text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition"
+									class="mt-1 text-xs text-base-500 hover:text-base-700 dark:hover:text-base-300 transition"
 									on:click={() => {
 										expandedContent = true;
 									}}
@@ -491,7 +440,7 @@
 							</div>
 							{#if isTruncated}
 								<button
-									class="mt-1 text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition"
+									class="mt-1 text-xs text-base-500 hover:text-base-700 dark:hover:text-base-300 transition"
 									on:click={() => {
 										expandedContent = true;
 									}}
@@ -555,7 +504,7 @@
 						{:else if docxData}
 							<DocxPreview data={docxData} className="h-[60vh]" />
 						{:else}
-							<div class="text-gray-500 text-sm p-4">{$i18n.t('No content available')}</div>
+							<div class="text-base-500 text-sm p-4">{$i18n.t('No content available')}</div>
 						{/if}
 					{:else if isPptx}
 						{#if pptxError}
@@ -569,7 +518,7 @@
 								className="h-[60vh]"
 							/>
 						{:else}
-							<div class="text-gray-500 text-sm p-4">{$i18n.t('No content available')}</div>
+							<div class="text-base-500 text-sm p-4">{$i18n.t('No content available')}</div>
 						{/if}
 					{:else}
 						<div class="max-h-96 overflow-scroll scrollbar-hidden text-xs whitespace-pre-wrap">
@@ -585,3 +534,10 @@
 		</div>
 	</div>
 </Modal>
+
+<style>
+	audio::-webkit-media-controls-enclosure,
+	audio::-webkit-media-controls-panel {
+		background-color: transparent;
+	}
+</style>

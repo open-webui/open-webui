@@ -80,7 +80,7 @@ class RatingData(BaseModel):
 
 
 class MetaData(BaseModel):
-    arena: Optional[bool] = None
+    strategy: Optional[str] = None
     chat_id: Optional[str] = None
     message_id: Optional[str] = None
     tags: Optional[list[str]] = None

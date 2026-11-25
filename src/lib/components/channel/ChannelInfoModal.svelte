@@ -102,8 +102,8 @@
 		bind:show
 	>
 		<div class="flex max-h-[calc(100dvh-3rem)] flex-col">
-			<div class="flex shrink-0 justify-between dark:text-gray-100 px-4 pt-3 mb-1">
-				<div class="self-center text-base">
+			<div class="flex shrink-0 justify-between dark:text-base-100 px-4 pt-3 mb-1">
+				<div class="text-sm font-medium self-center">
 					<div class="flex items-center gap-0.5 shrink-0">
 						{#if channel?.type === 'dm'}
 							<div class=" text-left self-center overflow-hidden w-full line-clamp-1 flex-1">
@@ -126,7 +126,7 @@
 				</div>
 				<button
 					aria-label={$i18n.t('Close')}
-					class="self-center rounded-lg py-1 text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 px-0"
+					class="self-center rounded-lg py-1 text-base-500 transition hover:text-base-700 dark:text-base-400 dark:hover:text-base-200 px-0"
 					on:click={() => {
 						show = false;
 					}}
@@ -136,7 +136,7 @@
 			</div>
 
 			<div
-				class="flex min-h-0 flex-col md:flex-row w-full px-3 pb-4 md:space-x-4 dark:text-gray-200"
+				class="flex min-h-0 flex-col md:flex-row w-full px-3 pb-4 md:space-x-4 dark:text-base-200"
 			>
 				<div class="flex min-h-0 flex-col w-full sm:flex-row sm:justify-center sm:space-x-6">
 					<form

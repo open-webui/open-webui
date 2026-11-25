@@ -5,7 +5,13 @@
 
 	onMount(() => {
 		const params = new URLSearchParams($page.url.searchParams);
-		params.set('settings', `admin:${$page.params.tab ?? 'general'}`);
+		const tab =
+			$page.params.tab === 'apps'
+				? 'integrations'
+				: $page.params.tab === 'videos'
+					? 'images'
+					: ($page.params.tab ?? 'general');
+		params.set('settings', `admin:${tab}`);
 		goto(`/?${params.toString()}`, { replaceState: true });
 	});
 </script>

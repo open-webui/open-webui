@@ -1,53 +1,34 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
-	import { decodeString } from '$lib/utils';
+	import { getCitationPreview } from '$lib/utils/citations';
 
-	const i18n = getContext('i18n');
+	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
-	export let id;
+	export let citation: any;
+	export let onClick: () => void = () => {};
 
-	export let title: string = 'N/A';
-
-	export let onClick: Function = () => {};
-
-	// Helper function to return only the domain from a URL
-	function getDomain(url: string): string {
-		const domain = url.replace('http://', '').replace('https://', '').split(/[/?#]/)[0];
-
-		if (domain.startsWith('www.')) {
-			return domain.slice(4);
-		}
-		return domain;
-	}
-
-	const getDisplayTitle = (title: string) => {
-		if (!title) return 'N/A';
-		if (title.length > 30) {
-			return title.slice(0, 15) + '...' + title.slice(-10);
-		}
-		return title;
-	};
-
-	// Helper function to check if text is a URL and return the domain
-	function formattedTitle(title: string): string {
-		if (title.startsWith('http')) {
-			return getDomain(title);
-		}
-
-		return title;
-	}
+	$: preview = getCitationPreview(citation);
 </script>
 
-{#if title !== 'N/A'}
-	<button
-		aria-label={$i18n.t('View source: {{title}}', { title: formattedTitle(decodeString(title)) })}
-		class="text-[0.625rem] w-fit translate-y-[2px] px-2 py-0.5 dark:bg-white/5 dark:text-white/80 dark:hover:text-white bg-gray-50 text-black/80 hover:text-black transition rounded-xl"
-		on:click={() => {
-			onClick(id);
-		}}
+<button
+	type="button"
+	aria-label={$i18n.t('View source: {{title}}', { title: preview.title })}
+	class="group flex h-full w-full flex-col px-3.5 py-2.5 text-left text-xs"
+	on:click={onClick}
+>
+	<div
+		class="max-w-full break-words text-[0.8125rem] leading-5 text-base-900 group-hover:underline dark:text-base-100"
 	>
-		<span class="line-clamp-1">
-			{getDisplayTitle(formattedTitle(decodeString(title)))}
-		</span>
-	</button>
-{/if}
+		{preview.title}
+	</div>
+	{#if preview.url || preview.page !== null}
+		<div class="max-w-full truncate text-base-500 dark:text-base-400">
+			{preview.url ?? $i18n.t('Page {{number}}', { number: preview.page })}
+		</div>
+	{/if}
+	{#if preview.passage}
+		<div class="mt-1 break-words line-clamp-3 text-base-600 dark:text-base-300">
+			{preview.passage}
+		</div>
+	{/if}
+</button>

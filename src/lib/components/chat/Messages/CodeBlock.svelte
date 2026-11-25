@@ -1,5 +1,4 @@
 <script lang="ts">
-	import hljs from 'highlight.js';
 	import { highlightCodeBlock } from '$lib/utils/codeHighlight';
 	import { toast } from 'svelte-sonner';
 	import { getContext, onMount, tick, onDestroy } from 'svelte';
@@ -459,7 +458,7 @@
 
 <div>
 	<div
-		class="relative {className} flex flex-col rounded-2xl border border-gray-100/30 dark:border-gray-850/30 my-0.5 overflow-clip"
+		class="relative {className} flex flex-col rounded-2xl border border-base-100/30 dark:border-base-850/30 my-0.5 overflow-clip"
 		dir="ltr"
 	>
 		{#if markdown?.allowRemoteContent !== false && ['mermaid', 'vega', 'vega-lite'].includes(lang)}
@@ -485,7 +484,7 @@
 			{/if}
 		{:else}
 			<div
-				class="sticky {stickyButtonsClassName} left-0 right-0 py-0.5 px-3.5 gap-2 flex items-center justify-end w-full z-10 text-xs text-black dark:text-white bg-white dark:bg-black"
+				class="sticky {stickyButtonsClassName} left-0 right-0 py-0.5 px-3.5 gap-2 flex items-center justify-end w-full z-10 text-xs text-base-1000 dark:text-base-0 bg-base-0 dark:bg-base-1000"
 			>
 				<div class="flex-1 truncate">
 					<Tooltip content={lang} placement="top-start">
@@ -495,10 +494,10 @@
 					</Tooltip>
 				</div>
 
-				<div class="flex max-w-full items-center gap-0.5 shrink-0 overflow-x-auto">
+				<div class="buttons flex max-w-full items-center gap-0.5 shrink-0 overflow-x-auto">
 					{#if isDiff && edit}
 						<button
-							class="flex h-6 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2 text-xs font-normal text-gray-600 transition-colors duration-100 hover:bg-gray-100/40 disabled:opacity-60 dark:text-gray-400 dark:hover:bg-white/5"
+							class="flex h-6 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2 text-xs font-normal text-base-600 transition-colors duration-100 hover:bg-base-100/40 disabled:opacity-60 dark:text-base-400 dark:hover:bg-base-0/5"
 							aria-pressed={editingDiff}
 							on:click={() => {
 								editingDiff = !editingDiff;
@@ -509,7 +508,7 @@
 						</button>
 					{/if}
 					<button
-						class="flex h-6 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2 text-xs font-normal text-gray-600 transition-colors duration-100 hover:bg-gray-100/40 disabled:opacity-60 dark:text-gray-400 dark:hover:bg-white/5"
+						class="flex h-6 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2 text-xs font-normal text-base-600 transition-colors duration-100 hover:bg-base-100/40 disabled:opacity-60 dark:text-base-400 dark:hover:bg-base-0/5"
 						on:click={collapseCodeBlock}
 					>
 						<div class=" -translate-y-[0.5px]">
@@ -524,13 +523,13 @@
 					{#if ($config?.features?.enable_code_execution ?? true) && (lang.toLowerCase() === 'python' || lang.toLowerCase() === 'py' || (lang === '' && checkPythonCode(code)))}
 						{#if executing}
 							<div
-								class="run-code-button flex h-6 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2 text-xs font-normal text-gray-600 transition-colors duration-100 hover:bg-gray-100/40 disabled:opacity-60 dark:text-gray-400 dark:hover:bg-white/5 cursor-not-allowed opacity-60"
+								class="run-code-button flex h-6 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2 text-xs font-normal text-base-600 transition-colors duration-100 hover:bg-base-100/40 disabled:opacity-60 dark:text-base-400 dark:hover:bg-base-0/5 cursor-not-allowed opacity-60"
 							>
 								{$i18n.t('Running')}
 							</div>
 						{:else if run && markdown?.allowRemoteContent !== false}
 							<button
-								class="run-code-button flex h-6 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2 text-xs font-normal text-gray-600 transition-colors duration-100 hover:bg-gray-100/40 disabled:opacity-60 dark:text-gray-400 dark:hover:bg-white/5"
+								class="run-code-button flex h-6 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2 text-xs font-normal text-base-600 transition-colors duration-100 hover:bg-base-100/40 disabled:opacity-60 dark:text-base-400 dark:hover:bg-base-0/5"
 								on:click={async () => {
 									code = _code;
 									await tick();
@@ -546,7 +545,7 @@
 
 					{#if save}
 						<button
-							class="save-code-button flex h-6 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2 text-xs font-normal text-gray-600 transition-colors duration-100 hover:bg-gray-100/40 disabled:opacity-60 dark:text-gray-400 dark:hover:bg-white/5"
+							class="save-code-button flex h-6 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2 text-xs font-normal text-base-600 transition-colors duration-100 hover:bg-base-100/40 disabled:opacity-60 dark:text-base-400 dark:hover:bg-base-0/5"
 							on:click={saveCode}
 						>
 							{saved ? $i18n.t('Saved') : $i18n.t('Save')}
@@ -554,13 +553,13 @@
 					{/if}
 
 					<button
-						class="copy-code-button flex h-6 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2 text-xs font-normal text-gray-600 transition-colors duration-100 hover:bg-gray-100/40 disabled:opacity-60 dark:text-gray-400 dark:hover:bg-white/5"
+						class="copy-code-button flex h-6 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2 text-xs font-normal text-base-600 transition-colors duration-100 hover:bg-base-100/40 disabled:opacity-60 dark:text-base-400 dark:hover:bg-base-0/5"
 						on:click={copyCode}>{copied ? $i18n.t('Copied') : $i18n.t('Copy')}</button
 					>
 
 					{#if preview && ['html', 'svg'].includes(lang) && $visibleControls['chat.code_preview']}
 						<button
-							class="run-code-button flex h-6 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2 text-xs font-normal text-gray-600 transition-colors duration-100 hover:bg-gray-100/40 disabled:opacity-60 dark:text-gray-400 dark:hover:bg-white/5"
+							class="run-code-button flex h-6 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2 text-xs font-normal text-base-600 transition-colors duration-100 hover:bg-base-100/40 disabled:opacity-60 dark:text-base-400 dark:hover:bg-base-0/5"
 							on:click={previewCode}
 						>
 							<div>
@@ -578,7 +577,7 @@
 						? ''
 						: 'rounded-b-2xl'} overflow-hidden"
 			>
-				<div class=" pt-6.5 bg-white dark:bg-black"></div>
+				<div class=" pt-6.5 bg-base-0 dark:bg-base-1000"></div>
 
 				{#if !collapsed}
 					{#if isDiff && !(edit && editingDiff)}
@@ -614,17 +613,20 @@
 								result) &&
 								'border-bottom-left-radius: 0px; border-bottom-right-radius: 0px;'}"><code
 								class="language-{lang} rounded-t-none whitespace-pre text-sm"
-								>{#if lang && hljs.getLanguage(lang)}{@html hljs.highlight(code, {
-										language: lang,
-										ignoreIllegals: true
-									}).value}{:else}{code}{/if}</code
+								>{#await import('highlight.js')}{code}{:then { default: hljs }}{#if lang && hljs.getLanguage(lang)}{@html hljs.highlight(
+											code,
+											{
+												language: lang,
+												ignoreIllegals: true
+											}
+										).value}{:else}{code}{/if}{:catch}{code}{/await}</code
 							></pre>
 					{/if}
 				{:else}
 					<div
-						class="bg-white dark:bg-black dark:text-white rounded-b-2xl! pt-1 pb-2 px-4 flex flex-col gap-2 text-xs"
+						class="bg-base-0 dark:bg-base-1000 dark:text-base-0 rounded-b-2xl! pt-1 pb-2 px-4 flex flex-col gap-2 text-xs"
 					>
-						<span class="text-gray-500 italic">
+						<span class="text-base-500 italic">
 							{$i18n.t('{{COUNT}} hidden lines', {
 								COUNT: (isDiff ? _code : code).split('\n').length
 							})}
@@ -636,22 +638,22 @@
 			{#if !collapsed}
 				<div
 					id="plt-canvas-{id}"
-					class="bg-gray-50 dark:bg-black dark:text-white max-w-full overflow-x-auto scrollbar-hidden"
+					class="bg-base-50 dark:bg-base-1000 dark:text-base-0 max-w-full overflow-x-auto scrollbar-hidden"
 				/>
 
 				{#if executing || stdout || stderr || result || files}
 					<div
-						class="bg-gray-50 dark:bg-black dark:text-white rounded-b-2xl! pt-2 pb-3 px-3.5 flex flex-col gap-2"
+						class="bg-base-50 dark:bg-base-1000 dark:text-base-0 rounded-b-2xl! pt-2 pb-3 px-3.5 flex flex-col gap-2"
 					>
 						{#if executing}
 							<div class=" ">
-								<div class=" text-gray-500 text-xs mb-1">{$i18n.t('STDOUT/STDERR')}</div>
+								<div class=" text-base-500 text-xs mb-1">{$i18n.t('STDOUT/STDERR')}</div>
 								<div class="text-sm">{$i18n.t('Running...')}</div>
 							</div>
 						{:else}
 							{#if stdout || stderr}
 								<div class=" ">
-									<div class=" text-gray-500 text-xs mb-1">{$i18n.t('STDOUT/STDERR')}</div>
+									<div class=" text-base-500 text-xs mb-1">{$i18n.t('STDOUT/STDERR')}</div>
 									<div
 										class="text-sm font-mono whitespace-pre-wrap {stdout?.split('\n')?.length > 100
 											? `max-h-96`
@@ -663,7 +665,7 @@
 							{/if}
 							{#if result || files}
 								<div class=" ">
-									<div class=" text-gray-500 text-xs mb-1">{$i18n.t('RESULT')}</div>
+									<div class=" text-base-500 text-xs mb-1">{$i18n.t('RESULT')}</div>
 									{#if result}
 										<div class="text-sm">{`${JSON.stringify(result)}`}</div>
 									{/if}

@@ -6,6 +6,7 @@
 
 	import { transcribeAudio } from '$lib/apis/audio';
 	import XMark from '$lib/components/icons/XMark.svelte';
+	import Spinner from '$lib/components/common/Spinner.svelte';
 
 	import dayjs from 'dayjs';
 
@@ -19,7 +20,7 @@
 	export let noiseSuppression = true;
 	export let autoGainControl = true;
 
-	export let className = ' p-2.5 w-full max-w-full';
+	export let className = 'w-full max-w-full';
 
 	export let confirmButtonId = 'confirm-recording-button';
 	export let onCancel = () => {};
@@ -136,6 +137,10 @@
 		const timeDomainData = new Uint8Array(analyser.fftSize);
 
 		let lastSoundTime = Date.now();
+		// One bar per interval (the loudest frame in it) keeps the waveform scrolling calmly.
+		const VISUALIZER_SAMPLE_MS = 40;
+		let lastSampleTime = 0;
+		let peakLevel = 0;
 
 		const detectSound = () => {
 			const processFrame = () => {
@@ -147,15 +152,21 @@
 
 					// Calculate RMS level from time domain data
 					const rmsLevel = calculateRMS(timeDomainData);
-					// Push the calculated decibel level to visualizerData
-					visualizerData.push(normalizeRMS(rmsLevel));
+					peakLevel = Math.max(peakLevel, normalizeRMS(rmsLevel));
 
-					// Ensure visualizerData array stays within the buffer length
-					if (visualizerData.length >= VISUALIZER_BUFFER_LENGTH) {
-						visualizerData.shift();
+					const now = performance.now();
+					if (now - lastSampleTime >= VISUALIZER_SAMPLE_MS) {
+						lastSampleTime = now;
+						visualizerData.push(peakLevel);
+						peakLevel = 0;
+
+						// Ensure visualizerData array stays within the buffer length
+						if (visualizerData.length >= VISUALIZER_BUFFER_LENGTH) {
+							visualizerData.shift();
+						}
+
+						visualizerData = visualizerData;
 					}
-
-					visualizerData = visualizerData;
 
 					// if (domainData.some((value) => value > 0)) {
 					// 	lastSoundTime = Date.now();
@@ -257,7 +268,7 @@
 
 			if (document.activeElement === document.body || !document.activeElement?.checkVisibility()) {
 				await tick();
-				document.getElementById(confirmButtonId)?.focus();
+				document.getElementById(confirmButtonId)?.focus({ preventScroll: true });
 			}
 
 			await requestWakeLock();
@@ -337,7 +348,7 @@
 						}
 
 						await tick();
-						document.getElementById('chat-input')?.focus();
+						document.getElementById('chat-input')?.focus({ preventScroll: true });
 
 						// Restart the inactivity timeout
 						timeoutId = setTimeout(() => {
@@ -475,51 +486,46 @@
 	});
 </script>
 
+<!-- Single-row card styled like the chat composer. -->
 <div
 	bind:this={containerElement}
 	bind:clientWidth={containerWidth}
-	class="{loading
-		? ' bg-gray-100/50 dark:bg-gray-850/50'
-		: 'bg-indigo-300/10 dark:bg-indigo-500/10 '} rounded-full flex justify-between {className}"
+	class="flex items-center gap-3 overflow-hidden rounded-3xl border border-base-200/60 bg-base-0/80 px-2 py-2 shadow-[0_6px_24px_-4px_rgba(0,0,0,0.1)] backdrop-blur-md dark:border-base-800/40 dark:bg-[color-mix(in_oklab,var(--color-base-850)_55%,var(--color-base-900))]/90 {className}"
 >
-	<div class="flex items-center mr-1">
-		<button
-			type="button"
-			class="p-1.5
+	<button
+		type="button"
+		class="flex size-[1.875rem] shrink-0 items-center justify-center rounded-full text-base-700 transition hover:bg-base-100/40 dark:text-base-0 dark:hover:bg-base-800/40"
+		aria-label={$i18n.t('Cancel')}
+		on:click={async () => {
+			cancelRecording();
+			onCancel();
+		}}
+	>
+		<XMark className="size-4" />
+	</button>
 
-            {loading
-				? ' bg-gray-200 dark:bg-gray-700/50'
-				: 'bg-indigo-400/20 text-indigo-600 dark:text-indigo-300 '} 
-
-
-             rounded-full"
-			aria-label={$i18n.t('Cancel')}
-			on:click={async () => {
-				cancelRecording();
-				onCancel();
-			}}
-		>
-			<XMark className={'size-4'} />
-		</button>
+	<div class="flex shrink-0 items-center gap-1.5">
+		<span
+			aria-hidden="true"
+			class="size-1.5 rounded-full {loading
+				? 'bg-base-300 dark:bg-base-600'
+				: 'animate-pulse bg-red-500'}"
+		></span>
+		<span class="text-[0.8125rem] tabular-nums text-base-600 dark:text-base-300">
+			{loading ? $i18n.t('Processing...') : formatSeconds(durationSeconds)}
+		</span>
 	</div>
 
-	<div
-		class="flex flex-1 self-center items-center justify-between ml-2 mx-1 overflow-hidden h-6"
-		dir="rtl"
-	>
+	<div class="flex h-6 min-w-0 flex-1 items-center overflow-hidden" dir="rtl">
 		<div
-			class="flex items-center gap-0.5 h-6 w-full max-w-full overflow-hidden overflow-x-hidden flex-wrap"
+			class="flex h-6 w-full max-w-full flex-wrap items-center gap-[3px] overflow-hidden transition-opacity {loading
+				? 'opacity-30'
+				: ''}"
 		>
 			{#each visualizerData.slice().reverse() as rms}
-				<div class="flex items-center h-full">
+				<div class="flex h-full items-center">
 					<div
-						class="w-[0.125rem] shrink-0
-                    
-                    {loading
-							? ' bg-gray-500 dark:bg-gray-400   '
-							: 'bg-indigo-500 dark:bg-indigo-400  '} 
-                    
-                    inline-block h-full"
+						class="inline-block h-full w-0.5 shrink-0 rounded-full bg-base-800 dark:bg-base-200"
 						style="height: {Math.min(100, Math.max(14, rms * 100))}%;"
 					/>
 				</div>
@@ -527,145 +533,30 @@
 		</div>
 	</div>
 
-	<div class="flex">
-		<div class="  mx-1.5 pr-1 flex justify-center items-center">
-			<div
-				class="text-sm
-        
-        
-        {loading ? ' text-gray-500  dark:text-gray-400  ' : ' text-indigo-400 '} 
-       font-normal flex-1 mx-auto text-center"
+	{#if loading}
+		<div class="flex size-[1.875rem] shrink-0 items-center justify-center text-base-500">
+			<Spinner className="size-4" />
+		</div>
+	{:else}
+		<button
+			id={confirmButtonId}
+			type="button"
+			aria-label={$i18n.t('Confirm recording')}
+			class="shrink-0 rounded-full bg-base-1000 p-[0.3125rem] text-base-0 transition hover:bg-base-900 dark:bg-base-0 dark:text-base-1000 dark:hover:bg-base-100"
+			on:click={async () => {
+				await confirmRecording();
+			}}
+		>
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				fill="none"
+				viewBox="0 0 24 24"
+				stroke-width="2.5"
+				stroke="currentColor"
+				class="size-5"
 			>
-				{formatSeconds(durationSeconds)}
-			</div>
-		</div>
-
-		<div class="flex items-center">
-			{#if loading}
-				<div class=" text-gray-500 rounded-full cursor-not-allowed">
-					<svg
-						width="24"
-						height="24"
-						viewBox="0 0 24 24"
-						xmlns="http://www.w3.org/2000/svg"
-						fill="currentColor"
-						><style>
-							.spinner_OSmW {
-								transform-origin: center;
-								animation: spinner_T6mA 0.75s step-end infinite;
-							}
-							@keyframes spinner_T6mA {
-								8.3% {
-									transform: rotate(30deg);
-								}
-								16.6% {
-									transform: rotate(60deg);
-								}
-								25% {
-									transform: rotate(90deg);
-								}
-								33.3% {
-									transform: rotate(120deg);
-								}
-								41.6% {
-									transform: rotate(150deg);
-								}
-								50% {
-									transform: rotate(180deg);
-								}
-								58.3% {
-									transform: rotate(210deg);
-								}
-								66.6% {
-									transform: rotate(240deg);
-								}
-								75% {
-									transform: rotate(270deg);
-								}
-								83.3% {
-									transform: rotate(300deg);
-								}
-								91.6% {
-									transform: rotate(330deg);
-								}
-								100% {
-									transform: rotate(360deg);
-								}
-							}
-						</style><g class="spinner_OSmW"
-							><rect x="11" y="1" width="2" height="5" opacity=".14" /><rect
-								x="11"
-								y="1"
-								width="2"
-								height="5"
-								transform="rotate(30 12 12)"
-								opacity=".29"
-							/><rect
-								x="11"
-								y="1"
-								width="2"
-								height="5"
-								transform="rotate(60 12 12)"
-								opacity=".43"
-							/><rect
-								x="11"
-								y="1"
-								width="2"
-								height="5"
-								transform="rotate(90 12 12)"
-								opacity=".57"
-							/><rect
-								x="11"
-								y="1"
-								width="2"
-								height="5"
-								transform="rotate(120 12 12)"
-								opacity=".71"
-							/><rect
-								x="11"
-								y="1"
-								width="2"
-								height="5"
-								transform="rotate(150 12 12)"
-								opacity=".86"
-							/><rect x="11" y="1" width="2" height="5" transform="rotate(180 12 12)" /></g
-						></svg
-					>
-				</div>
-			{:else}
-				<button
-					id={confirmButtonId}
-					type="button"
-					aria-label={$i18n.t('Confirm recording')}
-					class="p-1.5 bg-indigo-500 text-white dark:bg-indigo-500 dark:text-blue-950 rounded-full"
-					on:click={async () => {
-						await confirmRecording();
-					}}
-				>
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						fill="none"
-						viewBox="0 0 24 24"
-						stroke-width="2.5"
-						stroke="currentColor"
-						class="size-4"
-					>
-						<path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-					</svg>
-				</button>
-			{/if}
-		</div>
-	</div>
+				<path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+			</svg>
+		</button>
+	{/if}
 </div>
-
-<style>
-	.visualizer {
-		display: flex;
-		height: 100%;
-	}
-
-	.visualizer-bar {
-		width: 2px;
-		background-color: #4a5aba; /* or whatever color you need */
-	}
-</style>

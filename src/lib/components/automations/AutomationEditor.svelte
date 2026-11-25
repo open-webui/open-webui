@@ -1,12 +1,14 @@
 <script lang="ts">
 	import { getPageContext } from '$lib/utils/page';
-	const { goto, url: pageUrl } = getPageContext();
+	const { goto, url: pageUrl, tab: pageTab } = getPageContext();
 
 	import { formatSchedule } from '$lib/utils/schedule';
 	import { onMount, onDestroy, getContext, tick } from 'svelte';
 	import { toast } from 'svelte-sonner';
 
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
+	import SidebarIcon from '$lib/components/icons/Sidebar.svelte';
 	import { copyToClipboard } from '$lib/utils';
 	import type { AppLayoutContext } from '$lib/types';
 
@@ -14,19 +16,35 @@
 	import localizedFormat from 'dayjs/plugin/localizedFormat';
 	import type i18nType from '$lib/i18n';
 
-	import { WEBUI_NAME, baseModels, channels, folders, type AgentModel } from '$lib/stores';
-	import { getTerminalServers, type TerminalServer } from '$lib/apis/terminal';
+	import {
+		WEBUI_NAME,
+		baseModels,
+		channels,
+		config,
+		folders,
+		mobile,
+		showSidebar,
+		user,
+		type AgentModel
+	} from '$lib/stores';
+	import { getMachines, type MachineServer } from '$lib/apis/machines';
 	import { getFolders } from '$lib/apis/folders';
 	import { getChannels } from '$lib/apis/channels';
 
 	import {
 		getAutomationById,
+		updateAutomationAccessGrants,
 		toggleAutomationById,
 		runAutomationById,
 		deleteAutomationById,
 		getAutomationRuns,
 		getAutomationModels,
+		startsNew,
+		repliesInThread,
 		updateAutomationById,
+		regenerateAutomationToken,
+		getAutomationHookUrl,
+		getRunVariables,
 		type AutomationForm,
 		type AutomationResponse,
 		type AutomationRunModel
@@ -46,19 +64,33 @@
 	import ScheduleDropdown from '$lib/components/automations/ScheduleDropdown.svelte';
 	import ModelDropdown from '$lib/components/automations/ModelDropdown.svelte';
 	import DestinationDropdown from '$lib/components/automations/DestinationDropdown.svelte';
-	import TerminalDropdown from '$lib/components/automations/TerminalDropdown.svelte';
+	import MachineDropdown from '$lib/components/automations/MachineDropdown.svelte';
 	import Check from '$lib/components/icons/Check.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
+	import Dropdown from '$lib/components/common/Dropdown.svelte';
+	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
+	import LinkIcon from '$lib/components/icons/Link.svelte';
+	import WebhookDropdown from '$lib/components/automations/WebhookDropdown.svelte';
+	import InputVariablesModal from '$lib/components/chat/MessageInput/InputVariablesModal.svelte';
+	import AccessControlModal from '$lib/components/workspace/common/AccessControlModal.svelte';
 
 	dayjs.extend(localizedFormat);
 
 	const i18n: typeof i18nType = getContext('i18n');
-	const automationsLayout: any = getContext('automationsLayout');
 	const appLayout = getContext<AppLayoutContext | undefined>('appLayout');
 
 	export let automation: AutomationResponse;
 
 	let is_active = automation.is_active;
+
+	// Every run uses the owner's account, so only the owner changes what it does. Anyone it's
+	// shared with for editing renames, reschedules, pauses and runs it; viewers only look.
+	$: canEdit = automation.user_id === $user?.id;
+	$: canManage = canEdit || !!automation.write_access;
+	$: canShare = canEdit || $user?.role === 'admin';
+	let showAccessControlModal = false;
+	let accessGrants: any[] = [];
+	$: accessGrants = automation.access_grants ?? [];
 
 	let loading = false;
 	let showDeleteConfirm = false;
@@ -69,18 +101,41 @@
 	let prompt = '';
 	// Like the model editor's system prompt: a saved prompt starts collapsed.
 	let showPrompt = true;
+	// Collapsing (and its Show more / Show less toggle) only applies when the prompt is longer
+	// than the five-line preview; a hidden copy of the preview tells us whether it gets cut off.
+	let promptMeasureEl: HTMLDivElement | null = null;
+	let promptClamped = false;
+	const measurePrompt = () => {
+		if (!promptMeasureEl) return;
+		promptClamped = promptMeasureEl.scrollHeight > promptMeasureEl.clientHeight + 1;
+	};
+	$: if (promptMeasureEl) {
+		void prompt;
+		tick().then(measurePrompt);
+	}
+	onMount(() => {
+		const observer = new ResizeObserver(measurePrompt);
+		if (promptMeasureEl) observer.observe(promptMeasureEl);
+		return () => observer.disconnect();
+	});
 	let model_id = '';
 	let folder_id = '';
 	let target_type: 'chat' | 'channel' = 'chat';
 	let channel_id = '';
-	let terminalServerId = '';
-	let terminalCwd = '';
-	let terminalServers: TerminalServer[] = [];
+	let start_new = true;
+	let reply_in_thread = true;
+	let machineServerId = '';
+	let machineCwd = '';
+	let machines: MachineServer[] = [];
 	let agentModels: AgentModel[] = [];
 	let scheduleDropdown: ScheduleDropdown;
 	let scheduleTick = 0;
 	// The stored rule as the schedule fields rebuild it, so an untouched schedule is not a change.
 	let savedRrule = '';
+	let webhookEnabled = false;
+	let webhookAllowGet = false;
+	$: allowWebhook = !!$config?.features?.enable_automation_webhooks;
+	$: hookUrl = getAutomationHookUrl(automation);
 	let saving = false;
 	let fieldsReady = false;
 
@@ -91,8 +146,12 @@
 		folder_id = source.folder_id ?? '';
 		target_type = source.data.target?.type === 'channel' ? 'channel' : 'chat';
 		channel_id = source.data.target?.channel_id ?? '';
-		terminalServerId = source.data.terminal?.server_id ?? '';
-		terminalCwd = source.data.terminal?.cwd ?? '';
+		start_new = startsNew(source.data.target);
+		reply_in_thread = repliesInThread(source.data.target);
+		machineServerId = automationMachineOf(source.data)?.server_id ?? '';
+		machineCwd = automationMachineOf(source.data)?.cwd ?? '';
+		webhookEnabled = !!source.data.webhook;
+		webhookAllowGet = !!source.data.webhook?.allow_get;
 		await tick();
 		scheduleDropdown?.parseRrule(source.data.rrule);
 		savedRrule = scheduleDropdown?.buildRrule?.() ?? source.data.rrule;
@@ -109,21 +168,26 @@
 			(folder_id || '') !== (automation.folder_id ?? '') ||
 			target_type !== (automation.data.target?.type === 'channel' ? 'channel' : 'chat') ||
 			channel_id !== (automation.data.target?.channel_id ?? '') ||
-			terminalServerId !== (automation.data.terminal?.server_id ?? '') ||
-			terminalCwd.trim() !== (automation.data.terminal?.cwd ?? '') ||
-			rruleNow(scheduleTick) !== savedRrule);
+			start_new !== startsNew(automation.data.target) ||
+			reply_in_thread !== repliesInThread(automation.data.target) ||
+			machineServerId !== (automationMachineOf(automation.data)?.server_id ?? '') ||
+			machineCwd.trim() !== (automationMachineOf(automation.data)?.cwd ?? '') ||
+			rruleNow(scheduleTick) !== savedRrule ||
+			webhookEnabled !== !!automation.data.webhook ||
+			(webhookEnabled && webhookAllowGet !== !!automation.data.webhook?.allow_get));
 
-	// Agent models depend on the chosen terminal, as in the automation modal.
+	// Agent models depend on the chosen machine, as in the automation modal.
 	let modelRequest = 0;
-	$: void loadAgentModels(terminalServerId, terminalCwd, target_type);
-	async function loadAgentModels(terminalId: string, cwd: string, target: string) {
+	$: void loadAgentModels(machineServerId, machineCwd, target_type);
+	async function loadAgentModels(machineId: string, cwd: string, target: string) {
 		const request = ++modelRequest;
 		agentModels = [];
-		if (!terminalId || target !== 'chat') return;
+		// Only the owner picks the model, through the owner's machine.
+		if (!machineId || target !== 'chat' || automation.user_id !== $user?.id) return;
 		try {
 			const available = await getAutomationModels(
 				localStorage.token,
-				terminalId,
+				machineId,
 				cwd.trim(),
 				automation.id
 			);
@@ -142,9 +206,13 @@
 			toast.error($i18n.t('Channel is required'));
 			return;
 		}
+		const rrule = scheduleDropdown.buildRrule();
+		if (scheduleDropdown.frequency === 'CUSTOM' && !rrule.trim()) {
+			toast.error($i18n.t('Invalid value') + ': ' + $i18n.t('Custom schedule'));
+			return;
+		}
 		saving = true;
 		try {
-			const rrule = scheduleDropdown.buildRrule();
 			const form: AutomationForm = {
 				name: name.trim(),
 				folder_id: target_type === 'channel' ? null : folder_id || null,
@@ -153,10 +221,14 @@
 					model_id: model_id.trim(),
 					// An untouched schedule keeps its stored start date.
 					rrule: rrule === savedRrule ? automation.data.rrule : rrule,
-					terminal: terminalServerId
-						? { server_id: terminalServerId, cwd: terminalCwd.trim() || undefined }
+					webhook: webhookEnabled ? { allow_get: webhookAllowGet } : null,
+					machine: machineServerId
+						? { server_id: machineServerId, cwd: machineCwd.trim() || undefined }
 						: undefined,
-					target: target_type === 'channel' ? { type: 'channel', channel_id } : { type: 'chat' }
+					target:
+						target_type === 'channel'
+							? { type: 'channel', channel_id, new_thread: start_new, reply_in_thread }
+							: { type: 'chat', new_chat: start_new }
 				},
 				meta: automation.meta ?? undefined,
 				is_active
@@ -172,11 +244,15 @@
 		}
 	};
 
+	const RUNS_PAGE_SIZE = 20;
 	let runs: AutomationRunModel[] = [];
+	let runsDirection: 'desc' | 'asc' = 'desc';
 	let linkedRun: AutomationRunModel | null = null;
 	$: visibleRuns =
 		linkedRun && !runs.some((run) => run.id === linkedRun?.id)
-			? [...runs, linkedRun].sort((a, b) => b.created_at - a.created_at)
+			? [...runs, linkedRun].sort((a, b) =>
+					runsDirection === 'asc' ? a.created_at - b.created_at : b.created_at - a.created_at
+				)
 			: runs;
 	let linkedRunId = '';
 	let alive = true;
@@ -208,6 +284,8 @@
 	let runsLoading = false;
 	let hasMoreRuns = true;
 	let runsPage = 0;
+	// Bumped on every fresh load so a slower, older response can't overwrite a newer one.
+	let runsRequest = 0;
 	let foldersLoaded = false;
 	let channelsLoaded = false;
 
@@ -279,13 +357,39 @@
 		}
 	};
 
+	let showVariablesModal = false;
+	let runVariables: Record<string, any> = {};
+
 	const runNowHandler = async () => {
 		if (loading) return;
-		loading = true;
-		const res = await runAutomationById(localStorage.token, automation.id).catch((err) => {
+		runVariables = getRunVariables(automation.data.prompt);
+		// Variables are written into the owner's prompt; others run it with the defaults.
+		if (Object.keys(runVariables).length > 0 && canEdit) {
+			showVariablesModal = true;
+			return;
+		}
+		await run();
+	};
+
+	const regenerateHookUrlHandler = async () => {
+		const res = await regenerateAutomationToken(localStorage.token, automation.id).catch((err) => {
 			toast.error(`${err}`);
 			return null;
 		});
+		if (res) {
+			automation = res;
+			toast.success($i18n.t('New URL created. The old one no longer works.'));
+		}
+	};
+
+	const run = async (variables?: Record<string, any>) => {
+		loading = true;
+		const res = await runAutomationById(localStorage.token, automation.id, variables).catch(
+			(err) => {
+				toast.error(`${err}`);
+				return null;
+			}
+		);
 		if (res) {
 			automation = res;
 			toast.success($i18n.t('Automation triggered'));
@@ -319,41 +423,50 @@
 	};
 
 	const loadRuns = async (loadMore = false) => {
-		if (runsLoading || (!hasMoreRuns && loadMore)) return;
+		if (loadMore && (runsLoading || !hasMoreRuns)) return;
 
+		const request = loadMore ? runsRequest : ++runsRequest;
 		runsLoading = true;
 
-		if (!loadMore) {
-			runsPage = 0;
-			hasMoreRuns = true;
-		}
+		// hasMoreRuns keeps its value until the response arrives, so the "Automation created"
+		// row doesn't blink out on every reload.
+		if (!loadMore) runsPage = 0;
 
 		try {
 			const fetchedRuns =
-				(await getAutomationRuns(localStorage.token, automation.id, runsPage * 50, 50)) ?? [];
-			if (loadMore) {
-				runs = [...runs, ...fetchedRuns];
-			} else {
-				runs = fetchedRuns;
-			}
-
-			if (fetchedRuns.length < 50) {
-				hasMoreRuns = false;
-			}
+				(await getAutomationRuns(
+					localStorage.token,
+					automation.id,
+					runsPage * RUNS_PAGE_SIZE,
+					// One extra row tells us whether another page exists without an empty "Show more".
+					RUNS_PAGE_SIZE + 1,
+					runsDirection
+				)) ?? [];
+			if (request !== runsRequest) return;
+			const pageRuns = fetchedRuns.slice(0, RUNS_PAGE_SIZE);
+			runs = loadMore ? [...runs, ...pageRuns] : pageRuns;
+			hasMoreRuns = fetchedRuns.length > RUNS_PAGE_SIZE;
 			runsPage++;
 		} catch {
-			if (!loadMore) runs = [];
+			if (request !== runsRequest) return;
+			if (!loadMore) {
+				runs = [];
+				hasMoreRuns = false;
+			}
 		}
 		runsLoading = false;
 	};
 
-	const onScroll = (e: Event) => {
-		const target = e.target as HTMLElement;
-		if (target.scrollTop + target.clientHeight >= target.scrollHeight - 50) {
-			if (!runsLoading && hasMoreRuns) {
-				loadRuns(true);
-			}
-		}
+	let runsSortMenuOpen = false;
+	$: runsSortOptions = [
+		{ value: 'desc' as const, label: $i18n.t('Newest first') },
+		{ value: 'asc' as const, label: $i18n.t('Oldest first') }
+	];
+	const setRunsDirection = (direction: 'desc' | 'asc') => {
+		runsSortMenuOpen = false;
+		if (runsDirection === direction) return;
+		runsDirection = direction;
+		void loadRuns();
 	};
 
 	onMount(async () => {
@@ -363,33 +476,18 @@
 		showPrompt = !prompt.trim();
 		await ensureFolders();
 		await ensureChannels();
-		terminalServers = await getTerminalServers(localStorage.token).catch(() => []);
+		machines = await getMachines(localStorage.token).catch(() => []);
 		await loadRuns();
 	});
 
-	$: if (automation) {
-		automationsLayout?.setHeader({
-			itemName: automation.name,
-			actions: AutomationItemHeaderActions,
-			actionProps: {
-				loading,
-				dirty,
-				saving,
-				runNowHandler,
-				copyLinkHandler,
-				saveHandler,
-				duplicateHandler: () => (showCloneModal = true),
-				deleteHandler: () => (showDeleteConfirm = true)
-			}
-		});
-	}
 	import PageTitle from '$lib/components/common/PageTitle.svelte';
+	import { automationMachineOf } from '$lib/utils/machines';
 
 	const rowClass =
-		'flex h-7 items-center gap-2 rounded-lg px-2 transition-colors hover:bg-gray-50 dark:hover:bg-gray-850/50';
+		'flex h-7 items-center gap-2 rounded-lg px-2 transition-colors hover:bg-base-50 dark:hover:bg-base-850/50';
 	const labelClass =
-		'flex w-[5.375rem] shrink-0 items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400';
-	const valueClass = 'text-xs text-gray-700 dark:text-gray-300';
+		'flex w-[5.375rem] shrink-0 items-center gap-1.5 text-xs text-base-500 dark:text-base-400';
+	const valueClass = 'text-xs text-base-700 dark:text-base-300';
 </script>
 
 <!-- LICENSE covers this Open WebUI browser-title identifier.
@@ -402,10 +500,43 @@
 	title={$i18n.t('Delete automation?')}
 	on:confirm={deleteHandler}
 >
-	<div class="text-sm text-gray-500 truncate">
+	<div class="text-sm text-base-500 truncate">
 		{$i18n.t('This will delete')} <span class="">{automation.name}</span>.
 	</div>
 </DeleteConfirmDialog>
+
+<InputVariablesModal
+	bind:show={showVariablesModal}
+	variables={runVariables}
+	title={$i18n.t('Run {{name}}', { name: automation.name })}
+	onSave={(values) => run(values)}
+/>
+
+{#if canShare}
+	<AccessControlModal
+		bind:show={showAccessControlModal}
+		bind:accessGrants
+		accessRoles={['read', 'write']}
+		share={$user?.permissions?.sharing?.automations || $user?.role === 'admin'}
+		sharePublic={false}
+		shareUsers={($user?.permissions?.access_grants?.allow_users ?? true) || $user?.role === 'admin'}
+		allowGroups={($user?.permissions?.access_grants?.allow_groups ?? true) ||
+			$user?.role === 'admin'}
+		onChange={async () => {
+			try {
+				automation = await updateAutomationAccessGrants(
+					localStorage.token,
+					automation.id,
+					accessGrants
+				);
+				toast.success($i18n.t('Saved'));
+			} catch (error) {
+				accessGrants = automation.access_grants ?? [];
+				toast.error(`${error}`);
+			}
+		}}
+	/>
+{/if}
 
 <AutomationModal
 	bind:show={showCloneModal}
@@ -413,20 +544,69 @@
 	on:save={(e) => e.detail?.id && goto(`/automations/${e.detail.id}`)}
 />
 
-<div class="h-full overflow-y-auto scrollbar-hidden" on:scroll={onScroll}>
+<div class="h-full overflow-y-auto scrollbar-hidden">
 	<div class="w-full px-2.5 pb-12 md:px-3.5">
 		<!-- One centered column, like an issue: name, prompt, properties, then activity. -->
 		<div>
-			<input
-				class="w-full bg-transparent text-[0.9375rem] font-normal text-gray-800 outline-hidden placeholder:text-gray-400 dark:text-gray-200 dark:placeholder:text-gray-500"
-				bind:value={name}
-				aria-label={$i18n.t('Name')}
-				placeholder={$i18n.t('Automation name')}
-			/>
-			{#if showPrompt || !prompt.trim()}
+			<div class="flex h-8 items-center gap-1">
+				{#if $mobile && !pageTab}
+					<div class="{$showSidebar ? 'md:hidden' : ''} -ml-1 flex flex-none items-center">
+						<Tooltip content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}>
+							<button
+								id="sidebar-toggle-button"
+								class="flex size-7 items-center justify-center text-base-400 transition"
+								aria-label={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
+								on:click={() => {
+									showSidebar.set(!$showSidebar);
+								}}
+								type="button"
+							>
+								<SidebarIcon className="size-4" />
+							</button>
+						</Tooltip>
+					</div>
+				{/if}
+				<input
+					class="min-w-0 flex-1 bg-transparent text-[0.9375rem] font-normal text-base-800 outline-hidden placeholder:text-base-400 dark:text-base-200 dark:placeholder:text-base-500"
+					bind:value={name}
+					readonly={!canManage}
+					aria-label={$i18n.t('Name')}
+					placeholder={$i18n.t('Automation name')}
+				/>
+				<AutomationItemHeaderActions
+					{loading}
+					{dirty}
+					{saving}
+					runNowHandler={canManage ? runNowHandler : null}
+					{copyLinkHandler}
+					{saveHandler}
+					duplicateHandler={() => (showCloneModal = true)}
+					shareHandler={canShare ? () => (showAccessControlModal = true) : null}
+					deleteHandler={canShare ? () => (showDeleteConfirm = true) : null}
+				/>
+			</div>
+			{#if !canEdit}
+				<div class="mt-0.5 text-[0.6875rem] text-base-400 dark:text-base-500">
+					{$i18n.t('Shared by {{name}}', {
+						name: automation.user?.name ?? $i18n.t('Deleted User')
+					})}
+					· {canManage ? $i18n.t('Write') : $i18n.t('Read')}
+				</div>
+			{/if}
+			<div class="relative">
+				<div
+					bind:this={promptMeasureEl}
+					aria-hidden="true"
+					class="pointer-events-none invisible absolute inset-x-0 top-0 line-clamp-5 whitespace-pre-wrap break-words text-xs font-normal leading-relaxed"
+				>
+					{prompt}
+				</div>
+			</div>
+			{#if showPrompt || !promptClamped}
 				<Textarea
-					className="mt-1 w-full resize-none overflow-hidden bg-transparent text-xs font-normal leading-relaxed text-gray-500 outline-hidden placeholder:text-gray-400 dark:text-gray-400 dark:placeholder:text-gray-500"
+					className="mt-1 w-full resize-none overflow-hidden bg-transparent text-xs font-normal leading-relaxed text-base-500 outline-hidden placeholder:text-base-400 dark:text-base-400 dark:placeholder:text-base-500"
 					bind:value={prompt}
+					readonly={!canEdit}
 					rows={1}
 					ariaLabel={$i18n.t('Instructions')}
 					placeholder={$i18n.t('Enter prompt here.')}
@@ -439,14 +619,14 @@
 					on:click={() => {
 						showPrompt = true;
 					}}
-					class="mt-1 w-full cursor-text text-start line-clamp-5 whitespace-pre-wrap break-words text-xs font-normal leading-relaxed text-gray-500 dark:text-gray-400"
+					class="mt-1 w-full cursor-text text-start line-clamp-5 whitespace-pre-wrap break-words text-xs font-normal leading-relaxed text-base-500 dark:text-base-400"
 				>
 					{prompt}
 				</button>
 			{/if}
-			{#if prompt.trim()}
+			{#if promptClamped}
 				<button
-					class="mt-1 block text-xs text-gray-500 transition hover:text-gray-700 dark:hover:text-gray-300"
+					class="mt-1 block text-xs text-base-500 transition hover:text-base-700 dark:hover:text-base-300"
 					type="button"
 					aria-expanded={showPrompt}
 					on:click={() => {
@@ -457,7 +637,7 @@
 				</button>
 			{/if}
 
-			<div class="mt-6 mb-1 text-[0.6875rem] text-gray-400 dark:text-gray-500">
+			<div class="mt-6 mb-1 text-[0.6875rem] text-base-400 dark:text-base-500">
 				{$i18n.t('Properties')}
 			</div>
 			<div class="-mx-2">
@@ -475,6 +655,7 @@
 					>
 					<Switch
 						state={is_active}
+						disabled={!canManage}
 						on:change={toggleHandler}
 						ariaLabel={is_active ? $i18n.t('Active') : $i18n.t('Paused')}
 					/>
@@ -484,7 +665,7 @@
 					<span class={labelClass}
 						><Calendar className="size-3 shrink-0" />{$i18n.t('Schedule')}</span
 					>
-					<div class="min-w-0 flex-1">
+					<div class="min-w-0 flex-1" inert={!canManage || undefined}>
 						<ScheduleDropdown
 							bind:this={scheduleDropdown}
 							plain
@@ -495,9 +676,28 @@
 					</div>
 				</div>
 
+				{#if allowWebhook || automation.data.webhook}
+					<div class={rowClass}>
+						<span class={labelClass}
+							><LinkIcon className="size-3 shrink-0" />{$i18n.t('Webhook')}</span
+						>
+						<div class="min-w-0 flex-1" inert={!canEdit || undefined}>
+							<WebhookDropdown
+								bind:enabled={webhookEnabled}
+								bind:allowGet={webhookAllowGet}
+								url={webhookEnabled && automation.data.webhook ? hookUrl : ''}
+								onRegenerate={regenerateHookUrlHandler}
+								plain
+								side="bottom"
+								align="start"
+							/>
+						</div>
+					</div>
+				{/if}
+
 				<div class={rowClass}>
 					<span class={labelClass}><Sparkles className="size-3 shrink-0" />{$i18n.t('Model')}</span>
-					<div class="min-w-0 flex-1">
+					<div class="min-w-0 flex-1" inert={!canEdit || undefined}>
 						<ModelDropdown
 							bind:model_id
 							items={[...$baseModels, ...agentModels]}
@@ -512,11 +712,13 @@
 					<span class={labelClass}
 						><Folder className="size-3 shrink-0" />{$i18n.t('Destination')}</span
 					>
-					<div class="min-w-0 flex-1">
+					<div class="min-w-0 flex-1" inert={!canEdit || undefined}>
 						<DestinationDropdown
 							bind:target_type
 							bind:channel_id
 							bind:folder_id
+							bind:start_new
+							bind:reply_in_thread
 							folders={$folders}
 							channels={$channels}
 							plain
@@ -528,13 +730,13 @@
 
 				<div class={rowClass}>
 					<span class={labelClass}
-						><Icon name="terminal" size={12} class="shrink-0" />{$i18n.t('Terminal')}</span
+						><Icon name="terminal" size={12} class="shrink-0" />{$i18n.t('Machine')}</span
 					>
-					<div class="min-w-0 flex-1">
-						<TerminalDropdown
-							{terminalServers}
-							bind:terminalServerId
-							bind:terminalCwd
+					<div class="min-w-0 flex-1" inert={!canEdit || undefined}>
+						<MachineDropdown
+							{machines}
+							bind:machineServerId
+							bind:machineCwd
 							plain
 							side="bottom"
 							align="start"
@@ -542,7 +744,7 @@
 					</div>
 				</div>
 
-				<div class={rowClass}>
+				<div class={rowClass} class:hidden={!automation.data.rrule}>
 					<span class={labelClass}>
 						<svg
 							class="size-3 shrink-0"
@@ -562,8 +764,8 @@
 					-->
 					<span
 						class="min-w-0 flex-1 truncate text-xs {is_active
-							? 'text-gray-700 dark:text-gray-300'
-							: 'text-gray-400 dark:text-gray-500'}"
+							? 'text-base-700 dark:text-base-300'
+							: 'text-base-400 dark:text-base-500'}"
 						>{is_active
 							? formatNextRun(automation.next_runs?.[0] ?? automation.next_run_at)
 							: $i18n.t('Paused')}</span
@@ -571,7 +773,7 @@
 				</div>
 			</div>
 
-			<div class="mt-3 text-[0.6875rem] text-gray-400 dark:text-gray-500">
+			<div class="mt-3 text-[0.6875rem] text-base-400 dark:text-base-500">
 				{$i18n.t('Created {{date}}', { date: formatDate(automation.created_at) })} · {$i18n.t(
 					'Updated {{date}}',
 					{ date: formatDate(automation.updated_at) }
@@ -579,12 +781,51 @@
 			</div>
 		</div>
 
-		<!-- What happened: each run, newest first. -->
+		<!-- What happened: the latest runs (newest first by default), a page at a time. -->
 		<section class="mt-6">
-			<div class="mb-1 text-[0.6875rem] text-gray-400 dark:text-gray-500">
-				{$i18n.t('Activity')}
+			<div class="mb-1 flex items-center justify-between gap-2">
+				<div class="text-[0.6875rem] text-base-400 dark:text-base-500">
+					{$i18n.t('Activity')}
+				</div>
+				<Dropdown bind:show={runsSortMenuOpen} align="end" sideOffset={4}>
+					<Tooltip content={$i18n.t('Sort')}>
+						<button
+							type="button"
+							class="flex size-5 shrink-0 items-center justify-center rounded text-base-500 transition-colors duration-100 hover:text-base-800 dark:text-base-400 dark:hover:text-base-200"
+							aria-label={$i18n.t('Sort')}
+						>
+							<Icon name="sort" size={11} strokeWidth={1.4} />
+						</button>
+					</Tooltip>
+
+					<div slot="content">
+						<DropdownMenu className="min-w-[9.375rem]">
+							{#each runsSortOptions as option (option.value)}
+								<button
+									type="button"
+									class="flex h-7 w-full select-none items-center gap-2 rounded-lg px-2 text-xs transition hover:bg-base-50/40 dark:hover:bg-base-0/4"
+									on:click={() => setRunsDirection(option.value)}
+								>
+									<span class="flex-1 text-left">{option.label}</span>
+									{#if runsDirection === option.value}
+										<Check className="size-3 text-base-500 dark:text-base-400" />
+									{/if}
+								</button>
+							{/each}
+						</DropdownMenu>
+					</div>
+				</Dropdown>
 			</div>
 			<div class="-mx-2">
+				{#if runsDirection === 'asc'}
+					<div class="flex h-7 items-center gap-2 px-2 text-xs">
+						<Plus className="size-3 shrink-0 text-base-400 dark:text-base-500" strokeWidth="2" />
+						<span class="text-base-700 dark:text-base-300">{$i18n.t('Automation created')}</span>
+						<span class="shrink-0 tabular-nums text-base-400 dark:text-base-500"
+							>· {formatTime(automation.created_at)}</span
+						>
+					</div>
+				{/if}
 				{#if runsLoading && visibleRuns.length === 0}
 					<div class="flex px-2 py-3"><Spinner className="size-3.5" /></div>
 				{/if}
@@ -592,41 +833,49 @@
 					<button
 						id={run.id === linkedRun?.id ? 'inbox-automation-run' : undefined}
 						type="button"
-						class="flex h-7 w-full items-center gap-2 rounded-lg px-2 text-left text-xs transition-colors enabled:hover:bg-gray-50 dark:enabled:hover:bg-gray-850/50 {run.id ===
+						class="flex h-7 w-full items-center gap-2 rounded-lg px-2 text-left text-xs transition-colors enabled:hover:bg-base-50 dark:enabled:hover:bg-base-850/50 {run.id ===
 						linkedRun?.id
-							? 'bg-gray-50 dark:bg-gray-850/50'
+							? 'bg-base-50 dark:bg-base-850/50'
 							: ''}"
 						disabled={!run.chat_id}
 						on:click={() => openRun(run)}
 					>
 						<span
-							class="flex shrink-0 text-gray-400 dark:text-gray-500"
+							class="flex shrink-0 text-base-400 dark:text-base-500"
 							aria-label={run.status === 'success' ? $i18n.t('Succeeded') : $i18n.t('Failed')}
 						>
 							{#if run.status === 'success'}<Check className="size-3" />{:else}<XMark
 									className="size-3"
 								/>{/if}
 						</span>
-						<span class="min-w-0 truncate text-gray-700 dark:text-gray-300" title={run.error ?? ''}>
+						<span class="min-w-0 truncate text-base-700 dark:text-base-300" title={run.error ?? ''}>
 							{run.status === 'success'
 								? $i18n.t('Ran')
 								: run.error
 									? `${$i18n.t('Failed')}: ${run.error}`
 									: $i18n.t('Failed')}
 						</span>
-						<span class="shrink-0 tabular-nums text-gray-400 dark:text-gray-500"
+						<span class="shrink-0 tabular-nums text-base-400 dark:text-base-500"
 							>· {formatTime(run.created_at)}</span
 						>
 					</button>
 				{/each}
 				{#if runsLoading && runs.length > 0}
 					<div class="flex px-2 py-2"><Spinner className="size-3.5" /></div>
+				{:else if hasMoreRuns && runs.length > 0}
+					<button
+						type="button"
+						class="flex h-7 w-full items-center rounded-lg px-2 text-left text-xs text-base-500 transition-colors hover:bg-base-50 hover:text-base-700 dark:text-base-400 dark:hover:bg-base-850/50 dark:hover:text-base-300"
+						on:click={() => loadRuns(true)}
+					>
+						{$i18n.t('Show more')}
+					</button>
 				{/if}
-				{#if !hasMoreRuns || (!runsLoading && runs.length === 0)}
+				{#if runsDirection === 'desc' && (!hasMoreRuns || (!runsLoading && runs.length === 0))}
 					<div class="flex h-7 items-center gap-2 px-2 text-xs">
-						<Plus className="size-3 shrink-0 text-gray-400 dark:text-gray-500" strokeWidth="2" />
-						<span class="text-gray-700 dark:text-gray-300">{$i18n.t('Automation created')}</span>
-						<span class="shrink-0 tabular-nums text-gray-400 dark:text-gray-500"
+						<Plus className="size-3 shrink-0 text-base-400 dark:text-base-500" strokeWidth="2" />
+						<span class="text-base-700 dark:text-base-300">{$i18n.t('Automation created')}</span>
+						<span class="shrink-0 tabular-nums text-base-400 dark:text-base-500"
 							>· {formatTime(automation.created_at)}</span
 						>
 					</div>

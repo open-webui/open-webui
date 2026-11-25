@@ -7,7 +7,7 @@
 		canUseWebSearch,
 		isSettingsAdmin
 	} from '$lib/utils/settings-access';
-	import { config, settings, terminalServers, user, visibleControls } from '$lib/stores';
+	import { config, settings, machines, user, visibleControls } from '$lib/stores';
 	import { onMount, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { updateUserInfo } from '$lib/apis/users';
@@ -30,9 +30,9 @@
 	$: externalSettings = settingsValue !== null;
 	$: defaultSettings = ($config?.ui?.default_interface_settings ?? {}) as Record<string, any>;
 	// Defaults apply to every user, so they follow what the instance offers.
-	$: hasTerminal =
+	$: hasMachine =
 		$config?.features?.enable_tool_servers &&
-		(($terminalServers ?? []).some((server) => server.id) ||
+		(($machines ?? []).some((server) => server.id) ||
 			(externalSettings && $config?.features?.tether));
 
 	let backgroundImageUrl: string | null = null;
@@ -49,7 +49,7 @@
 	let splitLargeChunks = false;
 	let scrollOnBranchChange = true;
 	let scrollOnResponseGeneration = true;
-	let terminalFileDisplay: 'sidebar' | 'inline' = 'sidebar';
+	let machineFileDisplay: 'sidebar' | 'inline' = 'sidebar';
 	let userLocation = false;
 
 	// Interface
@@ -121,7 +121,7 @@
 	let iframeSandboxAllowSameOrigin = false;
 	let iframeSandboxAllowForms = true;
 	let iframeSandboxAllowDownloads = true;
-	let terminalPreviewAllowSameOrigin = false;
+	let machinePreviewAllowSameOrigin = false;
 
 	let showManageFloatingActionButtonsModal = false;
 	let showManageImageCompressionModal = false;
@@ -133,13 +133,13 @@
 	let showFontFamilyInput = false;
 	const settingRowClass = 'group/setting-row flex items-center justify-between gap-2.5';
 	const settingLabelClass =
-		'min-w-0 text-xs text-gray-600 group-has-[button[id$=-control]:enabled]/setting-row:cursor-pointer group-has-[button[id$=-control]:disabled]/setting-row:cursor-not-allowed transition-colors duration-150 group-hover/setting-row:text-gray-900 group-focus-within/setting-row:text-gray-900 dark:text-gray-400 dark:group-hover/setting-row:text-white dark:group-focus-within/setting-row:text-white';
+		'min-w-0 text-xs text-base-600 group-has-[button[id$=-control]:enabled]/setting-row:cursor-pointer group-has-[button[id$=-control]:disabled]/setting-row:cursor-not-allowed transition-colors duration-150 group-hover/setting-row:text-base-900 group-focus-within/setting-row:text-base-900 dark:text-base-400 dark:group-hover/setting-row:text-white dark:group-focus-within/setting-row:text-white';
 	const settingControlClass = 'flex shrink-0 items-center justify-end gap-1.5';
-	const sectionHeadingClass = 'mt-4 text-xs text-gray-600 dark:text-gray-500';
-	const firstSectionHeadingClass = 'text-xs text-gray-600 dark:text-gray-500';
-	const settingDescriptionClass = 'mt-1.5 text-[0.6875rem] text-gray-600 dark:text-gray-500';
+	const sectionHeadingClass = 'mt-4 text-xs text-base-600 dark:text-base-500';
+	const firstSectionHeadingClass = 'text-xs text-base-600 dark:text-base-500';
+	const settingDescriptionClass = 'mt-1.5 text-[0.6875rem] text-base-500 dark:text-base-500/80';
 	const actionButtonClass =
-		'text-xs text-gray-600 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-white';
+		'text-xs text-base-600 transition-colors hover:text-base-900 dark:text-base-400 dark:hover:text-base-0';
 
 	const hasSettingPath = (source: Record<string, any>, path: string) => {
 		let current: any = source;
@@ -375,7 +375,10 @@
 		splitLargeChunks = currentSettings?.splitLargeChunks ?? false;
 		scrollOnBranchChange = currentSettings?.scrollOnBranchChange ?? true;
 		scrollOnResponseGeneration = currentSettings?.scrollOnResponseGeneration ?? true;
-		terminalFileDisplay = currentSettings?.terminalFileDisplay === 'inline' ? 'inline' : 'sidebar';
+		machineFileDisplay =
+			(currentSettings?.machineFileDisplay ?? currentSettings?.terminalFileDisplay) === 'inline'
+				? 'inline'
+				: 'sidebar';
 
 		temporaryChatByDefault = currentSettings?.temporaryChatByDefault ?? false;
 		chatDirection = currentSettings?.chatDirection ?? 'auto';
@@ -386,7 +389,10 @@
 		iframeSandboxAllowSameOrigin = currentSettings?.iframeSandboxAllowSameOrigin ?? false;
 		iframeSandboxAllowForms = currentSettings?.iframeSandboxAllowForms ?? true;
 		iframeSandboxAllowDownloads = currentSettings?.iframeSandboxAllowDownloads ?? true;
-		terminalPreviewAllowSameOrigin = currentSettings?.terminalPreviewAllowSameOrigin ?? false;
+		machinePreviewAllowSameOrigin =
+			currentSettings?.machinePreviewAllowSameOrigin ??
+			currentSettings?.terminalPreviewAllowSameOrigin ??
+			false;
 
 		stylizedPdfExport = currentSettings?.stylizedPdfExport ?? true;
 
@@ -510,7 +516,7 @@
 			<div class=" flex items-center gap-2 px-1 pb-1">
 				<button
 					type="button"
-					class="rounded-lg p-1 transition outline-gray-200 hover:bg-gray-100 dark:outline-gray-700 dark:hover:bg-gray-800"
+					class="rounded-lg p-1 transition outline-base-200 hover:bg-base-100 dark:outline-base-700 dark:hover:bg-base-800"
 					on:click={() => {
 						textScale = Math.max(1, parseFloat(((textScale ?? 1) - 0.1).toFixed(2)));
 						setTextScaleHandler(textScale);
@@ -543,7 +549,7 @@
 
 				<button
 					type="button"
-					class="rounded-lg p-1 transition outline-gray-200 hover:bg-gray-100 dark:outline-gray-700 dark:hover:bg-gray-800"
+					class="rounded-lg p-1 transition outline-base-200 hover:bg-base-100 dark:outline-base-700 dark:hover:bg-base-800"
 					on:click={() => {
 						textScale = Math.min(1.5, parseFloat(((textScale ?? 1) + 0.1).toFixed(2)));
 						setTextScaleHandler(textScale);
@@ -588,7 +594,7 @@
 				<input
 					id="font-family-input"
 					aria-labelledby="font-family-label"
-					class="h-7 w-full rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-600 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-500 dark:focus:border-blue-500"
+					class="h-7 w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 text-xs text-base-700 outline-hidden transition-colors placeholder:text-base-600 focus:border-blue-400 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-300 dark:placeholder:text-base-500 dark:focus:border-blue-500"
 					type="text"
 					placeholder="Aptos"
 					bind:value={fontFamilyInput}
@@ -1510,7 +1516,7 @@
 	{$i18n.t('settings.personal.interface.showFilesOnTerminalSelect.label')}
 	{$i18n.t('settings.personal.interface.showFilesOnTerminalSelect.description')}
 	-->
-	{#if hasTerminal}
+	{#if hasMachine}
 		<div>
 			<div class={settingRowClass}>
 				<label
@@ -1518,7 +1524,7 @@
 					class={settingLabelClass}
 					for="terminal-file-display-label-control"
 				>
-					{$i18n.t('settings.personal.interface.terminalFileDisplay.label')}
+					{$i18n.t('settings.personal.interface.machineFileDisplay.label')}
 				</label>
 
 				<button
@@ -1526,18 +1532,18 @@
 					aria-labelledby="terminal-file-display-label terminal-file-display-state"
 					class={actionButtonClass}
 					on:click={() => {
-						terminalFileDisplay = terminalFileDisplay === 'inline' ? 'sidebar' : 'inline';
-						saveSettings({ terminalFileDisplay });
+						machineFileDisplay = machineFileDisplay === 'inline' ? 'sidebar' : 'inline';
+						saveSettings({ machineFileDisplay });
 					}}
 					type="button"
 				>
 					<span id="terminal-file-display-state">
-						{terminalFileDisplay === 'inline' ? $i18n.t('Inline') : $i18n.t('Sidebar')}
+						{machineFileDisplay === 'inline' ? $i18n.t('Inline') : $i18n.t('Sidebar')}
 					</span>
 				</button>
 			</div>
 			<p class={settingDescriptionClass}>
-				{$i18n.t('settings.personal.interface.terminalFileDisplay.description')}
+				{$i18n.t('settings.personal.interface.machineFileDisplay.description')}
 			</p>
 		</div>
 
@@ -1548,23 +1554,23 @@
 					class={settingLabelClass}
 					for="terminal-preview-allow-same-origin-label-control"
 				>
-					{$i18n.t('settings.personal.interface.terminalPreviewAllowSameOrigin.label')}
+					{$i18n.t('settings.personal.interface.machinePreviewAllowSameOrigin.label')}
 				</label>
 
 				<div class={settingControlClass}>
 					<Switch
 						ariaLabelledbyId="terminal-preview-allow-same-origin-label"
 						tooltip={true}
-						bind:state={terminalPreviewAllowSameOrigin}
-						inherited={isDefaultSetting('terminalPreviewAllowSameOrigin')}
+						bind:state={machinePreviewAllowSameOrigin}
+						inherited={isDefaultSetting('machinePreviewAllowSameOrigin')}
 						on:change={() => {
-							saveSettings({ terminalPreviewAllowSameOrigin });
+							saveSettings({ machinePreviewAllowSameOrigin });
 						}}
 					/>
 				</div>
 			</div>
 			<p class={settingDescriptionClass}>
-				{$i18n.t('settings.personal.interface.terminalPreviewAllowSameOrigin.description')}
+				{$i18n.t('settings.personal.interface.machinePreviewAllowSameOrigin.description')}
 			</p>
 		</div>
 	{/if}
@@ -2100,9 +2106,7 @@
 				type="button"
 			>
 				<span id="default-upload-mode-state">
-					{defaultUploadContext === 'full'
-						? $i18n.t('Using Entire Document')
-						: $i18n.t('Using Focused Retrieval')}
+					{defaultUploadContext === 'full' ? $i18n.t('Full text') : $i18n.t('Relevant passages')}
 				</span>
 			</button>
 		</div>

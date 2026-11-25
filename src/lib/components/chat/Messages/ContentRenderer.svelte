@@ -6,7 +6,8 @@
 		selectedComment
 	} from '$lib/components/comments/anchors';
 	import { config, user, mobile, settings, showEmbeds } from '$lib/stores';
-	import { onDestroy, onMount, tick, getContext } from 'svelte';
+	import { onDestroy, onMount, tick, getContext, setContext } from 'svelte';
+	import { writable } from 'svelte/store';
 	const i18n = getContext('i18n');
 
 	import Markdown from './Markdown.svelte';
@@ -14,6 +15,7 @@
 	import { getOutputText } from './structuredOutput';
 	import FloatingButtons from '../ContentRenderer/FloatingButtons.svelte';
 	import { createMessagesList, replaceOutsideCode } from '$lib/utils';
+	import { getCitations } from '$lib/utils/citations';
 
 	/**
 	 * Extracts all top-level <details>...</details> blocks from content,
@@ -110,31 +112,19 @@
 	let usingFloatingButtons = false;
 
 	let sourceIds = [];
+	/** @type {import('svelte/store').Writable<any[]>} */
+	const citations = writable([]);
+	setContext('citations', citations);
 	$: getSourceIds(sources);
 
 	const getSourceIds = (sources) => {
+		const showCitations = model?.info?.meta?.capabilities?.citations ?? true;
+		const sourceCitations = getCitations(sources);
+		citations.set(showCitations ? sourceCitations : []);
+		// Titles by citation number; numbers are shared across the chat, so there can be gaps.
 		const result = [];
-		const seenIds = new Set();
-		for (const source of sources ?? []) {
-			for (let index = 0; index < (source.document ?? []).length; index++) {
-				if (model?.info?.meta?.capabilities?.citations == false) {
-					result.push('N/A');
-					continue;
-				}
-				const metadata = source.metadata?.[index];
-				const id = metadata?.source ?? source?.source?.id ?? 'N/A';
-				if (seenIds.has(id)) {
-					continue;
-				}
-				seenIds.add(id);
-				if (metadata?.name) {
-					result.push(metadata.name);
-				} else if (id.startsWith('http://') || id.startsWith('https://')) {
-					result.push(id);
-				} else {
-					result.push(source?.source?.name ?? id);
-				}
-			}
+		for (const citation of sourceCitations) {
+			result[citation.number - 1] = showCitations ? citation.title : 'N/A';
 		}
 		sourceIds = result;
 	};

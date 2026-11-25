@@ -151,7 +151,7 @@
 	{#if side === 'right'}
 		<!-- svelte-ignore a11y_no_noninteractive_element_interactions, a11y_no_noninteractive_tabindex -->
 		<div
-			class="relative flex items-center justify-center group border-l border-gray-50 dark:border-gray-850/30 hover:border-gray-200 dark:hover:border-gray-800 transition z-20 bg-transparent p-0 appearance-none {subtleDivider
+			class="relative flex items-center justify-center group border-l border-base-50 dark:border-base-850/30 hover:border-base-200 dark:hover:border-base-800 transition z-20 bg-transparent p-0 appearance-none {subtleDivider
 				? 'border-transparent! outline-none!'
 				: ''}"
 			id={resizerId}
@@ -169,7 +169,7 @@
 			{#if subtleDivider}
 				<span
 					aria-hidden="true"
-					class="pointer-events-none absolute h-8 w-0.5 rounded-full bg-gray-300 dark:bg-gray-600 transition-opacity {isResizing
+					class="pointer-events-none absolute h-8 w-0.5 rounded-full bg-base-300 dark:bg-base-600 transition-opacity {isResizing
 						? 'opacity-100'
 						: 'opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100'}"
 				></span>
@@ -193,7 +193,7 @@
 	{#if side === 'left'}
 		<!-- svelte-ignore a11y_no_noninteractive_element_interactions, a11y_no_noninteractive_tabindex -->
 		<div
-			class="relative flex items-center justify-center group border-r border-gray-50 dark:border-gray-850/30 hover:border-gray-200 dark:hover:border-gray-800 transition z-20 bg-transparent p-0 appearance-none {subtleDivider
+			class="relative flex items-center justify-center group border-r border-base-50 dark:border-base-850/30 hover:border-base-200 dark:hover:border-base-800 transition z-20 bg-transparent p-0 appearance-none {subtleDivider
 				? 'border-transparent! outline-none!'
 				: ''}"
 			id={resizerId}
@@ -211,7 +211,7 @@
 			{#if subtleDivider}
 				<span
 					aria-hidden="true"
-					class="pointer-events-none absolute h-8 w-0.5 rounded-full bg-gray-300 dark:bg-gray-600 transition-opacity {isResizing
+					class="pointer-events-none absolute h-8 w-0.5 rounded-full bg-base-300 dark:bg-base-600 transition-opacity {isResizing
 						? 'opacity-100'
 						: 'opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100'}"
 				></span>

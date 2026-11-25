@@ -113,7 +113,7 @@ async def has_access(
     """
     Check if a user has the specified permission using an in-memory access_grants list.
 
-    Used for config-driven resources (arena models, tool servers) that store
+    Used for config-driven resources (router models, tool servers) that store
     access control as JSON config rather than in the access_grant DB table.
 
     Semantics:
@@ -224,10 +224,12 @@ _SHARING_PERMISSION_KEYS = {
     'skill': ('sharing.skills', 'sharing.public_skills', None),
     'note': ('sharing.notes', 'sharing.public_notes', None),
     'folder': ('sharing.folders', None, None),
+    'automation': ('sharing.automations', None, None),
     'channel': (None, 'sharing.public_channels', None),
     'calendar': (None, 'sharing.public_calendars', None),
     'shared_chat': (None, 'sharing.public_chats', 'sharing.open_chats'),
-    'terminal': (None, None, None),
+    'machine': (None, 'sharing.public_machines', None),  # not a grantable permission, so only admins can
+    'terminal': (None, None, None),  # former name of 'machine'
 }
 
 
@@ -297,7 +299,7 @@ async def validate_access_grants(
 ) -> list:
     """Reject unauthorized sharing changes before replacing any stored grants."""
     grants = normalize_access_grants(access_grants)
-    if resource_type == 'terminal' and any(grant['permission'] != 'read' for grant in grants):
+    if resource_type in ('machine', 'terminal') and any(grant['permission'] != 'read' for grant in grants):
         raise HTTPException(400, 'Template access grants must be read-only')
     allowed = await filter_allowed_access_grants(default_permissions, user_id, user_role, grants, resource_type, db=db)
     if len(allowed) != len(grants):

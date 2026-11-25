@@ -9,14 +9,14 @@ from open_webui.models.access_grants import AccessGrants
 from open_webui.models.config import Config
 from open_webui.utils.access_control import validate_access_grants
 from open_webui.utils.auth import get_verified_user
-from open_webui.utils.terminals import (
+from open_webui.utils.machines import (
     has_connection_write_access,
     get_connection,
     server_request,
-    template_terminal_id,
+    template_machine_id,
     template_connection,
-    get_terminal_context,
-    find_terminal_connection,
+    get_machine_context,
+    find_machine_connection,
 )
 
 router = APIRouter()
@@ -42,19 +42,19 @@ def path(template_id, suffix=''):
     return f'api/v1/terminals/templates/{quote(template_id, safe="")}{suffix}'
 
 
-async def changed(user_id, terminal_id, previous=()):
-    from open_webui.socket.main import emit_to_users
+async def changed(user_id, machine_id, previous=()):
+    from open_webui.utils.machines import notify_machines_changed
 
-    current = await AccessGrants.get_grants_by_resource('terminal', terminal_id)
+    current = await AccessGrants.get_grants_by_resource('machine', machine_id)
     recipients = {user_id}
     recipients.update(await AccessGrants.get_user_ids_by_access_grants([*previous, *current], 'read'))
-    await emit_to_users('events', {'data': {'type': 'terminals:changed'}}, list(recipients))
+    await notify_machines_changed(recipients)
 
 
 @router.get('/connections')
 async def management_connections(user=Depends(get_verified_user)):
     result = []
-    for connection in await Config.get('terminal_server.connections', []) or []:
+    for connection in await Config.get('machines.connections', []) or []:
         if connection.get('server_type') != 'orchestrator' or not connection.get('enabled', True):
             continue
         try:
@@ -82,97 +82,92 @@ async def create_template(body: CreateForm, user=Depends(get_verified_user)):
     row = await server_request(
         connection, 'api/v1/terminals/templates', method='POST', body={'id': str(body.id), 'data': body.data}
     )
-    selector = template_terminal_id(connection['id'], row['id'])
+    selector = template_machine_id(connection['id'], row['id'])
     try:
         await AccessGrants.set_access_grants(
-            'terminal', selector, [{'principal_type': 'user', 'principal_id': user.id, 'permission': 'read'}]
+            'machine', selector, [{'principal_type': 'user', 'principal_id': user.id, 'permission': 'read'}]
         )
     except Exception:
         await server_request(connection, path(row['id']), method='DELETE')
         raise
     await changed(user.id, selector)
-    return {**row, 'terminal_id': selector}
+    return {**row, 'machine_id': selector}
 
 
-@router.get('/{terminal_id}')
-async def get_template(terminal_id: str, user=Depends(get_verified_user)):
-    _, template = await template_connection(user, terminal_id, 'write')
+@router.get('/{machine_id}')
+async def get_template(machine_id: str, user=Depends(get_verified_user)):
+    _, template = await template_connection(user, machine_id, 'write')
     return template
 
 
-@router.patch('/{terminal_id}')
-async def update_template(terminal_id: str, body: dict, user=Depends(get_verified_user)):
-    connection, template = await template_connection(user, terminal_id, 'write')
+@router.patch('/{machine_id}')
+async def update_template(machine_id: str, body: dict, user=Depends(get_verified_user)):
+    connection, template = await template_connection(user, machine_id, 'write')
     result = await server_request(connection, path(template['id']), method='PATCH', body=body)
-    await changed(user.id, terminal_id)
+    await changed(user.id, machine_id)
     return result
 
 
-@router.delete('/{terminal_id}')
-async def delete_template(terminal_id: str, user=Depends(get_verified_user)):
-    connection, template = await template_connection(user, terminal_id, 'write')
-    previous = await AccessGrants.get_grants_by_resource('terminal', terminal_id)
+@router.delete('/{machine_id}')
+async def delete_template(machine_id: str, user=Depends(get_verified_user)):
+    connection, template = await template_connection(user, machine_id, 'write')
+    previous = await AccessGrants.get_grants_by_resource('machine', machine_id)
     result = await server_request(connection, path(template['id']), method='DELETE')
-    await AccessGrants.set_access_grants('terminal', terminal_id, [])
-    await changed(user.id, terminal_id, previous)
+    await AccessGrants.set_access_grants('machine', machine_id, [])
+    await changed(user.id, machine_id, previous)
     return result
 
 
-@router.get('/{terminal_id}/access')
-async def get_shares(terminal_id: str, user=Depends(get_verified_user)):
-    await template_connection(user, terminal_id, 'write')
+@router.get('/{machine_id}/access')
+async def get_shares(machine_id: str, user=Depends(get_verified_user)):
+    await template_connection(user, machine_id, 'write')
     return [
         grant
-        for grant in await AccessGrants.get_grants_by_resource('terminal', terminal_id)
+        for grant in await AccessGrants.get_grants_by_resource('machine', machine_id)
         if grant.permission == 'read'
     ]
 
 
-@router.post('/{terminal_id}/access')
-async def set_shares(terminal_id: str, body: ShareForm, user=Depends(get_verified_user)):
-    await template_connection(user, terminal_id, 'write')
-    if any(
-        g.get('principal_type') not in ('user', 'group') or g.get('principal_id') in (None, '', '*')
-        for g in body.access_grants
-    ):
-        raise HTTPException(400, 'Public terminal sharing is not allowed')
+@router.post('/{machine_id}/access')
+async def set_shares(machine_id: str, body: ShareForm, user=Depends(get_verified_user)):
+    await template_connection(user, machine_id, 'write')
     grants = await validate_access_grants(
-        await Config.get('user.permissions'), user.id, user.role, body.access_grants, resource_type='terminal'
+        await Config.get('user.permissions'), user.id, user.role, body.access_grants, resource_type='machine'
     )
-    previous = await AccessGrants.get_grants_by_resource('terminal', terminal_id)
-    await AccessGrants.set_access_grants('terminal', terminal_id, grants)
-    await changed(user.id, terminal_id, previous)
+    previous = await AccessGrants.get_grants_by_resource('machine', machine_id)
+    await AccessGrants.set_access_grants('machine', machine_id, grants)
+    await changed(user.id, machine_id, previous)
     return {'ok': True}
 
 
-@router.get('/{terminal_id}/instance')
+@router.get('/{machine_id}/instance')
 async def current_instance(
-    terminal_id: str,
+    machine_id: str,
     request: Request,
     chat_id: str | None = None,
     model_id: str | None = None,
     user=Depends(get_verified_user),
 ):
-    connection = await find_terminal_connection(
-        user, terminal_id, {'chat_id': chat_id, 'model_id': model_id}, request=request
+    connection = await find_machine_connection(
+        user, machine_id, {'chat_id': chat_id, 'model_id': model_id}, request=request
     )
     if not connection or not connection.get('template_id'):
         raise HTTPException(404, 'Template not found')
     result = await server_request(
         connection,
         path(connection['template_id'], '/instance'),
-        params={k: v for k, v in connection['terminal_context'].items() if v is not None},
+        params={k: v for k, v in connection['machine_context'].items() if v is not None},
     )
     return result
 
 
-@router.get('/{terminal_id}/instances')
-async def list_instances(terminal_id: str, user=Depends(get_verified_user)):
+@router.get('/{machine_id}/instances')
+async def list_instances(machine_id: str, user=Depends(get_verified_user)):
     from open_webui.models.chats import Chats
     from open_webui.models.models import Models
     from open_webui.models.users import Users
 
-    connection, template = await template_connection(user, terminal_id, 'write')
+    connection, template = await template_connection(user, machine_id, 'write')
     rows = await server_request(connection, path(template['id'], '/instances'))
     for row in rows:
         kind, _, value = (row.get('context_id') or '').partition(':')
@@ -191,39 +186,39 @@ async def list_instances(terminal_id: str, user=Depends(get_verified_user)):
     return rows
 
 
-async def instance_action(terminal_id, action, body, user):
-    connection, template = await template_connection(user, terminal_id, 'write')
-    context = get_terminal_context(template, body.user_id or user.id, body.model_dump(exclude_none=True))
+async def instance_action(machine_id, action, body, user):
+    connection, template = await template_connection(user, machine_id, 'write')
+    context = get_machine_context(template, body.user_id or user.id, body.model_dump(exclude_none=True))
     result = await server_request(
         connection,
         path(template['id'], '/instance' if action == 'delete' else '/' + action),
         method='DELETE' if action == 'delete' else 'POST',
         body=context,
     )
-    await changed(user.id, terminal_id)
+    await changed(user.id, machine_id)
     return result
 
 
-@router.post('/{terminal_id}/restart')
-async def restart(terminal_id: str, body: InstanceForm, user=Depends(get_verified_user)):
-    return await instance_action(terminal_id, 'restart', body, user)
+@router.post('/{machine_id}/restart')
+async def restart(machine_id: str, body: InstanceForm, user=Depends(get_verified_user)):
+    return await instance_action(machine_id, 'restart', body, user)
 
 
-@router.post('/{terminal_id}/stop')
-async def stop(terminal_id: str, body: InstanceForm, user=Depends(get_verified_user)):
-    return await instance_action(terminal_id, 'stop', body, user)
+@router.post('/{machine_id}/stop')
+async def stop(machine_id: str, body: InstanceForm, user=Depends(get_verified_user)):
+    return await instance_action(machine_id, 'stop', body, user)
 
 
-@router.post('/{terminal_id}/start')
-async def start(terminal_id: str, body: InstanceForm, user=Depends(get_verified_user)):
-    return await instance_action(terminal_id, 'start', body, user)
+@router.post('/{machine_id}/start')
+async def start(machine_id: str, body: InstanceForm, user=Depends(get_verified_user)):
+    return await instance_action(machine_id, 'start', body, user)
 
 
-@router.post('/{terminal_id}/reset')
-async def reset(terminal_id: str, body: InstanceForm, user=Depends(get_verified_user)):
-    return await instance_action(terminal_id, 'reset', body, user)
+@router.post('/{machine_id}/reset')
+async def reset(machine_id: str, body: InstanceForm, user=Depends(get_verified_user)):
+    return await instance_action(machine_id, 'reset', body, user)
 
 
-@router.delete('/{terminal_id}/instance')
-async def delete_instance(terminal_id: str, body: InstanceForm, user=Depends(get_verified_user)):
-    return await instance_action(terminal_id, 'delete', body, user)
+@router.delete('/{machine_id}/instance')
+async def delete_instance(machine_id: str, body: InstanceForm, user=Depends(get_verified_user)):
+    return await instance_action(machine_id, 'delete', body, user)

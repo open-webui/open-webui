@@ -13,8 +13,9 @@
 	import CheckCircle from '$lib/components/icons/CheckCircle.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import FullHeightIframe from '$lib/components/common/FullHeightIframe.svelte';
-	import MCPApp, { type MCPAppEmbed } from '$lib/components/chat/Messages/MCPApp.svelte';
+	import type { MCPAppEmbed } from '$lib/components/chat/Messages/MCPApp.svelte';
 	import { agentViewName, type AgentView } from '$lib/components/chat/Messages/agentViews';
+	import { toolCallLabel } from '$lib/components/chat/Messages/builtinToolLabels';
 
 	import { settings } from '$lib/stores';
 
@@ -28,6 +29,7 @@
 		attributes?: {
 			type?: string;
 			name?: string;
+			tool_id?: string;
 			display_label?: string;
 			running_label?: string;
 			done?: string;
@@ -167,48 +169,90 @@
 		const listed = count('list');
 		const webSearches = count('web');
 		const fetched = count('fetch');
+		const running = new Set(
+			tokens.flatMap((t) =>
+				t?.view &&
+				t.attributes?.done !== 'true' &&
+				!['rejected', 'failed', 'incomplete', 'pending', 'queued'].includes(
+					t.attributes?.status ?? ''
+				)
+					? [t.view.kind]
+					: []
+			)
+		);
 
 		const parts = [];
 		if (commands)
 			parts.push(
-				commands === 1
-					? $i18n.t('Ran 1 command')
-					: $i18n.t('Ran {{COUNT}} commands', { COUNT: commands })
+				running.has('command')
+					? commands === 1
+						? $i18n.t('Running 1 command')
+						: $i18n.t('Running {{COUNT}} commands', { COUNT: commands })
+					: commands === 1
+						? $i18n.t('Ran 1 command')
+						: $i18n.t('Ran {{COUNT}} commands', { COUNT: commands })
 			);
 		if (edited)
 			parts.push(
-				edited === 1
-					? $i18n.t('Edited 1 file')
-					: $i18n.t('Edited {{COUNT}} files', { COUNT: edited })
+				running.has('edit')
+					? edited === 1
+						? $i18n.t('Editing 1 file')
+						: $i18n.t('Editing {{COUNT}} files', { COUNT: edited })
+					: edited === 1
+						? $i18n.t('Edited 1 file')
+						: $i18n.t('Edited {{COUNT}} files', { COUNT: edited })
 			);
 		if (read)
 			parts.push(
-				read === 1 ? $i18n.t('Read 1 file') : $i18n.t('Read {{COUNT}} files', { COUNT: read })
+				running.has('read')
+					? read === 1
+						? $i18n.t('Reading 1 file')
+						: $i18n.t('Reading {{COUNT}} files', { COUNT: read })
+					: read === 1
+						? $i18n.t('Read 1 file')
+						: $i18n.t('Read {{COUNT}} files', { COUNT: read })
 			);
 		if (searches)
 			parts.push(
-				searches === 1
-					? $i18n.t('Searched code')
-					: $i18n.t('Searched code {{COUNT}} times', { COUNT: searches })
+				running.has('search')
+					? searches === 1
+						? $i18n.t('Searching code')
+						: $i18n.t('Searching code {{COUNT}} times', { COUNT: searches })
+					: searches === 1
+						? $i18n.t('Searched code')
+						: $i18n.t('Searched code {{COUNT}} times', { COUNT: searches })
 			);
 		if (listed)
 			parts.push(
-				listed === 1
-					? $i18n.t('Listed 1 directory')
-					: $i18n.t('Listed {{COUNT}} directories', { COUNT: listed })
+				running.has('list')
+					? listed === 1
+						? $i18n.t('Listing 1 directory')
+						: $i18n.t('Listing {{COUNT}} directories', { COUNT: listed })
+					: listed === 1
+						? $i18n.t('Listed 1 directory')
+						: $i18n.t('Listed {{COUNT}} directories', { COUNT: listed })
 			);
 		if (webSearches)
 			parts.push(
-				webSearches === 1
-					? $i18n.t('Searched the web')
-					: $i18n.t('Searched the web {{COUNT}} times', { COUNT: webSearches })
+				running.has('web')
+					? webSearches === 1
+						? $i18n.t('Searching the web')
+						: $i18n.t('Searching the web {{COUNT}} times', { COUNT: webSearches })
+					: webSearches === 1
+						? $i18n.t('Searched the web')
+						: $i18n.t('Searched the web {{COUNT}} times', { COUNT: webSearches })
 			);
 		if (fetched)
 			parts.push(
-				fetched === 1
-					? $i18n.t('Fetched 1 page')
-					: $i18n.t('Fetched {{COUNT}} pages', { COUNT: fetched })
+				running.has('fetch')
+					? fetched === 1
+						? $i18n.t('Fetching 1 page')
+						: $i18n.t('Fetching {{COUNT}} pages', { COUNT: fetched })
+					: fetched === 1
+						? $i18n.t('Fetched 1 page')
+						: $i18n.t('Fetched {{COUNT}} pages', { COUNT: fetched })
 			);
+
 		return parts.join(', ');
 	})();
 
@@ -251,9 +295,13 @@
 				token.attributes?.status ?? ''
 			)
 				? ''
-				: token.attributes?.done === 'true'
-					? token.attributes?.display_label
-					: token.attributes?.running_label
+				: toolCallLabel(
+						token.attributes,
+						token.attributes?.done === 'true',
+						token.attributes?.status === 'failed' ||
+							(token.attributes?.done === 'true' && isToolResultError(decode(token.text ?? ''))),
+						$i18n.t
+					)
 		);
 	$: toolNames = tokens
 		.filter((token) => token.attributes?.type === 'tool_calls')
@@ -274,7 +322,7 @@
 			tabindex="0"
 			class="flex-1 min-w-0 py-0.5 text-left {compactPreview
 				? 'text-xs'
-				: 'text-[0.90625rem]'} text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition cursor-pointer"
+				: 'text-[0.90625rem]'} text-base-500 hover:text-base-700 dark:hover:text-base-300 transition cursor-pointer"
 			aria-label={$i18n.t('Toggle details')}
 			aria-expanded={open}
 			on:click={() => {
@@ -306,7 +354,7 @@
 						<CheckCircle className="size-4" strokeWidth="2" />
 					</div>
 				{:else}
-					<div class="text-gray-400 dark:text-gray-500">
+					<div class="text-base-400 dark:text-base-500">
 						<Sparkles className="size-3.5" />
 					</div>
 				{/if}
@@ -315,22 +363,22 @@
 				<div class="flex-1 line-clamp-1">
 					{#if groupLabel}
 						<span
-							class="text-gray-400 dark:text-gray-500 {hasActiveDetails ? 'shimmer' : ''}"
+							class="text-base-400 dark:text-base-500 {hasActiveDetails ? 'shimmer' : ''}"
 							title={`${prefixText} ${summaryText}`}>{groupLabel}</span
 						>
 					{:else if actionText}
-						<span class="text-gray-500 dark:text-gray-400 {hasActiveDetails ? 'shimmer' : ''}"
+						<span class="text-base-500 dark:text-base-400 {hasActiveDetails ? 'shimmer' : ''}"
 							>{actionText}</span
 						>
 						{#if summaryText}
-							<span class="text-gray-400 dark:text-gray-500">{summaryText}</span>
+							<span class="text-base-400 dark:text-base-500">{summaryText}</span>
 						{/if}
 					{:else}
-						<span class="text-gray-600 dark:text-gray-300 {hasActiveDetails ? 'shimmer' : ''}"
+						<span class="text-base-600 dark:text-base-300 {hasActiveDetails ? 'shimmer' : ''}"
 							>{prefixText}</span
 						>
 						{#if summaryText}
-							<span class="text-gray-400 dark:text-gray-500">{summaryText}</span>
+							<span class="text-base-400 dark:text-base-500">{summaryText}</span>
 						{/if}
 					{/if}
 				</div>
@@ -340,7 +388,7 @@
 					<span class="flex gap-1 shrink-0">
 						<button
 							type="button"
-							class="tool-call-allow-button text-[0.6875rem] px-2.5 py-0.5 rounded-md text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-white/8 hover:bg-gray-200 dark:hover:bg-white/12 transition-colors duration-100 disabled:opacity-50"
+							class="tool-call-allow-button text-[0.6875rem] px-2.5 py-0.5 rounded-md text-base-600 dark:text-base-300 bg-base-100 dark:bg-base-0/8 hover:bg-base-200 dark:hover:bg-base-0/12 transition-colors duration-100 disabled:opacity-50"
 							disabled={!pendingCallId || resolvingCallId === pendingCallId}
 							on:click|stopPropagation={() => onResolve(pendingCallId, true)}
 						>
@@ -348,7 +396,7 @@
 						</button>
 						<button
 							type="button"
-							class="tool-call-deny-button text-[0.6875rem] px-2 py-0.5 rounded-md text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-100 disabled:opacity-50"
+							class="tool-call-deny-button text-[0.6875rem] px-2 py-0.5 rounded-md text-base-400 dark:text-base-500 hover:text-base-600 dark:hover:text-base-300 transition-colors duration-100 disabled:opacity-50"
 							disabled={!pendingCallId || resolvingCallId === pendingCallId}
 							on:click|stopPropagation={() => onResolve(pendingCallId, false)}
 						>
@@ -357,7 +405,7 @@
 					</span>
 				{:else}
 					<!-- Chevron -->
-					<div class="flex shrink-0 self-center text-gray-400 dark:text-gray-500">
+					<div class="flex shrink-0 self-center text-base-400 dark:text-base-500">
 						{#if open}
 							<ChevronUp strokeWidth="3.5" className="size-3" />
 						{:else}
@@ -374,14 +422,14 @@
 			{#each pendingToolTokens as token}
 				{@const pendingCallId = token?.attributes?.id ?? ''}
 				<div class="flex items-center gap-2 py-1 px-1">
-					<span class="text-xs text-gray-500 dark:text-gray-400 flex-1 min-w-0 line-clamp-1">
+					<span class="text-xs text-base-500 dark:text-base-400 flex-1 min-w-0 line-clamp-1">
 						{token?.attributes?.name ?? $i18n.t('tool')}
 					</span>
 					{#if token?.attributes?.name !== 'ask_user'}
 						<span class="flex gap-1 shrink-0">
 							<button
 								type="button"
-								class="tool-call-allow-button text-[0.6875rem] px-2.5 py-0.5 rounded-md text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-white/8 hover:bg-gray-200 dark:hover:bg-white/12 transition-colors duration-100 disabled:opacity-50"
+								class="tool-call-allow-button text-[0.6875rem] px-2.5 py-0.5 rounded-md text-base-600 dark:text-base-300 bg-base-100 dark:bg-base-0/8 hover:bg-base-200 dark:hover:bg-base-0/12 transition-colors duration-100 disabled:opacity-50"
 								disabled={!pendingCallId || resolvingCallId === pendingCallId}
 								on:click={() => onResolve(pendingCallId, true)}
 							>
@@ -389,7 +437,7 @@
 							</button>
 							<button
 								type="button"
-								class="tool-call-deny-button text-[0.6875rem] px-2 py-0.5 rounded-md text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-100 disabled:opacity-50"
+								class="tool-call-deny-button text-[0.6875rem] px-2 py-0.5 rounded-md text-base-400 dark:text-base-500 hover:text-base-600 dark:hover:text-base-300 transition-colors duration-100 disabled:opacity-50"
 								disabled={!pendingCallId || resolvingCallId === pendingCallId}
 								on:click={() => onResolve(pendingCallId, false)}
 							>
@@ -414,7 +462,9 @@
 		{#each allEmbeds as embedItem, idx}
 			<div id={`${id}-embed-${idx}`}>
 				{#if typeof embedItem.embed === 'object' && embedItem.embed?.type === 'mcp_app'}
-					{#key JSON.stringify(embedItem.embed)}<MCPApp app={embedItem.embed} />{/key}
+					{#key JSON.stringify(embedItem.embed)}{#await import('$lib/components/chat/Messages/MCPApp.svelte') then { default: MCPApp }}<MCPApp
+								app={embedItem.embed}
+							/>{/await}{/key}
 				{:else if typeof embedItem.embed === 'string'}
 					<FullHeightIframe
 						src={embedItem.embed}

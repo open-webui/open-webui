@@ -8,12 +8,14 @@ IMPORTANT: DO NOT IMPORT THIS MODULE DIRECTLY IN OTHER PARTS OF THE CODEBASE.
 
 import asyncio
 import logging
+import ntpath
 import time
 from typing import Literal, Optional
 from urllib.parse import unquote
 
 from fastapi import HTTPException, Request
 
+from open_webui.utils.machines import automation_machine_of, is_machine_ref, machine_id_of, strip_machine_prefix
 from open_webui.env import (
     KNOWLEDGE_GREP_MAX_MATCHES,
     VIEW_FILE_DEFAULT_MAX_CHARS,
@@ -21,13 +23,14 @@ from open_webui.env import (
 )
 from open_webui.events import EVENTS, publish_event
 from open_webui.models.channels import Channel, ChannelMember, Channels
+from open_webui.models.chat_messages import ChatMessages
 from open_webui.models.chats import Chats, chat_search_content_query, chat_search_terms
 from open_webui.models.config import Config
 from open_webui.models.groups import Groups
 from open_webui.models.memories import Memories
 from open_webui.models.messages import Message, Messages
 from open_webui.models.notes import NotePageConflict, Notes, get_content_files, get_page, matching_page
-from open_webui.models.users import UserModel, Users
+from open_webui.models.users import UserModel, Users, UserSettings
 from open_webui.retrieval.utils import filter_source_metadata, get_content_from_url
 from open_webui.retrieval.vector.async_client import ASYNC_VECTOR_DB_CLIENT
 from open_webui.routers.images import (
@@ -69,32 +72,17 @@ from open_webui.socket.main import close_changed_note_documents, sio
 from open_webui.tools.visualizations import render_visualization  # noqa: F401 — re-exported
 from open_webui.tools.knowledge_fs import kb_exec  # noqa: F401 — re-exported
 from open_webui.utils.access_control.files import has_access_to_note_files
+from open_webui.utils.access_control.notes import has_note_access
 from open_webui.utils.chat_id import is_saved_chat_id
 from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.notifications import notify_target
 from open_webui.utils.sanitize import sanitize_code
 from open_webui.utils.skill_files import SkillFile, SkillFileOperation, skill_content_page, skill_overview
-from open_webui.utils.terminals import get_terminal_file, upload_files_to_terminal
+from open_webui.utils.machines import get_machine_file, upload_files_to_machine
 
 log = logging.getLogger(__name__)
 
 MAX_KNOWLEDGE_BASE_SEARCH_ITEMS = 10_000
-
-
-async def _has_write_access_to_note(note, user_id: str) -> bool:
-    if note.user_id == user_id:
-        return True
-
-    from open_webui.models.access_grants import AccessGrants
-
-    user_group_ids = [group.id for group in await Groups.get_groups_by_member_id(user_id, include_inherited=True)]
-    return await AccessGrants.has_access(
-        user_id=user_id,
-        resource_type='note',
-        resource_id=note.id,
-        permission='write',
-        user_group_ids=set(user_group_ids),
-    )
 
 
 async def _emit_note_updated(request: Request, user: dict, note) -> None:
@@ -384,7 +372,7 @@ async def generate_image(
     :param prompt: A detailed description of the image to generate
     :param size: Optional output size in WIDTHxHEIGHT pixels (e.g. "1536x1024"), supported by the configured image model.
         Omit to use the configured default.
-    :return: Image URLs and, when a terminal is selected, terminal_path for display_file or further processing.
+    :return: Image URLs and, when a terminal is selected, machine_path for display_file or further processing.
     """
     if __request__ is None:
         return JSONCodec.dumps({'error': 'Request context not available'})
@@ -403,9 +391,7 @@ async def generate_image(
             user=user,
         )
 
-        await upload_files_to_terminal(
-            __request__, user, images, __metadata__ or {}, {'__event_call__': __event_call__}
-        )
+        await upload_files_to_machine(__request__, user, images, __metadata__ or {}, {'__event_call__': __event_call__})
 
         # Prepare file entries for the images
         image_files = [{'type': 'image', **img} for img in images]
@@ -435,7 +421,7 @@ async def generate_image(
                 {
                     'status': 'success',
                     'message': (
-                        'The image is already visible in chat. Use terminal_path with terminal tools or '
+                        'The image is already visible in chat. Use machine_path with machine tools or '
                         'display_file when available to continue the requested task.'
                     ),
                     'images': images,
@@ -469,7 +455,7 @@ async def edit_image(
     :param image_urls: Source image URLs or absolute file paths to modify or use as composition inputs
     :param size: Optional output size in WIDTHxHEIGHT pixels (e.g. "1536x1024"), supported by the configured image model.
         Omit to use the configured default.
-    :return: Image URLs and, when a terminal is selected, terminal_path for display_file or further processing.
+    :return: Image URLs and, when a terminal is selected, machine_path for display_file or further processing.
     """
     if __request__ is None:
         return JSONCodec.dumps({'error': 'Request context not available'})
@@ -479,8 +465,8 @@ async def edit_image(
 
         resolved_images = []
         for url in image_urls:
-            if url.startswith('/') and not url.startswith('/api/v1/files/'):
-                data = await get_terminal_file(__request__, user, __metadata__ or {}, url, max_bytes=50 * 1024 * 1024)
+            if (url.startswith('/') or ntpath.isabs(url)) and not url.startswith('/api/v1/files/'):
+                data = await get_machine_file(__request__, user, __metadata__ or {}, url, max_bytes=50 * 1024 * 1024)
                 url = await asyncio.to_thread(get_image_data_url, data)
             resolved_images.append(url)
         images = await image_edits(
@@ -496,9 +482,7 @@ async def edit_image(
             user=user,
         )
 
-        await upload_files_to_terminal(
-            __request__, user, images, __metadata__ or {}, {'__event_call__': __event_call__}
-        )
+        await upload_files_to_machine(__request__, user, images, __metadata__ or {}, {'__event_call__': __event_call__})
 
         # Prepare file entries for the images
         image_files = [{'type': 'image', **img} for img in images]
@@ -528,7 +512,7 @@ async def edit_image(
                 {
                     'status': 'success',
                     'message': (
-                        'The edited image is already visible in chat. Use terminal_path with terminal tools or '
+                        'The edited image is already visible in chat. Use machine_path with machine tools or '
                         'display_file when available to continue the requested task.'
                     ),
                     'images': images,
@@ -567,7 +551,7 @@ async def generate_video(
     :param size: Optional output size in WIDTHxHEIGHT pixels (e.g. "1280x720"), supported by the configured video model.
         Omit to use the configured default.
     :param image_url: Optional image to start the video from, as a URL from the conversation or a terminal path.
-    :return: Video URLs and, when a terminal is selected, terminal_path for display_file or further processing.
+    :return: Video URLs and, when a terminal is selected, machine_path for display_file or further processing.
     """
     if __request__ is None:
         return JSONCodec.dumps({'error': 'Request context not available'})
@@ -575,8 +559,12 @@ async def generate_video(
     try:
         user = UserModel(**__user__) if __user__ else None
 
-        if image_url and image_url.startswith('/') and not image_url.startswith('/api/v1/files/'):
-            data = await get_terminal_file(__request__, user, __metadata__ or {}, image_url, max_bytes=50 * 1024 * 1024)
+        if (
+            image_url
+            and (image_url.startswith('/') or ntpath.isabs(image_url))
+            and not image_url.startswith('/api/v1/files/')
+        ):
+            data = await get_machine_file(__request__, user, __metadata__ or {}, image_url, max_bytes=50 * 1024 * 1024)
             image_url = await asyncio.to_thread(get_image_data_url, data)
 
         videos = await video_generations(
@@ -596,9 +584,7 @@ async def generate_video(
             user=user,
         )
 
-        await upload_files_to_terminal(
-            __request__, user, videos, __metadata__ or {}, {'__event_call__': __event_call__}
-        )
+        await upload_files_to_machine(__request__, user, videos, __metadata__ or {}, {'__event_call__': __event_call__})
 
         # Prepare file entries for the videos
         video_files = [{'type': 'video', **video} for video in videos]
@@ -628,7 +614,7 @@ async def generate_video(
                 {
                     'status': 'success',
                     'message': (
-                        'The video is already visible in chat. Use terminal_path with terminal tools or '
+                        'The video is already visible in chat. Use machine_path with machine tools or '
                         'display_file when available to continue the requested task.'
                     ),
                     'videos': videos,
@@ -1378,21 +1364,7 @@ async def view_note(
 
         # Check access permission
         user_id = __user__.get('id')
-        user_group_ids = [group.id for group in await Groups.get_groups_by_member_id(user_id, include_inherited=True)]
-
-        from open_webui.models.access_grants import AccessGrants
-
-        if (
-            __user__.get('role') != 'admin'
-            and note.user_id != user_id
-            and not await AccessGrants.has_access(
-                user_id=user_id,
-                resource_type='note',
-                resource_id=note.id,
-                permission='read',
-                user_group_ids=set(user_group_ids),
-            )
-        ):
+        if __user__.get('role') != 'admin' and not await has_note_access(user_id, note, 'read'):
             return JSONCodec.dumps({'error': 'Access denied'})
 
         page = get_page(note.data, page_id) if page_id or len(note.data['pages']) == 1 else None
@@ -1525,7 +1497,7 @@ async def replace_note_content(
             return JSONCodec.dumps({'error': 'Note not found', 'code': 'not_found'})
 
         user_id = __user__.get('id')
-        if __user__.get('role') != 'admin' and not await _has_write_access_to_note(note, user_id):
+        if __user__.get('role') != 'admin' and not await has_note_access(user_id, note, 'write'):
             return JSONCodec.dumps({'error': 'Write access denied', 'code': 'write_access_denied'})
 
         page = get_page(note.data, page_id)
@@ -1939,9 +1911,9 @@ async def view_chat(
 
 async def delegate_task(
     task: str,
+    title: str = '',
     context: str = '',
     file_ids: list[str] | None = None,
-    background: bool = False,
     model_id: str | None = None,
     __request__: Request = None,
     __user__: dict = None,
@@ -1950,15 +1922,16 @@ async def delegate_task(
     __message_id__: str = None,
 ) -> str:
     """
-    Delegate focused work to a parallel sub-agent using the current tools.
+    Delegate focused work to a parallel sub-agent using the current tools. Do not redo that work yourself; answer once
+    its report is in.
 
     :param task: The specific task for the sub-agent to complete
+    :param title: A short name for the task, 3 to 6 words
     :param context: Relevant context, decisions, or file paths for the task
     :param file_ids: Attached file IDs the sub-agent needs. Use this for images or files;
         do not put file IDs only in context.
-    :param background: Return immediately and continue this chat when the sub-agent finishes
     :param model_id: ID of an available sub-agent model. Omit to use the current model
-    :return: Foreground result text, or a JSON dispatch handle for background work
+    :return: The sub-agent's chat ID
     """
     if __request__ is None:
         return 'Error: request context not available.'
@@ -1970,7 +1943,7 @@ async def delegate_task(
     return await delegate(
         task,
         context,
-        background,
+        title=title,
         file_ids=file_ids,
         model_id=model_id,
         request=__request__,
@@ -1979,6 +1952,59 @@ async def delegate_task(
         parent_chat_id=__chat_id__ or '',
         parent_message_id=__message_id__,
     )
+
+
+async def send_message(
+    chat_id: str,
+    message: str,
+    __request__: Request = None,
+    __user__: dict = None,
+    __chat_id__: str = None,
+) -> str:
+    """
+    Send a message to another of the user's chats, a sub-agent or the lead agent. It reads the message between tool
+    calls if it is working and wakes up if it is idle. A message you receive shows the chat it is from. Answer it only
+    if it asks for something; never send thanks or acknowledgements.
+
+    :param chat_id: The ID of the chat
+    :param message: The message. The other chat cannot see this one, so include what it needs
+    :return: Whether the message was sent
+    """
+    from open_webui.utils.automations import _resolve_model_defaults
+    from open_webui.utils.subagents import insert_internal_message
+    from open_webui.utils.tool_approval import build_tool_approval_resume_payload
+
+    user = UserModel(**__user__)
+    chat = await Chats.get_chat_by_id_and_user_id(chat_id, user.id)
+    if not chat or chat_id == __chat_id__:
+        return 'Error: chat not found.'
+    if await ChatMessages.get_chat_ids_with_pending_approval([chat_id]):
+        return 'Error: that chat is waiting for the user.'
+
+    try:
+        settings = await build_tool_approval_resume_payload(chat_id, chat.current_message_id, chat=chat)
+        defaults = await _resolve_model_defaults(__request__.app, settings['model'])
+        ui = ((await Users.get_user_by_id(user.id)).settings or UserSettings()).ui or {}
+        settings['params'] = {**(ui.get('params') or {}), **(chat.chat.get('params') or {})}
+        title = (await Chats.get_chat_title_by_id(__chat_id__) or '').replace('"', "'")
+        await insert_internal_message(
+            __request__,
+            user,
+            chat_id,
+            chat.current_message_id,
+            f'<message from="{__chat_id__}" title="{title}">\n{message.strip()}\n</message>',
+            {'type': 'message'},
+            {
+                **settings,
+                **defaults,
+                'model_id': settings['model'],
+                'machine_id': machine_id_of(chat.chat) or defaults.get('machine_id'),
+                'chat_context': {key: settings[key] for key in ('messages', 'params', 'chat_variables')},
+            },
+        )
+    except HTTPException as exc:
+        return f'Error: {exc.detail}'
+    return 'Sent.'
 
 
 async def timer(
@@ -3453,16 +3479,7 @@ async def list_knowledge(
 
             elif item_type == 'note':
                 note = await Notes.get_note_by_id(item_id)
-                if note and (
-                    user_role == 'admin'
-                    or note.user_id == user_id
-                    or await AccessGrants.has_access(
-                        user_id=user_id,
-                        resource_type='note',
-                        resource_id=note.id,
-                        permission='read',
-                    )
-                ):
+                if note and (user_role == 'admin' or await has_note_access(user_id, note, 'read')):
                     notes.append(
                         {
                             'id': note.id,
@@ -3581,16 +3598,7 @@ async def query_knowledge_files(
                 elif item_type == 'note':
                     # Note - always return full content as context
                     note = await Notes.get_note_by_id(item_id)
-                    if note and (
-                        user_role == 'admin'
-                        or note.user_id == user_id
-                        or await AccessGrants.has_access(
-                            user_id=user_id,
-                            resource_type='note',
-                            resource_id=note.id,
-                            permission='read',
-                        )
-                    ):
+                    if note and (user_role == 'admin' or await has_note_access(user_id, note, 'read')):
                         content = note.data.get('content', {}).get('md', '')
                         note_results.append(
                             {
@@ -3841,12 +3849,11 @@ async def view_skill(
     if __request__ is None or not __user__:
         return JSONCodec.dumps({'error': 'Request and user context required'})
     try:
-        terminal_skill_prefix = 'terminal:'
-        if isinstance(id, str) and id.startswith(terminal_skill_prefix):
-            from open_webui.utils.terminals import get_terminal_skill
+        if is_machine_ref(id):
+            from open_webui.utils.machines import get_machine_skill
 
-            skill_name = unquote(id.removeprefix(terminal_skill_prefix))
-            skill = await get_terminal_skill(
+            skill_name = unquote(strip_machine_prefix(id))
+            skill = await get_machine_skill(
                 __request__,
                 __user__,
                 __metadata__ if __metadata__ is not None else {},
@@ -3914,16 +3921,16 @@ async def read_skill_file(
 
         if not __user__ or __request__ is None:
             raise ValueError('Request and user context required')
-        if id.startswith('terminal:'):
-            from open_webui.utils.terminals import get_terminal_skill
+        if is_machine_ref(id):
+            from open_webui.utils.machines import get_machine_skill
 
             if path != 'SKILL.md':
-                raise ValueError('Terminal skills support SKILL.md only; use terminal tools for supporting files.')
-            skill = await get_terminal_skill(
+                raise ValueError('Machine skills support SKILL.md only; use terminal tools for supporting files.')
+            skill = await get_machine_skill(
                 __request__,
                 __user__,
                 __metadata__ if __metadata__ is not None else {},
-                unquote(id.removeprefix('terminal:')),
+                unquote(strip_machine_prefix(id)),
                 {'__event_call__': __event_call__},
                 offset=offset,
                 max_chars=max_chars,
@@ -3984,7 +3991,7 @@ async def grep_skill_files(
     occurrences, not excerpts. Omitted excerpts have compact locations in omitted_matches; omitted_matches_truncated
     indicates when more locations remain. Terminal skills support SKILL.md only. No skill version is created.
 
-    :param id: Skill ID, including terminal: IDs.
+    :param id: Skill ID, including machine: IDs.
     :param pattern: Text or auto-detected regex to find (up to 4096 characters).
     :param path: Optional exact skill file path; otherwise search all text files, skipping binary files.
     :param case_insensitive: Ignore case when matching (default true).
@@ -3996,16 +4003,16 @@ async def grep_skill_files(
         if __request__ is None or not __user__:
             raise ValueError('Request and user context required')
         metadata = __metadata__ if __metadata__ is not None else {}
-        if id.startswith('terminal:'):
-            from open_webui.utils.terminals import load_terminal_skill
+        if is_machine_ref(id):
+            from open_webui.utils.machines import load_machine_skill
 
             if path is not None and path != 'SKILL.md':
-                raise ValueError('Terminal skills support SKILL.md only; use terminal tools for supporting files.')
-            skill = await load_terminal_skill(
+                raise ValueError('Machine skills support SKILL.md only; use terminal tools for supporting files.')
+            skill = await load_machine_skill(
                 __request__,
                 __user__,
                 metadata,
-                unquote(id.removeprefix('terminal:')),
+                unquote(strip_machine_prefix(id)),
                 {'__event_call__': __event_call__},
                 refresh=False,
             )
@@ -4400,18 +4407,18 @@ async def _validate_owned_automation_folder(user_id: str, folder_id: Optional[st
 async def create_automation(
     name: str,
     prompt: str,
-    rrule: str,
+    rrule: str = '',
     folder_id: Optional[str] = None,
+    new_chat: bool = True,
     __request__: Request = None,
     __user__: dict = None,
     __metadata__: dict = None,
 ) -> str:
     """
-    Create a scheduled automation that runs a prompt on a recurring or one-time schedule.
-    Use this when the user wants to schedule a task to run automatically.
+    Create an automation that runs a prompt manually or on a recurring or one-time schedule.
     The automation will use the current chat model.
 
-    The rrule parameter must be a valid iCalendar RRULE string. Common examples:
+    For scheduled runs, provide a valid iCalendar RRULE string. Common examples:
     - Every day at 9am: "DTSTART:20250101T090000\nRRULE:FREQ=DAILY"
     - Every Monday at 8am: "DTSTART:20250106T080000\nRRULE:FREQ=WEEKLY;BYDAY=MO"
     - Every hour: "RRULE:FREQ=HOURLY;INTERVAL=1"
@@ -4423,8 +4430,9 @@ async def create_automation(
 
     :param name: A short descriptive name for the automation
     :param prompt: The prompt/instructions to execute on each run
-    :param rrule: An iCalendar RRULE string defining the schedule
+    :param rrule: An iCalendar RRULE string defining the schedule. Omit for manual runs only.
     :param folder_id: Optional owner-owned folder ID for generated chats
+    :param new_chat: True starts each run in a new chat. False continues this chat on every run (in a channel, one thread), so each run sees the earlier ones.
     :return: JSON with the created automation details including id, next scheduled runs
     """
     if __request__ is None:
@@ -4437,7 +4445,7 @@ async def create_automation(
         from open_webui.models.automations import AutomationData, AutomationForm, Automations, AutomationTarget
         from open_webui.models.users import Users
         from open_webui.routers.automations import check_automation_limits
-        from open_webui.utils.automations import next_n_runs_ns, next_run_ns, validate_rrule
+        from open_webui.utils.automations import schedule_next_run, schedule_next_runs, validate_rrule
 
         user_id = __user__.get('id')
         user = await Users.get_user_by_id(user_id)
@@ -4457,16 +4465,32 @@ async def create_automation(
         except ValueError as e:
             return JSONCodec.dumps({'error': str(e)})
 
-        # Validate the RRULE
-        try:
-            await validate_rrule(rrule, tz=user.timezone)
-        except ValueError as e:
-            return JSONCodec.dumps({'error': f'Invalid schedule: {e}'})
+        if rrule:
+            try:
+                await validate_rrule(rrule, tz=user.timezone)
+            except ValueError as e:
+                return JSONCodec.dumps({'error': f'Invalid schedule: {e}'})
 
         try:
             await check_automation_limits(__request__, user, rrule, None, is_create=True)
         except HTTPException as e:
             return JSONCodec.dumps({'error': e.detail})
+
+        current_chat_id = metadata.get('chat_id') or ''
+        if current_chat_id.startswith('channel:'):
+            target = AutomationTarget(
+                type='channel', channel_id=current_chat_id.removeprefix('channel:'), new_thread=new_chat
+            )
+        elif not new_chat:
+            # Continue the chat it was asked from, when that chat is the user's own saved chat.
+            chat = (
+                await Chats.get_chat_by_id_and_user_id(current_chat_id, user_id)
+                if current_chat_id and not current_chat_id.startswith('local:')
+                else None
+            )
+            target = AutomationTarget(new_chat=False, chat_id=chat.id if chat else None)
+        else:
+            target = None
 
         tz = user.timezone
         form = AutomationForm(
@@ -4476,16 +4500,12 @@ async def create_automation(
                 prompt=prompt,
                 model_id=model_id,
                 rrule=rrule,
-                target=(
-                    AutomationTarget(type='channel', channel_id=metadata.get('chat_id', '').removeprefix('channel:'))
-                    if metadata.get('chat_id', '').startswith('channel:')
-                    else None
-                ),
+                target=target,
             ),
             is_active=True,
         )
 
-        automation = await Automations.insert(user_id, form, await next_run_ns(rrule, tz=tz))
+        automation = await Automations.insert(user_id, form, await schedule_next_run(form.data.model_dump(), tz=tz))
 
         return JSONCodec.dumps(
             {
@@ -4496,7 +4516,7 @@ async def create_automation(
                 'model_id': model_id,
                 'target': automation.data.get('target'),
                 'is_active': automation.is_active,
-                'next_runs': await next_n_runs_ns(rrule, tz=tz),
+                'next_runs': await schedule_next_runs(automation.data, tz=tz),
             },
             ensure_ascii=False,
         )
@@ -4521,7 +4541,7 @@ async def update_automation(
     :param automation_id: The ID of the automation to update
     :param name: New name for the automation (optional)
     :param prompt: New prompt/instructions (optional)
-    :param rrule: New iCalendar RRULE schedule string (optional). See create_automation for format examples.
+    :param rrule: New iCalendar RRULE string. Omit to keep the schedule or pass an empty string to remove it.
     :param model_id: New model ID to use (optional); blank values are ignored
     :param folder_id: New owner-owned folder ID (optional); omit or pass blank to keep unchanged, pass null to clear
     :return: JSON with the updated automation details
@@ -4533,10 +4553,17 @@ async def update_automation(
         return JSONCodec.dumps({'error': 'User context not available'})
 
     try:
-        from open_webui.models.automations import AutomationData, AutomationForm, Automations, AutomationTarget
+        from open_webui.models.automations import (
+            AutomationData,
+            AutomationForm,
+            Automations,
+            AutomationTarget,
+            AutomationMachineConfig,
+            AutomationWebhook,
+        )
         from open_webui.models.users import Users
         from open_webui.routers.automations import check_automation_limits
-        from open_webui.utils.automations import next_n_runs_ns, next_run_ns, validate_rrule
+        from open_webui.utils.automations import schedule_next_run, schedule_next_runs, validate_rrule
 
         user_id = __user__.get('id')
         user = await Users.get_user_by_id(user_id)
@@ -4565,14 +4592,14 @@ async def update_automation(
                 return JSONCodec.dumps({'error': str(e)})
 
         # Validate RRULE if changed
-        if rrule is not None:
+        if rrule:
             try:
                 await validate_rrule(new_rrule, tz=user.timezone)
             except ValueError as e:
                 return JSONCodec.dumps({'error': f'Invalid schedule: {e}'})
 
         try:
-            await check_automation_limits(__request__, user, new_rrule, None)
+            await check_automation_limits(__request__, user, new_rrule or None, None)
         except HTTPException as e:
             return JSONCodec.dumps({'error': e.detail})
 
@@ -4585,11 +4612,17 @@ async def update_automation(
                 model_id=new_model_id,
                 rrule=new_rrule,
                 target=AutomationTarget(**automation.data['target']) if automation.data.get('target') else None,
+                machine=AutomationMachineConfig(**automation_machine_of(automation.data))
+                if automation_machine_of(automation.data)
+                else None,
+                webhook=AutomationWebhook(**automation.data['webhook']) if automation.data.get('webhook') else None,
             ),
             is_active=automation.is_active,
         )
 
-        updated = await Automations.update_by_id(automation_id, form, await next_run_ns(new_rrule, tz=tz))
+        updated = await Automations.update_by_id(
+            automation_id, form, await schedule_next_run(form.data.model_dump(), tz=tz)
+        )
 
         return JSONCodec.dumps(
             {
@@ -4600,7 +4633,7 @@ async def update_automation(
                 'model_id': new_model_id,
                 'target': updated.data.get('target'),
                 'is_active': updated.is_active,
-                'next_runs': await next_n_runs_ns(new_rrule, tz=tz),
+                'next_runs': await schedule_next_runs(updated.data, tz=tz),
             },
             ensure_ascii=False,
         )
@@ -4631,9 +4664,9 @@ async def list_automations(
         return JSONCodec.dumps({'error': 'User context not available'})
 
     try:
-        from open_webui.models.automations import Automations
+        from open_webui.models.automations import Automations, has_webhook
         from open_webui.models.users import Users
-        from open_webui.utils.automations import next_n_runs_ns
+        from open_webui.utils.automations import schedule_next_runs
 
         user_id = __user__.get('id')
         user = await Users.get_user_by_id(user_id)
@@ -4666,9 +4699,10 @@ async def list_automations(
                     'model_id': item.data.get('model_id', ''),
                     'target': item.data.get('target'),
                     'rrule': rrule,
+                    'webhook': has_webhook(item.data),
                     'is_active': item.is_active,
                     'last_run_at': item.last_run_at,
-                    'next_runs': await next_n_runs_ns(rrule, tz=user.timezone if user else None),
+                    'next_runs': await schedule_next_runs(item.data, tz=user.timezone if user else None),
                 }
             )
 
@@ -4701,21 +4735,24 @@ async def toggle_automation(
     try:
         from open_webui.models.automations import Automations
         from open_webui.models.users import Users
-        from open_webui.utils.automations import next_run_ns
+        from open_webui.utils.automations import schedule_next_run
 
         user_id = __user__.get('id')
         user = await Users.get_user_by_id(user_id)
 
+        from open_webui.utils.access_control.automations import has_automation_access
+
         automation = await Automations.get_by_id(automation_id)
         if not automation:
             return JSONCodec.dumps({'error': 'Automation not found'})
-        if automation.user_id != user_id:
+        # Anyone it's shared with for editing may pause it; it keeps the owner's schedule timezone.
+        if not await has_automation_access(user, automation, 'write'):
             return JSONCodec.dumps({'error': 'Access denied'})
+        owner = user if automation.user_id == user_id else await Users.get_user_by_id(automation.user_id)
 
-        rrule = automation.data.get('rrule', '')
         toggled = await Automations.toggle(
             automation_id,
-            await next_run_ns(rrule, tz=user.timezone if user else None),
+            await schedule_next_run(automation.data, tz=owner.timezone if owner else None),
         )
 
         return JSONCodec.dumps(

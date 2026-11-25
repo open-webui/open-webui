@@ -62,7 +62,7 @@
 <div class="mt-0.5 pb-1.5" id="pinned-models-list" role="list">
 	{#each $visiblePinnedModels as modelId (modelId)}
 		<PinnedModelItem
-			model={$models.find((model) => model.id === modelId)}
+			model={($models ?? []).find((model) => model.id === modelId)}
 			{shiftKey}
 			onClick={() => {
 				selectedChatId = null;

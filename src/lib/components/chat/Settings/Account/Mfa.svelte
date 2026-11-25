@@ -15,7 +15,7 @@
 	let reauthenticate = false;
 	let show = false;
 	const actionButtonClass =
-		'text-xs text-gray-500 transition-colors hover:text-gray-700 disabled:opacity-40 dark:text-gray-500 dark:hover:text-gray-200';
+		'text-xs text-base-500 transition-colors hover:text-base-700 disabled:opacity-40 dark:text-base-500 dark:hover:text-base-200';
 	onMount(async () => {
 		try {
 			status = await mfaRequest('status', undefined, localStorage.token);
@@ -72,7 +72,7 @@
 							}}>{show ? $i18n.t('Hide') : $i18n.t('Manage')}</button
 						>{/if}
 				</UserSettingRow>
-				<p class="text-[0.6875rem] text-gray-400 dark:text-gray-600">
+				<p class="text-[0.6875rem] text-base-400 dark:text-base-600">
 					{status.enabled
 						? $i18n.t('{{COUNT}} recovery codes remaining', {
 								COUNT: status.recovery_codes_remaining
@@ -81,19 +81,19 @@
 				</p>
 				{#if show && status.required && status.enabled}
 					<div class="w-full sm:max-w-md space-y-2.5 py-1">
-						<p class="text-[0.6875rem] leading-4 text-gray-400 dark:text-gray-500">
+						<p class="text-[0.6875rem] leading-4 text-base-400 dark:text-base-500">
 							{$i18n.t('Verify with a fresh code. Changes sign out all devices.')}
 						</p>
-						<label class="block text-gray-600 dark:text-gray-400"
+						<label class="block text-base-600 dark:text-base-400"
 							>{recovery ? $i18n.t('Recovery code') : $i18n.t('Authenticator code')}<input
-								class="mt-1 h-7 w-full rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-xs text-gray-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:focus:border-blue-500"
+								class="mt-1 h-7 w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-300 dark:focus:border-blue-500"
 								autocomplete="one-time-code"
 								bind:value={code}
 								maxlength={recovery ? 128 : 6}
 								inputmode={recovery ? 'text' : 'numeric'}
 							/></label
 						>
-						<label class="flex items-center gap-2 text-[0.6875rem] text-gray-500"
+						<label class="flex items-center gap-2 text-[0.6875rem] text-base-500"
 							><input
 								class="size-3 rounded-sm"
 								type="checkbox"

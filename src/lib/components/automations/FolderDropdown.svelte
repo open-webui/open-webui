@@ -58,7 +58,7 @@
 	placeholder={$i18n.t('Choose folder')}
 	{align}
 	{side}
-	triggerClass="relative h-8 max-w-[11rem] flex items-center gap-1.5 px-2.5 py-1.5 bg-transparent rounded-2xl text-xs font-normal text-gray-600 transition hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
+	triggerClass="relative h-8 max-w-[11rem] flex items-center gap-1.5 px-2.5 py-1.5 bg-transparent rounded-2xl text-xs font-normal text-base-600 transition hover:text-base-900 dark:text-base-400 dark:hover:text-base-100"
 	contentClass="w-72 shadow-lg"
 	maxHeight="18rem"
 	onChange={() => onChange()}
@@ -103,8 +103,8 @@
 		</div>
 
 		{#if folderOptions.length > 0}
-			<hr class="mx-1 my-0.5 border-gray-50/30 dark:border-gray-800/30" />
-			<div class="px-2 py-1 text-[0.6875rem] text-gray-500 dark:text-gray-400">
+			<hr class="mx-1 my-0.5 border-base-50/30 dark:border-base-800/30" />
+			<div class="px-2 py-1 text-[0.6875rem] text-base-500 dark:text-base-400">
 				{$i18n.t('Folders')}
 			</div>
 		{/if}
@@ -113,10 +113,10 @@
 			{@const path = folderPath(folder)}
 			<button
 				type="button"
-				class="flex h-[1.6875rem] w-full cursor-pointer items-center justify-between gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:bg-gray-50/40 hover:text-gray-900 dark:hover:bg-gray-800/40 dark:hover:text-gray-100 {folder_id ===
+				class="flex h-[1.6875rem] w-full cursor-pointer items-center justify-between gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:bg-base-50/40 hover:text-base-900 dark:hover:bg-base-800/40 dark:hover:text-base-100 {folder_id ===
 				folder.id
-					? 'text-gray-900 dark:text-gray-100'
-					: 'text-gray-700 dark:text-gray-300'}"
+					? 'text-base-900 dark:text-base-100'
+					: 'text-base-700 dark:text-base-300'}"
 				title={path ? `${path} / ${folderName(folder)}` : folderName(folder)}
 				on:click={() => {
 					selectItem({
@@ -130,7 +130,7 @@
 					<Folder className="size-3.5 shrink-0" />
 					<span class="min-w-0 truncate">{folderName(folder)}</span>
 					{#if path}
-						<span class="min-w-0 truncate text-[0.6875rem] text-gray-400 dark:text-gray-500">
+						<span class="min-w-0 truncate text-[0.6875rem] text-base-400 dark:text-base-500">
 							{path}
 						</span>
 					{/if}
@@ -140,7 +140,7 @@
 				{/if}
 			</button>
 		{:else}
-			<div class="px-2 py-1 text-[0.6875rem] text-gray-500 dark:text-gray-400">
+			<div class="px-2 py-1 text-[0.6875rem] text-base-500 dark:text-base-400">
 				{folderOptions.length > 0 ? $i18n.t('No results found') : $i18n.t('No folders')}
 			</div>
 		{/each}

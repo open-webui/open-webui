@@ -5,6 +5,7 @@ type NoteItem = {
 	title: string;
 	data: object;
 	meta?: null | object;
+	folder_id?: string | null;
 	access_grants?: object[];
 };
 
@@ -132,6 +133,7 @@ export const searchNotes = async (
 	sortKey: string | null = null,
 	page: number | null = null,
 	direction: string | null = null,
+	tagIds: string[] = [],
 	signal?: AbortSignal
 ) => {
 	let error = null;
@@ -140,6 +142,8 @@ export const searchNotes = async (
 	if (query !== null) {
 		searchParams.append('query', query);
 	}
+
+	for (const tag of tagIds) searchParams.append('tag_ids', tag);
 
 	if (viewOption !== null) {
 		searchParams.append('view_option', viewOption);
@@ -481,6 +485,220 @@ export const getPinnedNoteList = async (token: string = '') => {
 	}
 
 	return res ?? [];
+};
+
+// Tags on the notes the list shows, with how many notes carry each.
+export const getNoteTags = async (token: string, permission: string | null = null) => {
+	let error = null;
+	const searchParams = new URLSearchParams();
+
+	if (permission !== null) {
+		searchParams.append('permission', permission);
+	}
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/notes/tags?${searchParams.toString()}`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.then((json) => {
+			return json;
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const getNoteTagsById = async (token: string, id: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/notes/${id}/tags`, {
+		method: 'GET',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		}
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.then((json) => {
+			return json;
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const addNoteTagById = async (token: string, id: string, tagName: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/notes/${id}/tags`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
+			name: tagName
+		})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.then((json) => {
+			return json;
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const updateNoteTagColorById = async (
+	token: string,
+	id: string,
+	tagName: string,
+	color: string
+) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/notes/${id}/tags`, {
+		method: 'PATCH',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
+			name: tagName,
+			color
+		})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.then((json) => {
+			return json;
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const deleteNoteTagById = async (token: string, id: string, tagName: string) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/notes/${id}/tags`, {
+		method: 'DELETE',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
+			name: tagName
+		})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.then((json) => {
+			return json;
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
+};
+
+export const updateNoteFolderIdById = async (
+	token: string,
+	id: string,
+	folderId: string | null
+) => {
+	let error = null;
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/notes/${id}/folder`, {
+		method: 'POST',
+		headers: {
+			Accept: 'application/json',
+			'Content-Type': 'application/json',
+			authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify({
+			folder_id: folderId
+		})
+	})
+		.then(async (res) => {
+			if (!res.ok) throw await res.json();
+			return res.json();
+		})
+		.then((json) => {
+			return json;
+		})
+		.catch((err) => {
+			error = err.detail;
+			console.error(err);
+			return null;
+		});
+
+	if (error) {
+		throw error;
+	}
+
+	return res;
 };
 
 export const toggleNotePinnedStatusById = async (token: string, id: string) => {

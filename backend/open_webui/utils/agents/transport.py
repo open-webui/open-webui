@@ -9,13 +9,12 @@ import aiohttp
 from fastapi import HTTPException
 
 from open_webui.env import AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL
-from open_webui.utils.terminals import get_terminal_server_url, resolve_terminal_connection
-from open_webui.utils.tether import get_terminal_client
+from open_webui.utils.machines import get_machine_client, get_machine_url, resolve_machine_connection
 
 
-class TerminalTransport:
+class MachineTransport:
     def __init__(self, connection, headers, cookies, user_id):
-        self.url = get_terminal_server_url(connection)
+        self.url = get_machine_url(connection)
         self.service = connection.get('service', 'open_terminal')
         self.headers, self.cookies, self.user_id = headers, cookies, user_id
         self.session_id = None
@@ -32,13 +31,13 @@ class TerminalTransport:
 
     @classmethod
     async def resolve(cls, request, user, metadata):
-        resolved = await resolve_terminal_connection(request, user, metadata)
+        resolved = await resolve_machine_connection(request, user, metadata)
         if not resolved:
-            raise ValueError('Select an accessible server or Tether terminal to use agents')
+            raise ValueError('Select an accessible machine to use agents')
         return cls(*resolved, resolved[0].get('instance_user_id', user.id))
 
     async def request(self, method, path, body=None):
-        async with get_terminal_client(
+        async with get_machine_client(
             self.url, self.user_id, service=self.service, timeout=aiohttp.ClientTimeout(total=30), trust_env=True
         ) as client:
             async with client.request(
@@ -75,7 +74,7 @@ class TerminalTransport:
         try:
             while not self.closed:
                 try:
-                    async with get_terminal_client(
+                    async with get_machine_client(
                         self.url,
                         self.user_id,
                         service=self.service,

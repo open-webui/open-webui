@@ -93,8 +93,8 @@
 				<div
 					class="grid grid-cols-[7rem_minmax(0,1fr)] items-start gap-2 sm:grid-cols-[8rem_minmax(0,1fr)]"
 				>
-					<dt class="text-gray-600 dark:text-gray-400">{row.label}</dt>
-					<dd class="min-w-0 whitespace-normal break-words text-gray-900 dark:text-gray-100">
+					<dt class="text-base-600 dark:text-base-400">{row.label}</dt>
+					<dd class="min-w-0 whitespace-normal break-words text-base-900 dark:text-base-100">
 						{row.value}
 					</dd>
 				</div>

@@ -1,6 +1,6 @@
 <h2>Open WebUI</h2>
 
-<p>Open WebUI to <a href="https://docs.openwebui.com/"><strong>dom dla AI</strong></a>: rozszerzalna, łatwa w obsłudze platforma do samodzielnego hostowania, zaprojektowana do pracy całkowicie offline. Podłącz lokalne modele przez Ollama lub korzystaj z API zgodnych z OpenAI dla modeli lokalnych i chmurowych.</p>
+<p>Open WebUI to <a href="https://docs.openwebui.com/"><strong>dom dla AI</strong></a>: rozszerzalna, łatwa w obsłudze platforma do samodzielnego hostowania, zaprojektowana do pracy całkowicie offline. Podłącz lokalne modele przez Ollama, korzystaj z API zgodnych z OpenAI dla modeli lokalnych i chmurowych lub dodawaj agentów przez <a href="https://docs.openwebui.com/features/open-terminal/agents">Agent Client Protocol (ACP)</a>.</p>
 
 [English](README.md) |
 [简体中文](README.zh.md) |

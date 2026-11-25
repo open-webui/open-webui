@@ -1,18 +1,26 @@
 import { browser } from '$app/environment';
 import { v4 as uuidv4 } from 'uuid';
 import { writable } from 'svelte/store';
-import { getChatView, updateChatView } from '$lib/apis/chats/view';
-import { terminalRequest, type TerminalTarget } from '$lib/apis/terminal';
-import { createBrowserSession } from '$lib/apis/terminal/browser';
-import { isSavedChatId } from '$lib/utils/chatId';
 import {
+	ChatViewConflict,
+	getChatView,
+	updateChatView,
+	type SavedChatView
+} from '$lib/apis/chats/view';
+import { machineRequest, type MachineTarget } from '$lib/apis/machines';
+import { createBrowserSession } from '$lib/apis/machines/browser';
+import { isFolderSessionId, isSavedChatId } from '$lib/utils/chatId';
+import {
+	activateTab,
 	createTabsState,
 	mainChatTabId,
 	normalizeChatTab,
+	openTab,
 	removeTab,
 	type ChatViewState,
 	type Tab
 } from '$lib/components/chat/Tabs/tabs';
+import { normalizeMetaMachineId, normalizeViewMachineId } from '$lib/utils/machines';
 
 export type EditorDraft = {
 	baseText: string;
@@ -33,6 +41,8 @@ type Entry = {
 	pending: Map<string, Promise<void>>;
 	revision: number;
 	persistedRevision: number;
+	/** Revision of the saved folder view the next save replaces. */
+	savedRevision: number;
 	persisted?: string;
 	loaded: boolean;
 	persistent: boolean;
@@ -62,7 +72,7 @@ export function serializeChatView(state: ChatViewState): ChatViewState {
 	}
 	return {
 		schemaVersion: 1,
-		selectedTerminalId: state.selectedTerminalId,
+		selectedMachineId: state.selectedMachineId,
 		panels: {
 			...panels,
 			tabs: panels.tabs.map((tab) => ({
@@ -70,7 +80,7 @@ export function serializeChatView(state: ChatViewState): ChatViewState {
 				kind: tab.kind,
 				label: tab.label,
 				href: tab.href,
-				terminalId: tab.terminalId,
+				machineId: tab.machineId,
 				terminalNumber: tab.terminalNumber,
 				chatId: tab.chatId,
 				chatNumber: tab.chatNumber,
@@ -92,14 +102,15 @@ export function chatViewEntry(userId: string, chatId: string | null, temporary =
 		instanceId: uuidv4(),
 		userId,
 		chatId,
-		state: { schemaVersion: 1, selectedTerminalId: null, panels: createTabsState() },
+		state: { schemaVersion: 1, selectedMachineId: null, panels: createTabsState() },
 		drafts: new Map(),
 		transient: {},
 		pending: new Map(),
 		revision: 0,
 		persistedRevision: 0,
-		loaded: !isSavedChatId(chatId) || temporary,
-		persistent: isSavedChatId(chatId) && !temporary,
+		savedRevision: 0,
+		loaded: !isFolderSessionId(chatId) && (!isSavedChatId(chatId) || temporary),
+		persistent: isFolderSessionId(chatId) || (isSavedChatId(chatId) && !temporary),
 		promoting: false,
 		error: '',
 		sessionErrors: {}
@@ -110,17 +121,17 @@ export function chatViewEntry(userId: string, chatId: string | null, temporary =
 
 export async function loadChatView(entry: Entry) {
 	if (!entry.persistent) return;
-	if (entry.load) return entry.load;
-	entry.load = (async () => {
+	const load = (entry.load ??= (async () => {
 		try {
 			// Revalidate access even when the view is already cached. Never replace local edits.
 			const result = await getChatView(entry.chatId!);
 			if (result.state && result.state.schemaVersion !== 1)
 				throw new Error('Unsupported chat view version');
+			if (!entry.loaded) entry.savedRevision = result.revision ?? 0;
 			if (!entry.loaded && result.state) {
-				entry.state = result.state;
+				entry.state = normalizeViewMachineId(result.state);
 				entry.state.panels.tabs = entry.state.panels.tabs.map((tab) =>
-					normalizeChatTab(tab, entry.chatId)
+					normalizeChatTab(normalizeMetaMachineId(tab), entry.chatId)
 				);
 				entry.persisted = JSON.stringify(serializeChatView(entry.state));
 			}
@@ -133,8 +144,10 @@ export async function loadChatView(entry: Entry) {
 			entry.load = undefined;
 			notify();
 		}
-	})();
-	return entry.load;
+	})());
+	// A view already loaded is shown at once; a failed check shows as its error.
+	if (entry.loaded) return void load.catch(() => {});
+	return load;
 }
 
 export function changeChatView(entry: Entry, state = entry.state, immediate = false) {
@@ -144,6 +157,29 @@ export function changeChatView(entry: Entry, state = entry.state, immediate = fa
 	if (entry.loaded && entry.persistent && !entry.promoting)
 		entry.timer = setTimeout(() => void flushChatView(entry), immediate ? 0 : 300);
 	notify();
+}
+
+/** Takes the tabs another window opened and closed; this window keeps its own arrangement. */
+function mergeSavedView(entry: Entry, saved: SavedChatView) {
+	const before = new Set<string>(
+		entry.persisted
+			? JSON.parse(entry.persisted).panels.tabs.map((tab: Tab) => tab.id)
+			: [mainChatTabId]
+	);
+	const savedTabs = saved.state?.panels.tabs ?? [];
+	let panels = entry.state.panels;
+	for (const tab of panels.tabs) {
+		if (before.has(tab.id) && !savedTabs.some((item) => item.id === tab.id))
+			panels = removeTab(panels, tab.id);
+	}
+	const activeId = panels.activeId;
+	for (const tab of savedTabs) {
+		if (!before.has(tab.id) && !panels.tabs.some((item) => item.id === tab.id))
+			panels = openTab(panels, tab);
+	}
+	entry.savedRevision = saved.revision ?? 0;
+	entry.persisted = saved.state ? JSON.stringify(saved.state) : undefined;
+	changeChatView(entry, { ...entry.state, panels: activateTab(panels, activeId) });
 }
 
 export async function flushChatView(entry: Entry): Promise<void> {
@@ -160,7 +196,18 @@ export async function flushChatView(entry: Entry): Promise<void> {
 				const revision = entry.revision;
 				const snapshot = JSON.stringify(serializeChatView(entry.state));
 				if (snapshot !== entry.persisted) {
-					await updateChatView(entry.chatId!, JSON.parse(snapshot));
+					try {
+						const saved = await updateChatView(
+							entry.chatId!,
+							JSON.parse(snapshot),
+							entry.savedRevision
+						);
+						entry.savedRevision = saved.revision ?? 0;
+					} catch (error) {
+						if (!(error instanceof ChatViewConflict)) throw error;
+						mergeSavedView(entry, error.saved);
+						continue;
+					}
 					entry.persisted = snapshot;
 				}
 				entry.persistedRevision = revision;
@@ -192,7 +239,9 @@ export function updateViewTab(entry: Entry, id: string, values: Partial<Tab>) {
 
 export function renameChatTabs(chatId: string, label: string) {
 	for (const entry of entries.values()) {
-		const tabs = entry.state.panels.tabs.filter((t) => t.chatId === chatId && t.label !== label);
+		const tabs = entry.state.panels.tabs.filter(
+			(t) => t.kind === 'chat' && t.chatId === chatId && t.label !== label
+		);
 		if (!tabs.length) continue;
 		for (const tab of tabs) tab.label = label;
 		changeChatView(entry);
@@ -214,7 +263,12 @@ export function closeChatTabs(chatId: string) {
 	}
 }
 
-export function createViewSession(entry: Entry, id: string, target: TerminalTarget) {
+export function createViewSession(
+	entry: Entry,
+	id: string,
+	target: MachineTarget,
+	directory?: string
+) {
 	const pending = entry.pending.get(id);
 	if (pending) return pending;
 	const tab = entry.state.panels.tabs.find((tab) => tab.id === id);
@@ -222,10 +276,17 @@ export function createViewSession(entry: Entry, id: string, target: TerminalTarg
 	delete entry.sessionErrors[id];
 	const request = (async () => {
 		try {
+			// A folder's shells start in its directory; a chat's follow the directory of the chat.
+			if (directory && tab.kind === 'terminal' && isFolderSessionId(target.context.chatId))
+				await machineRequest(target, '/files/cwd', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ path: directory })
+				});
 			const session =
 				tab.kind === 'browser'
 					? await createBrowserSession(target, tab.path ?? '')
-					: await terminalRequest<{ id: string }>(target, '/api/terminals', {
+					: await machineRequest<{ id: string }>(target, '/api/terminals', {
 							method: 'POST'
 						});
 			updateViewTab(entry, id, { sessionId: session.id });

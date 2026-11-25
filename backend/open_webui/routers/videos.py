@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
+import uuid
 
 import aiohttp
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -18,8 +19,17 @@ from open_webui.routers.images import (
     upload_image,
 )
 from open_webui.utils.access_control import has_permission
+from open_webui.utils.audit import set_audit_model
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.headers import get_headers_and_cookies
+from open_webui.utils.images.comfyui import (
+    ComfyUICreateVideoForm,
+    ComfyUIWorkflow,
+    comfyui_create_video,
+    comfyui_upload_image,
+)
+from open_webui.utils.images.connections import get_image_model_ref
+from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.session_pool import get_session
 from open_webui.utils.videos.connections import (
     VIDEO_CONNECTIONS_CONFIG_KEY,
@@ -214,12 +224,17 @@ async def video_generations(
     Video models take minutes, so the provider runs each request as a job: create it with
     ``POST /videos``, check ``GET /videos/{id}`` until it is done, then download ``/videos/{id}/content``.
     OpenAI's API (which LiteLLM follows) takes a multipart form; OpenRouter's takes JSON.
+    ComfyUI connections run the admin's workflow instead (see ``comfyui_video_generations``).
     """
     connection, model = await resolve_video_model(request, user, form_data.model, strict=strict)
+    set_audit_model(get_image_model_ref(connection['id'], model))
     connection_config = connection.get('config') or {}
     seconds = form_data.seconds or connection_config.get('seconds')
     size = form_data.size or connection_config.get('size')
     metadata = metadata or {}
+
+    if connection['type'] == 'comfyui':
+        return await comfyui_video_generations(request, connection, model, form_data, seconds, size, metadata, user)
 
     try:
         headers, cookies = await get_headers_and_cookies(
@@ -254,7 +269,7 @@ async def video_generations(
         else:
             # The create request is multipart, so the connection's JSON content type does not apply.
             headers.pop('Content-Type', None)
-            form = aiohttp.FormData()
+            form = aiohttp.FormData(default_to_multipart=True)
             if model:
                 form.add_field('model', model)
             form.add_field('prompt', form_data.prompt)
@@ -315,6 +330,107 @@ async def video_generations(
             name='generated-video',
         )
         return [video_file]
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.exception(f'Video generation failed: {e}')
+        error = e.message if isinstance(e, aiohttp.ClientResponseError) else e
+        raise HTTPException(status_code=400, detail=ERROR_MESSAGES.DEFAULT(error))
+
+
+COMFYUI_DEFAULT_FPS = 24
+
+
+def get_comfyui_video_length(seconds: int, fps: float) -> int:
+    """Frames for a video of *seconds* at *fps*. Video models want 8n+1 frames (Wan 4n+1, LTX-Video 8n+1),
+    so the count is rounded to the nearest such length."""
+    return max(round(seconds * fps / 8), 1) * 8 + 1
+
+
+def get_comfyui_workflow_fps(connection_config: dict) -> float | None:
+    """The frame rate the workflow's mapped fps node already has, if any."""
+    workflow = JSONCodec.loads(connection_config['workflow'])
+    for node in connection_config.get('nodes') or []:
+        if node.get('type') != 'fps':
+            continue
+        for node_id in node.get('node_ids') or []:
+            value = ((workflow.get(node_id) or {}).get('inputs') or {}).get(node.get('key') or 'fps')
+            if isinstance(value, (int, float)) and value > 0:
+                return value
+    return None
+
+
+async def comfyui_video_generations(
+    request: Request,
+    connection: dict,
+    model: str,
+    form_data: CreateVideoForm,
+    seconds: int | None,
+    size: str | None,
+    metadata: dict,
+    user,
+):
+    """Run the connection's ComfyUI video workflow and save each video it makes as a file.
+
+    The request's prompt, size, length, frame rate and starting frame go into the workflow nodes the admin
+    mapped; anything left out keeps the workflow's own value.
+    """
+    connection_config = connection.get('config') or {}
+    if not connection_config.get('workflow'):
+        raise HTTPException(
+            status_code=400, detail=ERROR_MESSAGES.DEFAULT('This ComfyUI connection has no video workflow')
+        )
+
+    try:
+        width, height = (int(value) for value in size.split('x')) if size and size != 'auto' else (None, None)
+    except ValueError:
+        raise HTTPException(
+            status_code=400, detail=ERROR_MESSAGES.DEFAULT(f'Invalid video size: {size} (e.g. 1280x720)')
+        )
+
+    # Frames are counted at the admin's frame rate, else the one the workflow saves at.
+    fps = connection_config.get('fps') or get_comfyui_workflow_fps(connection_config) or COMFYUI_DEFAULT_FPS
+
+    try:
+        image = None
+        if form_data.image:
+            image_file_item = get_image_file_item(await load_url_image(form_data.image, user))
+            res = await comfyui_upload_image(image_file_item, connection['url'], connection['key'])
+            image = res.get('name') or image_file_item[1][0]
+
+        payload = ComfyUICreateVideoForm(
+            workflow=ComfyUIWorkflow(
+                workflow=connection_config['workflow'],
+                nodes=connection_config.get('nodes') or [],
+            ),
+            prompt=form_data.prompt,
+            image=image,
+            width=width,
+            height=height,
+            length=get_comfyui_video_length(seconds, fps) if seconds else None,
+            fps=fps if connection_config.get('fps') else None,
+        )
+        videos = await comfyui_create_video(
+            model,
+            payload,
+            str(uuid.uuid4()),
+            connection['url'],
+            connection['key'],
+            timeout=VIDEO_GENERATION_TIMEOUT,
+        )
+
+        files = []
+        for video_data, content_type in videos:
+            _, video_file = await upload_image(
+                request,
+                video_data,
+                content_type,
+                {'model': model, 'prompt': form_data.prompt, **metadata},
+                user,
+                name='generated-video',
+            )
+            files.append(video_file)
+        return files
     except HTTPException:
         raise
     except Exception as e:

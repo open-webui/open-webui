@@ -4,12 +4,8 @@
 	import { getContext, onDestroy } from 'svelte';
 	import type { Readable, Writable } from 'svelte/store';
 	import { getSkillItems } from '$lib/apis/skills';
-	import {
-		listTerminalSkills,
-		resolveTerminalTarget,
-		type TerminalSkill
-	} from '$lib/apis/terminal';
-	import { settings, terminalServers } from '$lib/stores';
+	import { listMachineSkills, resolveMachineTarget, type MachineSkill } from '$lib/apis/machines';
+	import { settings, machines } from '$lib/stores';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Cube from '$lib/components/icons/Cube.svelte';
 	import { getChatContext } from '$lib/components/chat/context';
@@ -19,8 +15,8 @@
 	const i18n = getContext('i18n');
 
 	export let query = '';
-	export let selectedTerminalId: Readable<string | null>;
-	export let terminalSkills: Writable<any[]>;
+	export let selectedMachineId: Readable<string | null>;
+	export let machineSkills: Writable<any[]>;
 	export let onSelect = (e) => {};
 
 	let selectedIdx = 0;
@@ -40,22 +36,20 @@
 	});
 
 	const getItems = async () => {
-		const [res, terminalItems] = await Promise.all([
+		const [res, machineItems] = await Promise.all([
 			getSkillItems(localStorage.token, query).catch(() => null),
-			getTerminalItems(query)
+			getMachineItems(query)
 		]);
-		filteredItems = [...(res?.items ?? []), ...terminalItems];
+		filteredItems = [...(res?.items ?? []), ...machineItems];
 	};
 
-	const getTerminalItems = async (query = ''): Promise<TerminalSkill[]> => {
-		const target = resolveTerminalTarget(
-			$selectedTerminalId,
-			$terminalServers ?? [],
-			localStorage.token,
-			{ chatId: $chatId || null, modelId: modelId }
-		);
-		const items = await listTerminalSkills(target).catch(() => []);
-		terminalSkills.set(items);
+	const getMachineItems = async (query = ''): Promise<MachineSkill[]> => {
+		const target = resolveMachineTarget($selectedMachineId, $machines ?? [], localStorage.token, {
+			chatId: $chatId || null,
+			modelId: modelId
+		});
+		const items = await listMachineSkills(target).catch(() => []);
+		machineSkills.set(items);
 		const q = query.trim().toLowerCase();
 		return q
 			? items.filter((skill) => `${skill.name} ${skill.description}`.toLowerCase().includes(q))
@@ -114,7 +108,7 @@
 			tippyOptions={{ maxWidth: '20rem' }}
 		>
 			<button
-				class="flex h-6 w-full items-center rounded-xl px-2 text-left text-[0.8125rem] transition-colors duration-75 hover:bg-gray-50/40 dark:hover:bg-gray-800/40 {skillIdx ===
+				class="flex h-6 w-full items-center rounded-xl px-2 text-left text-[0.8125rem] transition-colors duration-75 hover:bg-base-50/40 dark:hover:bg-base-800/40 {skillIdx ===
 				selectedIdx
 					? 'app-interactive-active selected-command-option-button'
 					: ''}"
@@ -136,7 +130,7 @@
 						{resolveLocalizedResource(skill, $i18n.language)}
 					</div>
 					<div class="app-muted max-w-24 shrink-0 truncate text-[0.625rem]">
-						{skill.source === 'terminal' ? $i18n.t('Terminal') : skill.id}
+						{skill.source === 'machine' ? $i18n.t('Machine') : skill.id}
 					</div>
 				</div>
 			</button>

@@ -10,6 +10,7 @@ from open_webui.models.knowledge import Knowledges
 from open_webui.models.models import Models
 from open_webui.models.notes import NoteModel, Notes, get_note_files
 from open_webui.models.users import UserModel, Users
+from open_webui.utils.access_control.notes import has_note_access
 from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
@@ -130,6 +131,10 @@ async def has_access_to_file(
             db=db,
         ):
             return True
+        for note_id in note_ids:
+            note = await Notes.get_note_by_id(note_id, db=db)
+            if note and note.folder_id and await has_note_access(user.id, note, 'read', db):
+                return True
 
     # Check if the file is directly attached to a shared workspace model (per the ownership
     # note above, model write is conferred only for files the model owner owns).
@@ -177,12 +182,18 @@ async def get_accessible_folder_files(
             group.id for group in await Groups.get_groups_by_member_id(user.id, db=db, include_inherited=True)
         }
 
+    file_owner_ids = await Files.get_owner_ids_by_file_ids(
+        [entry.get('id') for entry in entries if entry.get('type') == 'file' and isinstance(entry.get('id'), str)],
+        db=db,
+    )
+
     accessible: list[dict] = []
     for entry in entries:
         entry_type = entry.get('type')
         entry_id = entry.get('id')
         if entry_type == 'file':
-            if await has_access_to_file(entry_id, 'read', user, db=db, user_group_ids=user_group_ids):
+            is_own_file = isinstance(entry_id, str) and file_owner_ids.get(entry_id) == user.id
+            if is_own_file or await has_access_to_file(entry_id, 'read', user, db=db, user_group_ids=user_group_ids):
                 accessible.append(entry)
         elif entry_type == 'collection':
             if await Knowledges.check_access_by_user_id(
@@ -190,19 +201,8 @@ async def get_accessible_folder_files(
             ):
                 accessible.append(entry)
         elif entry_type == 'note':
-            # Owner has no self-grant (notes are private by default), so check ownership too.
             note = await Notes.get_note_by_id(entry_id, db=db)
-            if note and (
-                note.user_id == user.id
-                or await AccessGrants.has_access(
-                    user_id=user.id,
-                    resource_type='note',
-                    resource_id=entry_id,
-                    permission='read',
-                    user_group_ids=user_group_ids,
-                    db=db,
-                )
-            ):
+            if note and await has_note_access(user.id, note, 'read', db):
                 accessible.append(entry)
     return accessible
 

@@ -16,8 +16,8 @@
 		config,
 		mobile,
 		settings,
-		selectedTerminalId,
-		terminalSkills,
+		selectedMachineId,
+		machineSkills,
 		socket,
 		user
 	} from '$lib/stores';
@@ -95,7 +95,7 @@
 
 	export let replyToMessage: any = null;
 
-	export let typingUsersClassName = 'from-white dark:from-gray-900';
+	export let typingUsersClassName = 'from-base-0 dark:from-base-900';
 
 	let loaded = false;
 	let draggedOver = false;
@@ -702,13 +702,22 @@
 		} else {
 			processingQueueChannels.add(targetQueueKey);
 			try {
-				await onSubmit({
+				const res = await onSubmit({
 					content: entry.prompt,
 					data: { files: entry.files },
 					channel_id: entry.channel_id,
 					parent_id: entry.parent_id,
 					reply_to_message: entry.reply_to_message
 				});
+				if (!res) {
+					channelRequestQueues.update((q) => ({
+						...q,
+						[targetQueueKey]: [
+							{ ...entry, error: 'Failed to send message' },
+							...(q[targetQueueKey] ?? [])
+						]
+					}));
+				}
 			} finally {
 				processingQueueChannels.delete(targetQueueKey);
 				void processNextInQueue(targetQueueKey);
@@ -772,8 +781,8 @@
 						.run();
 				},
 				render: getSuggestionRenderer(CommandSuggestionList, {
-					selectedTerminalId,
-					terminalSkills,
+					selectedMachineId,
+					machineSkills,
 					i18n,
 					onSelect: (e) => {
 						const { type, data } = e;
@@ -817,8 +826,8 @@
 					editor.chain().focus().deleteRange(range).insertContent(emoji).run();
 				},
 				render: getSuggestionRenderer(CommandSuggestionList, {
-					selectedTerminalId,
-					terminalSkills,
+					selectedMachineId,
+					machineSkills,
 					i18n,
 					onSelect: (e) => {
 						inputRoot?.querySelector<HTMLElement>(`[id="${inputId}"]`)?.focus();
@@ -913,7 +922,7 @@
 							>
 								<button
 									aria-label={$i18n.t('Scroll to bottom')}
-									class=" bg-white border border-gray-100 dark:border-none dark:bg-white/20 p-1.5 rounded-full pointer-events-auto"
+									class=" bg-base-0 border border-base-100 dark:border-none dark:bg-base-0/20 p-1.5 rounded-full pointer-events-auto"
 									on:click={() => {
 										scrollEnd = true;
 										scrollToBottom();
@@ -944,7 +953,7 @@
 								<Skeleton size="xs" />
 
 								<div>
-									<span class=" font-normal text-black dark:text-white">
+									<span class=" font-normal text-base-1000 dark:text-base-0">
 										{typingUsers.map((user) => user.name).join(', ')}
 									</span>
 									{$i18n.t('is typing...')}
@@ -993,7 +1002,7 @@
 					>
 						{#if messageQueue.length > 0}
 							<div
-								class="mb-1 mx-2 py-0.5 px-1.5 rounded-2xl bg-white dark:bg-gray-900/60 border border-gray-100 dark:border-gray-800/50 overflow-x-hidden overflow-y-auto max-h-[25vh]"
+								class="mb-1 mx-2 py-0.5 px-1.5 rounded-2xl bg-base-0 dark:bg-base-900/60 border border-base-100 dark:border-base-800/50 overflow-x-hidden overflow-y-auto max-h-[25vh]"
 							>
 								{#each messageQueue as entry (entry.id)}
 									<QueuedMessageItem
@@ -1016,7 +1025,7 @@
 								<div class="px-3 pt-2 text-left w-full flex flex-col z-10">
 									<div class="flex items-center justify-between w-full">
 										<div
-											class="min-w-0 flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400"
+											class="min-w-0 flex items-center gap-2 text-xs text-base-500 dark:text-base-400"
 										>
 											<div class="translate-y-[0.5px]">
 												<span class=""
@@ -1028,7 +1037,7 @@
 										</div>
 										<div>
 											<button
-												class="flex h-6 shrink-0 items-center justify-center rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 px-0"
+												class="flex h-6 shrink-0 items-center justify-center rounded-md text-base-500 dark:text-base-400 hover:text-base-900 dark:hover:text-base-100 px-0"
 												aria-label={$i18n.t('Cancel')}
 												type="button"
 												on:click={() => {
@@ -1060,7 +1069,7 @@
 												</div>
 												<div class=" absolute -top-1 -right-1">
 													<button
-														class=" bg-white text-black border border-white rounded-full hover-reveal transition"
+														class=" bg-base-0 text-base-1000 border border-base-0 rounded-full hover-reveal transition"
 														type="button"
 														aria-label={$i18n.t('Remove file')}
 														on:click={() => {
@@ -1106,7 +1115,7 @@
 
 							<div class="px-2">
 								<div
-									class="scrollbar-hidden rtl:text-right ltr:text-left bg-transparent dark:text-gray-100 outline-hidden w-full pt-2 pb-0.5 px-1 resize-none h-fit max-h-96 overflow-auto"
+									class="scrollbar-hidden rtl:text-right ltr:text-left bg-transparent dark:text-base-100 outline-hidden w-full pt-2 pb-0.5 px-1 resize-none h-fit max-h-96 overflow-auto"
 								>
 									{#key $settings?.richTextInput && $settings?.showFormattingToolbar}
 										<RichTextInput
@@ -1144,9 +1153,8 @@
 
 												const isCtrlPressed = e.ctrlKey || e.metaKey; // metaKey is for Cmd key on Mac
 
-												const suggestionsContainerElement = inputRoot?.querySelector<HTMLElement>(
-													'[id="suggestions-container"]'
-												);
+												const suggestionsContainerElement =
+													document.getElementById('suggestions-container');
 
 												if (!suggestionsContainerElement) {
 													if (
@@ -1250,7 +1258,7 @@
 											>
 												<button
 													id="input-menu-button"
-													class="bg-transparent hover:bg-gray-100/40 text-gray-700 dark:text-white dark:hover:bg-gray-800/40 rounded-full size-[1.875rem] flex justify-center items-center outline-hidden focus:outline-hidden shrink-0"
+													class="bg-transparent hover:bg-base-100/40 text-base-700 dark:text-base-0 dark:hover:bg-base-800/40 rounded-full size-[1.875rem] flex justify-center items-center outline-hidden focus:outline-hidden shrink-0"
 													type="button"
 													aria-label={$i18n.t('More')}
 												>
@@ -1266,7 +1274,7 @@
 										<Tooltip content={$i18n.t('Record voice')}>
 											<button
 												id="voice-input-button"
-												class=" text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200 transition rounded-full p-1.5 self-center mr-0.5"
+												class=" text-base-600 dark:text-base-300 hover:text-base-700 dark:hover:text-base-200 transition rounded-full p-1.5 self-center mr-0.5"
 												type="button"
 												on:click={async () => {
 													try {
@@ -1307,7 +1315,7 @@
 												<Tooltip content={$i18n.t('Stop')}>
 													<button
 														aria-label={$i18n.t('Stop')}
-														class="bg-white hover:bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-800 transition rounded-full p-[0.3125rem]"
+														class="bg-base-0 hover:bg-base-100 text-base-800 dark:bg-base-700 dark:text-base-0 dark:hover:bg-base-800 transition rounded-full p-[0.3125rem]"
 														on:click={() => {
 															onStop();
 														}}
@@ -1334,8 +1342,8 @@
 														id="send-message-button"
 														aria-label={$i18n.t('Send message')}
 														class="{content !== '' || files.length !== 0
-															? 'bg-black text-white hover:bg-gray-900 dark:bg-white dark:text-black dark:hover:bg-gray-100 '
-															: 'text-white bg-gray-200 dark:text-gray-900 dark:bg-gray-700 disabled'} transition rounded-full p-[0.3125rem] self-center"
+															? 'bg-base-1000 text-base-0 hover:bg-base-900 dark:bg-base-0 dark:text-base-1000 dark:hover:bg-base-100 '
+															: 'text-base-0 bg-base-200 dark:text-base-900 dark:bg-base-700 disabled'} transition rounded-full p-[0.3125rem] self-center"
 														type="submit"
 														disabled={content === '' && files.length === 0}
 													>

@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 import re
@@ -15,6 +16,74 @@ log = logging.getLogger(__name__)
 # The V1 API embeds every image as a base64 data URI, which is not text worth indexing
 MARKDOWN_IMAGE = re.compile(r'!\[([^\[\]\n]*)\]\(data:[^()\s]*\)')
 HTML_IMAGE = re.compile(r'<img\b[^<>]*>', re.IGNORECASE)
+
+# Page data arrives beside the markdown: a content list (3.x, cloud) or a middle JSON (4.x)
+PAGE_DATA_FILES = ('content_list.json', 'middle_json.json', 'layout.json')
+MAX_PAGE_DATA_BYTES = 64 * 1024 * 1024
+MIN_PAGE_ANCHOR_CHARS = 16
+
+
+def page_texts(data) -> list[tuple[int, list[str]]]:
+    """List each page's text in reading order from MinerU's content list or middle JSON."""
+
+    def strings(node):
+        if isinstance(node, str):
+            line = node.strip().split('\n', 1)[0].strip()
+            if len(line) >= MIN_PAGE_ANCHOR_CHARS:
+                yield line[:80]
+        elif isinstance(node, list):
+            for item in node:
+                yield from strings(item)
+        elif isinstance(node, dict):
+            for key, value in node.items():
+                # Headers and footers are left out of the markdown
+                if 'discard' not in key:
+                    yield from strings(value)
+
+    if isinstance(data, str):
+        data = json.loads(data)
+    if isinstance(data, dict):
+        data = data.get('pages') or data.get('pdf_info') or []
+    pages: dict[int, list[str]] = {}
+    for item in data if isinstance(data, list) else []:
+        index = item.get('page_idx') if isinstance(item, dict) else None
+        if type(index) is int and index >= 0:
+            pages.setdefault(index, []).extend(strings(item))
+    return sorted(pages.items())
+
+
+def split_pages(markdown: str, metadata: dict, page_data) -> List[Document]:
+    """Split the markdown where each page's first matching text begins, or keep it whole."""
+    try:
+        pages = page_texts(page_data) if page_data else []
+    except (ValueError, AttributeError) as e:
+        log.warning('Ignoring unreadable MinerU page data: %s', e)
+        pages = []
+
+    starts = []
+    cursor = 0
+    for index, texts in pages:
+        for text in texts:
+            found = markdown.find(text, cursor)
+            if found != -1:
+                # Keep the heading or list marker in front of the text with its page
+                start = markdown.rfind('\n', cursor, found) + 1 or cursor
+                starts.append((index, start))
+                cursor = found + len(text)
+                break
+    if not starts:
+        return [Document(page_content=markdown, metadata=metadata)]
+
+    # Text ahead of the first match belongs to the first page found
+    starts[0] = (starts[0][0], 0)
+    documents = []
+    for (index, start), (_, end) in zip(starts, [*starts[1:], (None, len(markdown))]):
+        content = markdown[start:end].strip()
+        if content:
+            documents.append(
+                Document(page_content=content, metadata={**metadata, 'page': index, 'page_label': index + 1})
+            )
+    return documents
 
 
 class MinerULoader:
@@ -41,6 +110,7 @@ class MinerULoader:
         self.api_key = api_key
         self.timeout = timeout
         self.max_markdown_bytes = max_markdown_bytes
+        self.page_data = None
 
         # Parse params dict with defaults
         self.params = params or {}
@@ -92,6 +162,7 @@ class MinerULoader:
         form_data = {
             **self.params,
             'return_md': 'true',
+            'return_content_list': 'true',
         }
 
         # Page ranges (Local API uses start_page_id and end_page_id)
@@ -183,7 +254,7 @@ class MinerULoader:
             'version': result.get('version', 'unknown'),
         }
 
-        return [Document(page_content=markdown_content, metadata=metadata)]
+        return split_pages(markdown_content, metadata, file_result.get('content_list'))
 
     def _is_v1_api(self) -> bool:
         """
@@ -334,7 +405,7 @@ class MinerULoader:
             'version': file_result['parse'].get('parser_version', 'unknown'),
         }
 
-        return [Document(page_content=markdown_content, metadata=metadata)]
+        return split_pages(markdown_content, metadata, self.page_data)
 
     def _request_v1_api(self, method: str, path: str, headers: Optional[dict] = None, **kwargs) -> requests.Response:
         """
@@ -395,7 +466,7 @@ class MinerULoader:
             'batch_id': batch_id,
         }
 
-        return [Document(page_content=markdown_content, metadata=metadata)]
+        return split_pages(markdown_content, metadata, self.page_data)
 
     def _request_upload_url(self, filename: str) -> tuple:
         """
@@ -672,6 +743,15 @@ class MinerULoader:
                         continue
                     if markdown_content:
                         break
+
+                for suffix in PAGE_DATA_FILES:
+                    member = next((m for m in members if m.filename.endswith(suffix)), None)
+                    if member and member.file_size <= MAX_PAGE_DATA_BYTES:
+                        try:
+                            self.page_data = json.loads(zip_ref.read(member))
+                            break
+                        except ValueError as e:
+                            log.warning(f'Failed to read {member.filename}: {e}')
 
                 if markdown_content is None:
                     log.error(f'Available files in ZIP: {all_files}')

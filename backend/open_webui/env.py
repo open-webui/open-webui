@@ -658,22 +658,23 @@ try:
 except (ValueError, TypeError):
     AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA = 10
 
-# Terminal requests can provision a container before returning metadata.
-AIOHTTP_CLIENT_TIMEOUT_TERMINAL = os.getenv(
-    'AIOHTTP_CLIENT_TIMEOUT_TERMINAL',
-    os.getenv('AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA', '60'),
+# Machine requests can provision a container before returning metadata.
+# AIOHTTP_CLIENT_TIMEOUT_TERMINAL is the former name, still read as a fallback.
+AIOHTTP_CLIENT_TIMEOUT_MACHINE = os.getenv(
+    'AIOHTTP_CLIENT_TIMEOUT_MACHINE',
+    os.getenv('AIOHTTP_CLIENT_TIMEOUT_TERMINAL', os.getenv('AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA', '60')),
 )
 
-if AIOHTTP_CLIENT_TIMEOUT_TERMINAL == '':
-    AIOHTTP_CLIENT_TIMEOUT_TERMINAL = None
+if AIOHTTP_CLIENT_TIMEOUT_MACHINE == '':
+    AIOHTTP_CLIENT_TIMEOUT_MACHINE = None
 else:
     try:
-        AIOHTTP_CLIENT_TIMEOUT_TERMINAL = int(AIOHTTP_CLIENT_TIMEOUT_TERMINAL)
+        AIOHTTP_CLIENT_TIMEOUT_MACHINE = int(AIOHTTP_CLIENT_TIMEOUT_MACHINE)
     except (ValueError, TypeError):
-        AIOHTTP_CLIENT_TIMEOUT_TERMINAL = 60
+        AIOHTTP_CLIENT_TIMEOUT_MACHINE = 60
 
-if AIOHTTP_CLIENT_TIMEOUT_TERMINAL is not None and AIOHTTP_CLIENT_TIMEOUT_TERMINAL <= 0:
-    AIOHTTP_CLIENT_TIMEOUT_TERMINAL = None
+if AIOHTTP_CLIENT_TIMEOUT_MACHINE is not None and AIOHTTP_CLIENT_TIMEOUT_MACHINE <= 0:
+    AIOHTTP_CLIENT_TIMEOUT_MACHINE = None
 
 AIOHTTP_FILE_STREAM_CHUNK_SIZE = os.getenv('AIOHTTP_FILE_STREAM_CHUNK_SIZE', str(1024 * 1024))
 try:
@@ -1216,6 +1217,8 @@ ENABLE_AUDIT_LOGS_FILE = os.getenv('ENABLE_AUDIT_LOGS_FILE', 'True').lower() == 
 # Defaults to the DATA_DIR/audit.log. To set AUDIT_LOGS_FILE_PATH you need to
 # provide the whole path, like: /app/audit.log
 AUDIT_LOGS_FILE_PATH = os.getenv('AUDIT_LOGS_FILE_PATH', f'{DATA_DIR}/audit.log')
+# When enabled, startup fails if audit logging is on and the audit log file cannot be opened
+ENABLE_AUDIT_LOGS_FILE_STARTUP_CHECK = os.getenv('ENABLE_AUDIT_LOGS_FILE_STARTUP_CHECK', 'False').lower() == 'true'
 # Maximum size of a file before rotating into a new log file
 AUDIT_LOG_FILE_ROTATION_SIZE = os.getenv('AUDIT_LOG_FILE_ROTATION_SIZE', '10MB')
 
@@ -1248,6 +1251,9 @@ AUDIT_INCLUDED_PATHS = [
 
 # When enabled, GET requests are also audited (disabled by default to avoid log noise)
 ENABLE_AUDIT_GET_REQUESTS = os.getenv('ENABLE_AUDIT_GET_REQUESTS', 'False').lower() == 'true'
+
+# When enabled, anonymous requests (no credential) are also audited (disabled by default, anyone can send them)
+ENABLE_AUDIT_ANONYMOUS_REQUESTS = os.getenv('ENABLE_AUDIT_ANONYMOUS_REQUESTS', 'False').lower() == 'true'
 
 
 # OpenTelemetry

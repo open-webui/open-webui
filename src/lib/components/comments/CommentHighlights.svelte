@@ -12,6 +12,7 @@
 	import { isSavedChatId } from '$lib/utils/chatId';
 	import {
 		anchorRange,
+		middleTruncate,
 		getCommentSurfaces,
 		surfaceRevision,
 		commentSelectionDraft,
@@ -358,6 +359,11 @@
 			hideOnClick: false,
 			offset: [0, 0]
 		});
+		// Popper only re-measures on scroll/resize; re-place (flip) as soon as the composer grows.
+		const resizeObserver = new ResizeObserver(() => {
+			if (popup?.state.isVisible) void popup.popperInstance?.update();
+		});
+		resizeObserver.observe(preview);
 		mounted = true;
 		document.addEventListener('mousemove', move);
 		document.addEventListener('mouseleave', leave);
@@ -370,6 +376,7 @@
 		window.addEventListener('focus', refresh);
 		window.addEventListener('comments:updated', refresh);
 		return () => {
+			resizeObserver.disconnect();
 			mounted = false;
 			clearTimeout(refreshTimer);
 			for (const request of requests.values()) request.abort();
@@ -397,7 +404,7 @@
 <div class="hidden">
 	<div
 		bind:this={preview}
-		class="w-80 max-w-[calc(100vw-24px)] rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-850 text-gray-800 dark:text-gray-200 shadow-lg"
+		class="w-80 max-w-[calc(100vw-24px)] rounded-2xl border border-base-100 dark:border-base-800 bg-base-0 dark:bg-base-850 text-base-800 dark:text-base-200 shadow-lg"
 	>
 		{#if $commentSelectionDraft}
 			{@const draft = $commentSelectionDraft}
@@ -407,27 +414,27 @@
 						src={$user?.id ? `${WEBUI_API_BASE_URL}/users/${$user.id}/profile/image` : undefined}
 						className="-ml-1 size-6 shrink-0 rounded-full!"
 					/>
-					<span class="min-w-0 truncate text-[0.8125rem] text-gray-900 dark:text-gray-100"
+					<span class="min-w-0 truncate text-[0.8125rem] text-base-900 dark:text-base-100"
 						>{$user?.name ?? $i18n.t('Unknown User')}</span
 					>
 					<button
 						type="button"
 						aria-label={$i18n.t('Close')}
-						class="ms-auto shrink-0 p-0 text-gray-400 hover:text-gray-900 dark:text-gray-500 dark:hover:text-gray-100"
+						class="ms-auto shrink-0 p-0 text-base-400 hover:text-base-900 dark:text-base-500 dark:hover:text-base-100"
 						on:click={dismissDraft}><XMark className="size-3.5" /></button
 					>
 				</div>
 				<div
-					class="my-1 border-l-2 border-gray-200 dark:border-gray-700 ps-2 text-xs text-gray-500 dark:text-gray-400 whitespace-pre-wrap break-words"
+					class="my-1 border-l-2 border-base-200 dark:border-base-700 ps-2 text-xs text-base-500 dark:text-base-400 break-words"
+					title={draft.anchor.quote}
 				>
-					{draft.anchor.quote}
+					{middleTruncate(draft.anchor.quote)}
 				</div>
 				<div class="-mr-1 mt-2">
 					{#key `${resourceQuery(draft.options)}:${draft.options.target_id}:${draft.anchor.surface_id}:${draft.anchor.start}:${draft.anchor.end}`}
 						<CommentComposer
 							bind:this={composer}
 							resource={draft.options}
-							scrollable={false}
 							embedded={true}
 							draftKey={`${$user?.id}:${resourceQuery(draft.options)}:${draft.options.target_id}:${draft.anchor.surface_id}:${draft.anchor.source}:${draft.anchor.start}:${draft.anchor.end}`}
 							onCancel={dismissDraft}
@@ -468,21 +475,24 @@
 							: undefined}
 						className="-ml-1 size-6 shrink-0 rounded-full!"
 					/>
-					<span class="min-w-0 truncate text-[0.8125rem] text-gray-900 dark:text-gray-100"
+					<span class="min-w-0 truncate text-[0.8125rem] text-base-900 dark:text-base-100"
 						>{comment.user?.name ?? $i18n.t('Deleted user')}</span
 					>
-					<span class="ms-auto shrink-0 text-xs text-gray-400 dark:text-gray-500"
+					<span class="ms-auto shrink-0 text-xs text-base-400 dark:text-base-500"
 						>{dayjs(comment.created_at / 1e6).fromNow()}</span
 					>
 				</div>
 				{#if comment.meta?.anchor}
 					<div
-						class="my-1 border-l-2 border-gray-200 dark:border-gray-700 ps-2 text-xs text-gray-500 dark:text-gray-400 whitespace-pre-wrap break-words"
+						class="my-1 border-l-2 border-base-200 dark:border-base-700 ps-2 text-xs text-base-500 dark:text-base-400 break-words"
+						title={comment.meta.anchor.quote}
 					>
-						{comment.meta.anchor.quote}
+						{middleTruncate(comment.meta.anchor.quote)}
 					</div>
 				{/if}
-				<div class="mt-2 text-[0.8125rem] text-gray-600 dark:text-gray-300 break-words">
+				<div
+					class="scrollbar-hidden mt-2 max-h-40 overflow-y-auto text-[0.8125rem] text-base-600 dark:text-base-300 break-words"
+				>
 					<Markdown
 						id={`comment-preview-${comment.id}`}
 						content={comment.content}
@@ -494,13 +504,14 @@
 				</div>
 				<button
 					type="button"
-					class="mt-2 p-0 text-xs text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
+					class="mt-2 p-0 text-xs text-base-500 hover:text-base-900 dark:text-base-400 dark:hover:text-base-100"
 					on:click={() => open(comment)}>{$i18n.t('View comment')}</button
 				>
 				<div class="-mx-1 mt-2">
 					<CommentReplyComposer
 						{comment}
 						autofocus={false}
+						compact={true}
 						className=""
 						onCancel={null}
 						onSubmitted={hide}

@@ -6,6 +6,7 @@ import io
 import logging
 import posixpath
 from copy import deepcopy
+from pathlib import Path
 from typing import Optional
 from urllib.parse import unquote
 
@@ -18,7 +19,7 @@ from fastapi import (
     Response,
     status,
 )
-from fastapi.responses import RedirectResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import (
@@ -47,11 +48,11 @@ from open_webui.models.models import (
 from open_webui.storage.provider import Storage
 from open_webui.utils.access_control import (
     filter_allowed_access_grants,
-    has_access,
     has_permission,
     validate_access_grants,
 )
 from open_webui.utils.access_control.files import has_access_to_file
+from open_webui.utils.access_control.notes import has_note_access
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.chat_variables import get_chat_variables_schema
 from open_webui.utils.models import get_all_models
@@ -85,7 +86,7 @@ async def _check_model_controls(form, previous, user, request):
         if not request.app.state.MODELS:
             await get_all_models(request, user=user)
         base = request.app.state.MODELS.get(form.base_model_id or form.id, {})
-        if 'pipe' in base or base.get('owned_by') == 'arena':
+        if 'pipe' in base or base.get('owned_by') == 'router':
             raise HTTPException(400, 'Model controls require a server-managed provider model.')
 
 
@@ -134,15 +135,25 @@ def is_valid_model_id(model_id: str) -> bool:
     return model_id and len(model_id) <= 256 and not any(char.isspace() for char in model_id)
 
 
-async def _verify_background_image(url: str | None, user, db, previous_url: str | None = None) -> None:
-    if not url or url == previous_url:
-        return
+async def _verify_image_access(url: str, user, db):
     file_id = url.split('/')[-2]
     file = await Files.get_file_by_id(file_id, db=db)
     if not file or not (
         user.role == 'admin' or file.user_id == user.id or await has_access_to_file(file_id, 'read', user, db=db)
     ):
-        raise HTTPException(status_code=403, detail='Background image is not accessible.')
+        raise HTTPException(status_code=403, detail='Image is not accessible.')
+    return file
+
+
+async def _verify_images(meta: ModelMeta, user, db, previous: ModelMeta | None = None) -> None:
+    url = meta.profile_image_url
+    if url and url.startswith('/api/v1/files/') and not (previous and url == previous.profile_image_url):
+        await _verify_image_access(url, user, db)
+
+    url = meta.background_image_url
+    if not url or (previous and url == previous.background_image_url):
+        return
+    file = await _verify_image_access(url, user, db)
     try:
         path = await asyncio.to_thread(Storage.get_file, file.path)
         with open(path, 'rb') as image:
@@ -151,7 +162,7 @@ async def _verify_background_image(url: str | None, user, db, previous_url: str 
     except (ValueError, OSError) as error:
         raise HTTPException(status_code=400, detail=str(error)) from error
     if (file.meta or {}).get('content_type') != content_type:
-        if not await Files.update_file_metadata_by_id(file_id, {'content_type': content_type}, db=db):
+        if not await Files.update_file_metadata_by_id(file.id, {'content_type': content_type}, db=db):
             raise HTTPException(status_code=500, detail='Could not validate background image.')
 
 
@@ -397,7 +408,7 @@ async def create_new_model(
         db,
     )
 
-    await _verify_background_image(form_data.meta.background_image_url, user, db)
+    await _verify_images(form_data.meta, user, db)
     await _verify_voice_avatar(form_data.meta.voice_avatar, user, db)
 
     form_data.access_grants = await filter_allowed_access_grants(
@@ -480,6 +491,16 @@ async def export_models(
                 raise HTTPException(
                     status_code=400, detail=f'Could not export background for model {model.id}.'
                 ) from error
+        url = model.meta.profile_image_url
+        if url and url.startswith('/api/v1/files/'):
+            try:
+                file = await Files.get_file_by_id(url.split('/')[-2], db=db)
+                path = await asyncio.to_thread(Storage.get_file, file.path)
+                image_data = base64.b64encode(await asyncio.to_thread(Path(path).read_bytes)).decode('ascii')
+                data['meta']['profile_image_url'] = f'data:{file.meta["content_type"]};base64,{image_data}'
+            except Exception:
+                log.warning('Could not export profile image for model %s', model.id)
+                data['meta']['profile_image_url'] = None
         exported.append(data)
     return exported
 
@@ -671,11 +692,8 @@ async def import_models(
                                 db=db,
                             )
                             imported_model.meta.background_image_url = f'/api/v1/files/{uploaded.id}/content'
-                        await _verify_background_image(
-                            imported_model.meta.background_image_url,
-                            user,
-                            db,
-                            existing_model.meta.background_image_url if existing_model else None,
+                        await _verify_images(
+                            imported_model.meta, user, db, existing_model.meta if existing_model else None
                         )
                         if existing_model and 'voice_avatar' not in imported_model.meta.model_fields_set:
                             imported_model.meta.voice_avatar = existing_model.meta.voice_avatar
@@ -746,9 +764,7 @@ async def sync_models(
         await _verify_voice_avatar(model.meta.voice_avatar, user, db, previous.meta.voice_avatar if previous else None)
         if previous and 'background_image_url' not in model.meta.model_fields_set:
             model.meta.background_image_url = previous.meta.background_image_url
-        await _verify_background_image(
-            model.meta.background_image_url, user, db, previous.meta.background_image_url if previous else None
-        )
+        await _verify_images(model.meta, user, db, previous.meta if previous else None)
     models = await Models.sync_models(user.id, form_data.models, db=db)
     await publish_event(
         request,
@@ -878,15 +894,19 @@ async def _verify_version_dependencies(request, form, user, db):
     from open_webui.models.knowledge import Knowledges
     from open_webui.models.notes import Notes
     from open_webui.models.skills import Skills
-    from open_webui.routers.terminals import list_terminal_servers
+    from open_webui.routers.machines import list_machines
     from open_webui.routers.tools import get_tools
 
     async def require_resource(resource_type, resource_id, resource):
         if not resource or getattr(resource, 'is_active', True) is False:
             raise HTTPException(400, f'Referenced {resource_type} is unavailable: {resource_id}')
         if not (user.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL) and resource.user_id != user.id:
-            if not await AccessGrants.has_access(
-                user_id=user.id, resource_type=resource_type, resource_id=resource_id, permission='read', db=db
+            if not (
+                await has_note_access(user.id, resource, 'read', db)
+                if resource_type == 'note'
+                else await AccessGrants.has_access(
+                    user_id=user.id, resource_type=resource_type, resource_id=resource_id, permission='read', db=db
+                )
             ):
                 raise HTTPException(403, f'Referenced {resource_type} is not accessible: {resource_id}')
 
@@ -917,9 +937,9 @@ async def _verify_version_dependencies(request, form, user, db):
             function = await Functions.get_function_by_id(function_id, db=db)
             if not function or not function.is_active:
                 raise HTTPException(400, f'A referenced function is unavailable: {function_id}')
-    terminal_id = getattr(form.meta, 'terminalId', None)
-    if terminal_id and terminal_id not in {t['id'] for t in await list_terminal_servers(request, user=user)}:
-        raise HTTPException(400, 'The referenced terminal is missing or inaccessible.')
+    machine_id = getattr(form.meta, 'machineId', None) or getattr(form.meta, 'terminalId', None)
+    if machine_id and machine_id not in {t['id'] for t in await list_machines(request, user=user)}:
+        raise HTTPException(400, 'The referenced machine is missing or inaccessible.')
 
 
 class ModelVersionForm(BaseModel):
@@ -945,7 +965,7 @@ async def set_model_version(
         raise HTTPException(403, ERROR_MESSAGES.ACCESS_PROHIBITED)
     await _check_model_controls(form, model, user, request)
     await _verify_version_dependencies(request, form, user, db)
-    await _verify_background_image(form.meta.background_image_url, user, db)
+    await _verify_images(form.meta, user, db)
     await _verify_voice_avatar(form.meta.voice_avatar, user, db)
     result = await Models.update_model_by_id(id, form, db=db, user_id=user.id, production_version_id=entry.id)
     if result is None:
@@ -974,6 +994,8 @@ async def get_model_profile_image(
 
     # First, check the database for regular models
     model_meta = await Models.get_model_meta_by_id(id, db=db)
+    # As in the model list, a model without a row is visible to admins only.
+    read_access = bypass_access_control or (not model_meta and user.role == 'admin')
     if model_meta:
         meta, model_user_id, model_updated_at = model_meta
         # Denied callers get the default image rather than an error, so model ids stay unprobeable.
@@ -988,22 +1010,18 @@ async def get_model_profile_image(
                 db=db,
             )
         ):
+            read_access = True
             profile_image_url = (meta or {}).get('profile_image_url')
             updated_at = model_updated_at
 
-    # Fallback: check arena models stored in config (not in the DB)
+    # Fallback: check router models stored in config (not in the DB)
     if not profile_image_url:
-        arena_models = await Config.get('evaluation.arena.models', []) or []
-        for arena_model in arena_models:
-            if arena_model.get('id') == id:
-                arena_meta = arena_model.get('meta', {})
-                access_grants = arena_meta.get('access_grants', [])
-                if (
-                    bypass_access_control
-                    or (not access_grants and user.role == 'admin')
-                    or await has_access(user.id, permission='read', access_grants=access_grants, db=db)
-                ):
-                    profile_image_url = arena_meta.get('profile_image_url')
+        router_models = await Config.get('router.models', []) or []
+        for router_model in router_models:
+            if router_model.get('id') == id:
+                router_meta = router_model.get('meta', {})
+                if read_access:
+                    profile_image_url = router_meta.get('profile_image_url')
                 break
 
     if profile_image_url:
@@ -1046,6 +1064,15 @@ async def get_model_profile_image(
                 )
             except Exception:
                 pass
+        elif profile_image_url.startswith('/api/v1/files/'):
+            file = await Files.get_file_by_id(profile_image_url.split('/')[-2], db=db)
+            media_type = (file.meta or {}).get('content_type') if file else None
+            if media_type in PROFILE_IMAGE_ALLOWED_MIME_TYPES:
+                return FileResponse(
+                    await asyncio.to_thread(Storage.get_file, file.path),
+                    media_type=media_type,
+                    headers={'X-Content-Type-Options': 'nosniff', 'Cache-Control': 'no-cache'},
+                )
         else:
             safe_static = _safe_static_redirect_path(profile_image_url)
             if safe_static:
@@ -1172,7 +1199,7 @@ async def update_model_by_id(
     await _verify_voice_avatar(form_data.meta.voice_avatar, user, db, model.meta.voice_avatar)
     if 'background_image_url' not in form_data.meta.model_fields_set:
         form_data.meta.background_image_url = model.meta.background_image_url
-    await _verify_background_image(form_data.meta.background_image_url, user, db, model.meta.background_image_url)
+    await _verify_images(form_data.meta, user, db, model.meta)
 
     await _check_model_controls(form_data, model, user, request)
     model = await Models.update_model_by_id(form_data.id, form_data, db=db, user_id=user.id)

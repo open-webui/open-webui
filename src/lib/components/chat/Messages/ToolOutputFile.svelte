@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { resolveTerminalTarget } from '$lib/apis/terminal';
+	import { resolveMachineTarget } from '$lib/apis/machines';
 	// Keep keys in nested template expressions visible to i18next-parser.
 	// $i18n.t("Terminal unavailable");
 	// $i18n.t("No preview available");
@@ -8,14 +8,8 @@
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
 	import { toast } from 'svelte-sonner';
-	import {
-		settings,
-		selectedTerminalId,
-		showTabs,
-		showFileNavPath,
-		terminalServers
-	} from '$lib/stores';
-	import { downloadFileBlob, downloadFilePreview, readFile } from '$lib/apis/terminal';
+	import { settings, selectedMachineId, showTabs, showFileNavPath, machines } from '$lib/stores';
+	import { downloadFileBlob, downloadFilePreview, readFile } from '$lib/apis/machines';
 	import { getFileContentById } from '$lib/apis/files';
 	import FilePreview from '$lib/components/chat/FileNav/FilePreview.svelte';
 	import Icon from '$lib/components/chat/FileNav/Icon.svelte';
@@ -61,18 +55,17 @@
 	$: path = String(fileId ? item.name : item?.full_path || item?.path || '');
 	$: name = String(item?.name || path.split('/').filter(Boolean).at(-1) || 'file');
 	$: targetPage = normalizeDocumentTargetPage(item?.page);
-	$: selector = item?.terminal_selector;
-	// Follows the Terminal menu: the card only reaches its file while that terminal is selected.
-	$: terminal =
-		selector && $selectedTerminalId === selector
-			? resolveTerminalTarget(selector, $terminalServers ?? [], localStorage.token, {
+	$: selector = item?.machine_selector ?? item?.terminal_selector; // terminal_selector: saved before the rename
+	// Follows the machine menu: the card only reaches its file while that machine is selected.
+	$: machine =
+		selector && $selectedMachineId === selector
+			? resolveMachineTarget(selector, $machines ?? [], localStorage.token, {
 					chatId,
 					modelId: item?.model_id ?? modelId
 				})
 			: null;
-	$: unavailable = !terminal && !fileId;
-	$: previewKey =
-		fileId || (terminal ? `${terminal.baseUrl}|${terminal.key}|${path}|${chatId}` : '');
+	$: unavailable = !machine && !fileId;
+	$: previewKey = fileId || (machine ? `${machine.baseUrl}|${machine.key}|${path}|${chatId}` : '');
 
 	$: previewClass = isImage(path)
 		? 'h-[22rem]'
@@ -122,8 +115,8 @@
 				? { blob: new Blob([data], { type: item?.content_type ?? '' }), filename: name }
 				: null;
 		}
-		if (!terminal) return null;
-		return downloadFileBlob(terminal, path);
+		if (!machine) return null;
+		return downloadFileBlob(machine, path);
 	}
 
 	async function loadPreview(key: string) {
@@ -159,7 +152,7 @@
 					const arrayBuffer = await result.blob.arrayBuffer();
 					fileSqliteData = arrayBuffer;
 				} else if (ext === 'docx') {
-					const preview = terminal ? await downloadFilePreview(terminal, path) : null;
+					const preview = machine ? await downloadFilePreview(machine, path) : null;
 					if (preview) {
 						filePdfData = await preview.blob.arrayBuffer();
 					} else {
@@ -178,7 +171,7 @@
 						excelWorkbook = workbook;
 					}
 				} else if (ext === 'pptx') {
-					const preview = terminal ? await downloadFilePreview(terminal, path) : null;
+					const preview = machine ? await downloadFilePreview(machine, path) : null;
 					if (preview) {
 						filePdfData = await preview.blob.arrayBuffer();
 					} else {
@@ -194,8 +187,8 @@
 				const result = await blobForPreview();
 				if (!result) throw new Error(t('Preview failed'));
 				fileContent = await result.blob.text();
-			} else if (terminal) {
-				fileContent = await readFile(terminal, path);
+			} else if (machine) {
+				fileContent = await readFile(machine, path);
 			}
 		} catch (e) {
 			error = e instanceof Error ? e.message : t('Preview failed');
@@ -230,10 +223,10 @@
 </script>
 
 <div
-	class="my-2 w-full overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/8 dark:bg-gray-950/20"
+	class="my-2 w-full overflow-hidden rounded-xl border border-base-200 bg-base-0 dark:border-base-0/8 dark:bg-base-950/20"
 >
 	<div
-		class="flex h-8 items-center {expanded ? 'border-b border-gray-100 dark:border-white/8' : ''}"
+		class="flex h-8 items-center {expanded ? 'border-b border-base-100 dark:border-base-0/8' : ''}"
 	>
 		<button
 			type="button"
@@ -242,18 +235,18 @@
 			aria-expanded={expanded}
 		>
 			<div
-				class="flex size-5 shrink-0 items-center justify-center text-gray-500 dark:text-gray-400"
+				class="flex size-5 shrink-0 items-center justify-center text-base-500 dark:text-base-400"
 			>
 				<Icon name={fileIconName(name || path || '', 'file')} size={14} />
 			</div>
-			<div class="min-w-0 flex-1 truncate text-xs font-medium text-gray-800 dark:text-gray-100">
+			<div class="min-w-0 flex-1 truncate text-xs font-medium text-base-800 dark:text-base-100">
 				{name}
 			</div>
 		</button>
 
 		<button
 			type="button"
-			class="mr-1 flex size-6 shrink-0 items-center justify-center rounded text-gray-400 transition-colors hover:text-gray-700 disabled:opacity-40 disabled:hover:text-gray-400 dark:text-gray-500 dark:hover:text-gray-200 dark:disabled:hover:text-gray-500"
+			class="mr-1 flex size-6 shrink-0 items-center justify-center rounded text-base-400 transition-colors hover:text-base-700 disabled:opacity-40 disabled:hover:text-base-400 dark:text-base-500 dark:hover:text-base-200 dark:disabled:hover:text-base-500"
 			disabled={unavailable}
 			on:click|stopPropagation={downloadFile}
 			aria-label={t('Download')}
@@ -263,7 +256,7 @@
 		{#if !fileId}
 			<button
 				type="button"
-				class="mr-1 flex size-6 shrink-0 items-center justify-center rounded text-gray-400 transition-colors hover:text-gray-700 disabled:opacity-40 disabled:hover:text-gray-400 dark:text-gray-500 dark:hover:text-gray-200 dark:disabled:hover:text-gray-500"
+				class="mr-1 flex size-6 shrink-0 items-center justify-center rounded text-base-400 transition-colors hover:text-base-700 disabled:opacity-40 disabled:hover:text-base-400 dark:text-base-500 dark:hover:text-base-200 dark:disabled:hover:text-base-500"
 				disabled={unavailable}
 				on:click|stopPropagation={openInFiles}
 				aria-label={t('Open')}
@@ -275,14 +268,14 @@
 
 	{#if expanded}
 		{#if unavailable}
-			<div class="px-4 py-3 text-xs text-gray-500 dark:text-gray-400">
-				{t('Terminal unavailable')}
+			<div class="px-4 py-3 text-xs text-base-500 dark:text-base-400">
+				{t('Machine unavailable')}
 			</div>
 		{:else if error}
 			<div class="px-4 py-3 text-xs text-red-500 dark:text-red-400">{error}</div>
 		{:else}
 			<div
-				class="{previewClass} max-h-[75vh] min-h-24 resize-y overflow-hidden bg-gray-50 dark:bg-gray-950"
+				class="{previewClass} max-h-[75vh] min-h-24 resize-y overflow-hidden bg-base-50 dark:bg-base-950"
 			>
 				<FilePreview
 					selectedFile={path}
@@ -295,7 +288,7 @@
 					{fileModelData}
 					{fileDocxData}
 					{fileContent}
-					target={fileId ? null : terminal}
+					target={fileId ? null : machine}
 					{chatId}
 					{excelWorkbook}
 					{fileOfficeSlides}
@@ -306,7 +299,7 @@
 				/>
 				{#if !loading && fileImageUrl === null && fileVideoUrl === null && fileAudioUrl === null && filePdfData === null && fileSqliteData === null && fileModelData === null && fileDocxData === null && fileContent === null && excelWorkbook === null && fileOfficeSlides === null}
 					<div
-						class="flex h-full items-center justify-center px-3 text-xs text-gray-500 dark:text-gray-400"
+						class="flex h-full items-center justify-center px-3 text-xs text-base-500 dark:text-base-400"
 					>
 						{t('No preview available')}
 					</div>

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { getContext, afterUpdate, tick } from 'svelte';
-	import type { GitFile } from '$lib/apis/terminal/git';
+	import type { GitFile } from '$lib/apis/machines/git';
 	export let gitFile: GitFile | null = null;
 	export let gitDiffOpen = false;
 	export let onToggleGitDiff: () => void = () => {};
@@ -12,7 +12,7 @@
 	import Check from '$lib/components/icons/Check.svelte';
 	import { formatFileSize } from '$lib/utils';
 
-	export let dragType = 'application/x-terminal-file-move';
+	export let dragType = 'application/x-machine-file-move';
 	export let dragContext = '';
 	const i18n: any = getContext('i18n');
 
@@ -130,17 +130,15 @@
 	}}
 />
 
-<div
-	class="m-0 flex items-center gap-1 px-1 pt-0 pb-1.5 shrink-0 border-b border-gray-200/40 dark:border-gray-850/20"
->
+<div class="m-0 flex items-center gap-1 px-1 pb-0.75 shrink-0">
 	<div class="flex shrink-0 items-center gap-0.5 px-1">
 		<!-- Back -->
 		<Tooltip content={$i18n.t('Back')}>
 			<button
 				type="button"
 				class="shrink-0 flex h-5 min-w-6 items-center justify-center rounded px-1.5 transition-colors duration-100 {canGoBack
-					? 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
-					: 'text-gray-200 dark:text-gray-700 cursor-default'}"
+					? 'text-base-500 dark:text-base-400 hover:text-base-800 dark:hover:text-base-200'
+					: 'text-base-200 dark:text-base-700 cursor-default'}"
 				on:click={onGoBack}
 				disabled={!canGoBack}
 				aria-label={$i18n.t('Back')}
@@ -154,8 +152,8 @@
 			<button
 				type="button"
 				class="shrink-0 flex h-5 min-w-6 items-center justify-center rounded px-1.5 transition-colors duration-100 {canGoForward
-					? 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
-					: 'text-gray-200 dark:text-gray-700 cursor-default'}"
+					? 'text-base-500 dark:text-base-400 hover:text-base-800 dark:hover:text-base-200'
+					: 'text-base-200 dark:text-base-700 cursor-default'}"
 				on:click={onGoForward}
 				disabled={!canGoForward}
 				aria-label={$i18n.t('Forward')}
@@ -170,7 +168,7 @@
 			bind:this={pathInput}
 			value={selectedFile ?? breadcrumbs.at(-1)?.path ?? ''}
 			readonly={!!selectedFile}
-			class="min-w-0 flex-1 bg-transparent text-xs text-gray-800 outline-hidden dark:text-gray-200"
+			class="min-w-0 flex-1 bg-transparent text-xs text-base-800 outline-hidden dark:text-base-200"
 			aria-label={$i18n.t('Path')}
 			on:keydown={(e) => {
 				if (selectedFile && e.key !== 'Escape') return;
@@ -207,15 +205,17 @@
 	>
 		{#each breadcrumbs as crumb, i}
 			{#if showSeparator(i)}
-				<span class="text-gray-300 dark:text-gray-600 text-xs shrink-0 select-none">/</span>
+				<span class="text-base-300 dark:text-base-600 text-xs shrink-0 select-none">/</span>
 			{/if}
 			<button
 				type="button"
 				class="text-xs shrink-0 p-0 transition
 				{!selectedFile && i === breadcrumbs.length - 1
-					? 'text-gray-700 dark:text-gray-300'
-					: 'text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400'}
-				{dragOverCrumb === i ? 'bg-gray-100 dark:bg-white/8 ring-1 ring-black/15 dark:ring-white/15' : ''}"
+					? 'text-base-700 dark:text-base-300'
+					: 'text-base-400 dark:text-base-500 hover:text-base-600 dark:hover:text-base-400'}
+				{dragOverCrumb === i
+					? 'bg-base-100 dark:bg-base-0/8 ring-1 ring-base-1000/15 dark:ring-base-0/15'
+					: ''}"
 				on:click={() => onNavigate(crumb.path)}
 				on:dragover={(e) => {
 					if (!writable) return;
@@ -246,34 +246,34 @@
 			</button>
 		{/each}
 		{#if selectedFile}
-			<span class="text-gray-300 dark:text-gray-600 text-xs shrink-0 select-none">/</span>
-			<span class="text-xs shrink-0 p-0 text-gray-700 dark:text-gray-300">
+			<span class="text-base-300 dark:text-base-600 text-xs shrink-0 select-none">/</span>
+			<span class="text-xs shrink-0 p-0 text-base-700 dark:text-base-300">
 				{selectedFile.split('/').pop()}
 			</span>
 			{#if gitFile}
 				<span class="flex shrink-0 items-center gap-1 font-mono text-[0.625rem]">
 					{#if gitFile.binary}
-						<span class="text-gray-500 dark:text-gray-400"
+						<span class="text-base-500 dark:text-base-400"
 							>{gitFile.status === 'untracked' ? 'U' : gitFile.status[0].toUpperCase()}</span
 						>
 					{:else}
 						<span class="text-green-600 dark:text-green-400">+{gitFile.additions ?? 0}</span>
-						<span class="text-gray-500 dark:text-gray-400">-{gitFile.deletions ?? 0}</span>
+						<span class="text-base-500 dark:text-base-400">-{gitFile.deletions ?? 0}</span>
 					{/if}
 				</span>
 			{/if}
 		{/if}
 	</div>
 	{#if selectedFile && fileSize !== undefined}
-		<span class="shrink-0 me-1 text-[0.6875rem] text-gray-400/75">{formatFileSize(fileSize)}</span>
+		<span class="shrink-0 me-1 text-[0.6875rem] text-base-400/75">{formatFileSize(fileSize)}</span>
 	{/if}
 	{#if selectedFile && (gitFile || gitDiffOpen)}
 		<Tooltip content={gitDiffOpen ? $i18n.t('Hide diff') : $i18n.t('Show diff')}>
 			<button
 				type="button"
 				class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 {gitDiffOpen
-					? 'text-gray-800 dark:text-gray-200'
-					: 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'}"
+					? 'text-base-800 dark:text-base-200'
+					: 'text-base-500 dark:text-base-400 hover:text-base-800 dark:hover:text-base-200'}"
 				aria-label={gitDiffOpen ? $i18n.t('Hide diff') : $i18n.t('Show diff')}
 				aria-pressed={gitDiffOpen}
 				on:click={onToggleGitDiff}
@@ -283,7 +283,7 @@
 		</Tooltip>
 	{/if}
 	{#if !writable}
-		<span class="text-[0.625rem] text-gray-400 dark:text-gray-500 shrink-0">
+		<span class="text-[0.625rem] text-base-400 dark:text-base-500 shrink-0">
 			{$i18n.t('Read-only')}
 		</span>
 	{/if}
@@ -291,7 +291,7 @@
 	<Tooltip content={$i18n.t('Refresh')}>
 		<button
 			type="button"
-			class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+			class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-base-500 dark:text-base-400 hover:text-base-800 dark:hover:text-base-200"
 			on:click={onRefresh}
 			aria-label={$i18n.t('Refresh')}
 		>
@@ -303,7 +303,7 @@
 			<Tooltip content={$i18n.t('Sort')}>
 				<button
 					type="button"
-					class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+					class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-base-500 dark:text-base-400 hover:text-base-800 dark:hover:text-base-200"
 					aria-label={$i18n.t('Sort')}
 				>
 					<Icon name="sort" size={11} strokeWidth={1.4} />
@@ -314,7 +314,7 @@
 				<DropdownMenu className="min-w-[9.375rem] z-[9999999]">
 					<button
 						type="button"
-						class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-gray-50/40 dark:hover:bg-white/4 transition"
+						class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-base-50/40 dark:hover:bg-base-0/4 transition"
 						on:click={() => {
 							onSort('name');
 							sortMenuOpen = false;
@@ -326,7 +326,7 @@
 								name="chevron-up"
 								size={12}
 								strokeWidth={1.5}
-								class="text-gray-500 dark:text-gray-400 transition-transform {sortAsc
+								class="text-base-500 dark:text-base-400 transition-transform {sortAsc
 									? ''
 									: 'rotate-180'}"
 							/>
@@ -334,7 +334,7 @@
 					</button>
 					<button
 						type="button"
-						class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-gray-50/40 dark:hover:bg-white/4 transition"
+						class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-base-50/40 dark:hover:bg-base-0/4 transition"
 						on:click={() => {
 							onSort('size');
 							sortMenuOpen = false;
@@ -346,7 +346,7 @@
 								name="chevron-up"
 								size={12}
 								strokeWidth={1.5}
-								class="text-gray-500 dark:text-gray-400 transition-transform {sortAsc
+								class="text-base-500 dark:text-base-400 transition-transform {sortAsc
 									? ''
 									: 'rotate-180'}"
 							/>
@@ -354,7 +354,7 @@
 					</button>
 					<button
 						type="button"
-						class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-gray-50/40 dark:hover:bg-white/4 transition"
+						class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-base-50/40 dark:hover:bg-base-0/4 transition"
 						on:click={() => {
 							onSort('date');
 							sortMenuOpen = false;
@@ -366,7 +366,7 @@
 								name="chevron-up"
 								size={12}
 								strokeWidth={1.5}
-								class="text-gray-500 dark:text-gray-400 transition-transform {sortAsc
+								class="text-base-500 dark:text-base-400 transition-transform {sortAsc
 									? ''
 									: 'rotate-180'}"
 							/>
@@ -375,7 +375,7 @@
 					{#if showDateAdded}
 						<button
 							type="button"
-							class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-gray-50/40 dark:hover:bg-white/4 transition"
+							class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-base-50/40 dark:hover:bg-base-0/4 transition"
 							on:click={() => {
 								onSort('created');
 								sortMenuOpen = false;
@@ -387,7 +387,7 @@
 									name="chevron-up"
 									size={12}
 									strokeWidth={1.5}
-									class="text-gray-500 dark:text-gray-400 transition-transform {sortAsc
+									class="text-base-500 dark:text-base-400 transition-transform {sortAsc
 										? ''
 										: 'rotate-180'}"
 								/>
@@ -402,7 +402,7 @@
 				<button
 					type="button"
 					data-file-search-toggle
-					class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+					class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-base-500 dark:text-base-400 hover:text-base-800 dark:hover:text-base-200"
 					aria-label={$i18n.t('Search')}
 					aria-expanded={showSearch}
 					on:click={onToggleSearch}
@@ -415,7 +415,7 @@
 			<Tooltip content={$i18n.t('Actions')}>
 				<button
 					type="button"
-					class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+					class="shrink-0 flex h-5 w-5 items-center justify-center rounded transition-colors duration-100 text-base-500 dark:text-base-400 hover:text-base-800 dark:hover:text-base-200"
 					aria-label={$i18n.t('Actions')}
 				>
 					<Icon name="three-dots" size={11} strokeWidth={1.4} />
@@ -426,7 +426,7 @@
 				<DropdownMenu className="min-w-[9.375rem] z-[9999999]">
 					<button
 						type="button"
-						class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-xs hover:text-gray-900 dark:hover:text-gray-100 disabled:opacity-40"
+						class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-xs hover:text-base-900 dark:hover:text-base-100 disabled:opacity-40"
 						on:click={() => {
 							onNewFile();
 							actionsMenuOpen = false;
@@ -438,7 +438,7 @@
 					</button>
 					<button
 						type="button"
-						class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-xs hover:text-gray-900 dark:hover:text-gray-100 disabled:opacity-40"
+						class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-xs hover:text-base-900 dark:hover:text-base-100 disabled:opacity-40"
 						on:click={() => {
 							onNewFolder();
 							actionsMenuOpen = false;
@@ -450,7 +450,7 @@
 					</button>
 					<button
 						type="button"
-						class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-gray-50/40 dark:hover:bg-white/4 transition disabled:opacity-40 disabled:hover:bg-transparent"
+						class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-base-50/40 dark:hover:bg-base-0/4 transition disabled:opacity-40 disabled:hover:bg-transparent"
 						on:click={() => {
 							actionsMenuOpen = false;
 							uploadInput?.click();
@@ -463,7 +463,7 @@
 					{#if onUploadFolder}
 						<button
 							type="button"
-							class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-gray-50/40 dark:hover:bg-white/4 transition disabled:opacity-40 disabled:hover:bg-transparent"
+							class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-base-50/40 dark:hover:bg-base-0/4 transition disabled:opacity-40 disabled:hover:bg-transparent"
 							disabled={!writable}
 							on:click={() => {
 								actionsMenuOpen = false;
@@ -476,7 +476,7 @@
 					{/if}
 					<button
 						type="button"
-						class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-gray-50/40 dark:hover:bg-white/4 transition"
+						class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-base-50/40 dark:hover:bg-base-0/4 transition"
 						on:click={() => {
 							onDownloadDir();
 							actionsMenuOpen = false;
@@ -487,7 +487,7 @@
 					</button>
 					<button
 						type="button"
-						class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-gray-50/40 dark:hover:bg-white/4 transition"
+						class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-base-50/40 dark:hover:bg-base-0/4 transition"
 						on:click={() => {
 							onToggleHidden();
 							actionsMenuOpen = false;
@@ -497,11 +497,11 @@
 						<span>{showHidden ? $i18n.t('Hide Hidden Files') : $i18n.t('Show Hidden Files')}</span>
 					</button>
 					{#if viewMode !== null}
-						<div class="my-1 border-t border-gray-100 dark:border-white/10" role="separator"></div>
+						<div class="my-1 border-t border-base-100 dark:border-base-0/10" role="separator"></div>
 						{#each ['grid', 'list'] as mode}
 							<button
 								type="button"
-								class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-gray-50/40 dark:hover:bg-white/4 transition"
+								class="select-none flex h-7 w-full items-center gap-2 rounded-lg px-2 text-xs hover:bg-base-50/40 dark:hover:bg-base-0/4 transition"
 								aria-pressed={viewMode === mode}
 								on:click={() => {
 									onViewModeChange(mode === 'grid' ? 'grid' : 'list');

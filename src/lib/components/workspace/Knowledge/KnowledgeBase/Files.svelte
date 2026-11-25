@@ -372,7 +372,7 @@
 >
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
-		class="mb-1 px-2 py-1 text-xs text-gray-400"
+		class="mb-1 px-2 py-1 text-xs text-base-400"
 		on:dragover={(event) => {
 			if (
 				knowledge.write_access &&
@@ -459,11 +459,11 @@
 		</div>
 	{:else if data.items.length < data.total}<button
 			type="button"
-			class="px-2 py-1 text-xs text-gray-500"
+			class="px-2 py-1 text-xs text-base-500"
 			on:click={() => load(id, true, search)}>{$i18n.t('Load more')}</button
 		>
 	{:else if !data.items.length && (search || !data.directories.length)}<p
-			class="px-2 py-1 text-xs text-gray-400"
+			class="px-2 py-1 text-xs text-base-400"
 		>
 			{search ? $i18n.t('No results found') : $i18n.t('No files')}
 		</p>{/if}

@@ -61,13 +61,13 @@
 	let variableFormValue = '';
 
 	const textareaClass =
-		'w-full resize-y rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
+		'w-full resize-y rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors placeholder:text-base-300 focus:border-blue-400 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-300 dark:placeholder:text-base-700 dark:focus:border-blue-500';
 	const inputClass =
-		'h-7 w-full rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
+		'h-7 w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 text-xs text-base-700 outline-hidden transition-colors placeholder:text-base-300 focus:border-blue-400 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-300 dark:placeholder:text-base-700 dark:focus:border-blue-500';
 	const variableValueClass =
-		'w-full resize-none rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
+		'w-full resize-none rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors placeholder:text-base-300 focus:border-blue-400 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-300 dark:placeholder:text-base-700 dark:focus:border-blue-500';
 	const actionButtonClass =
-		'text-xs text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white';
+		'text-xs text-base-500 transition-colors hover:text-base-900 dark:text-base-500 dark:hover:text-base-0';
 	const variableRowClass = 'flex w-full items-center gap-1.5';
 	const variableKeyRegex = /^[a-z][a-z0-9_]*$/;
 
@@ -249,7 +249,7 @@
 	}}
 >
 	<div class="flex-1 min-h-0 w-full overflow-y-auto scrollbar-hover pr-1.5">
-		<h2 class="mb-4 text-sm font-medium text-gray-900 dark:text-white">
+		<h2 class="mb-4 text-sm font-medium text-base-900 dark:text-base-0">
 			{$i18n.t('settings.personal.account.title')}
 		</h2>
 
@@ -332,6 +332,7 @@
 				<input
 					class="{inputClass} dark:scheme-dark"
 					type="date"
+					max={new Date().toISOString().slice(0, 10)}
 					aria-label={$i18n.t('settings.personal.account.birthDate.label')}
 					bind:value={dateOfBirth}
 				/>
@@ -340,11 +341,11 @@
 
 		<section class="mt-4 w-full">
 			<div
-				class="mb-0.5 flex items-center justify-between gap-2 text-xs text-gray-600 dark:text-gray-400"
+				class="mb-0.5 flex items-center justify-between gap-2 text-xs text-base-600 dark:text-base-400"
 			>
 				<div class="flex min-w-0 items-center gap-1.5">
 					{$i18n.t('User Variables')}
-					<span class="text-gray-400 dark:text-gray-600">{variableRows.length}</span>
+					<span class="text-base-400 dark:text-base-600">{variableRows.length}</span>
 				</div>
 				<button class={actionButtonClass} type="button" on:click={() => openVariableModal()}>
 					{$i18n.t('Add')}
@@ -353,10 +354,10 @@
 			<div class="flex flex-col gap-1 py-1">
 				{#each variableRows as row, idx}
 					<div class={variableRowClass}>
-						<div class="min-w-0 truncate font-mono text-xs text-gray-700 dark:text-gray-300">
+						<div class="min-w-0 truncate font-mono text-xs text-base-700 dark:text-base-300">
 							{row.key || $i18n.t('key_name')}
 						</div>
-						<div class="min-w-0 flex-1 truncate text-xs text-gray-500 dark:text-gray-500">
+						<div class="min-w-0 flex-1 truncate text-xs text-base-500 dark:text-base-500">
 							{row.value || $i18n.t('Empty')}
 						</div>
 						<button class={actionButtonClass} type="button" on:click={() => openVariableModal(idx)}>
@@ -366,13 +367,13 @@
 				{/each}
 
 				{#if variableRows.length === 0}
-					<div class="text-xs text-gray-400 dark:text-gray-600">
+					<div class="text-xs text-base-400 dark:text-base-600">
 						{$i18n.t('No user variables configured.')}
 					</div>
 				{/if}
 			</div>
 
-			<div class="text-[0.6875rem] text-gray-400 dark:text-gray-600">
+			<div class="text-[0.6875rem] text-base-400 dark:text-base-600">
 				{$i18n.t('Use these in model system prompts as {{example}}.', {
 					example: '{{user.variables.key_name}}'
 				})}
@@ -421,7 +422,7 @@
 
 									<button
 										type="button"
-										class="ml-1.5 rounded-sm px-1.5 py-1 text-gray-500 transition hover:text-gray-700 dark:hover:text-gray-300"
+										class="ml-1.5 rounded-sm px-1.5 py-1 text-base-500 transition hover:text-base-700 dark:hover:text-base-300"
 										aria-label={$i18n.t('Copy Token')}
 										on:click={() => {
 											copyToClipboard(localStorage.token);
@@ -484,7 +485,7 @@
 
 										<button
 											type="button"
-											class="ml-1.5 rounded-sm px-1.5 py-1 text-gray-500 transition hover:text-gray-700 dark:hover:text-gray-300"
+											class="ml-1.5 rounded-sm px-1.5 py-1 text-base-500 transition hover:text-base-700 dark:hover:text-base-300"
 											aria-label={$i18n.t('Copy API Key')}
 											on:click={() => {
 												copyToClipboard(APIKey);
@@ -532,7 +533,7 @@
 											<Tooltip content={$i18n.t('More')}>
 												<button
 													type="button"
-													class="rounded-sm px-1.5 py-1 text-gray-500 transition hover:text-gray-700 dark:hover:text-gray-300"
+													class="rounded-sm px-1.5 py-1 text-base-500 transition hover:text-base-700 dark:hover:text-base-300"
 													aria-label={$i18n.t('More')}
 												>
 													<EllipsisHorizontal strokeWidth="2" className="size-4" />
@@ -552,7 +553,7 @@
 														<div class="flex items-center">{$i18n.t('Create new key')}</div>
 													</button>
 
-													<hr class="border-gray-50 dark:border-gray-850/30" />
+													<hr class="border-base-50 dark:border-base-850/30" />
 
 													<button
 														type="button"
@@ -591,7 +592,7 @@
 
 	<div class="shrink-0 flex w-full justify-end pt-3 text-sm font-normal">
 		<button
-			class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
+			class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-base-0 transition hover:bg-base-1000 disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-base-0"
 			type="submit"
 		>
 			{$i18n.t('Save')}
@@ -605,7 +606,7 @@
 	confirmLabel={$i18n.t('Delete')}
 	on:confirm={deleteAPIKeyHandler}
 >
-	<div class="text-sm text-gray-500">
+	<div class="text-sm text-base-500">
 		{$i18n.t('This will revoke the current API key.')}
 	</div>
 </ConfirmDialog>
@@ -618,11 +619,11 @@
 	bind:show={variableModalOpen}
 >
 	<form class="p-4" on:submit|preventDefault={saveVariableForm}>
-		<h2 class="mb-3 text-sm font-medium text-gray-900 dark:text-white">
+		<h2 class="mb-3 text-sm font-medium text-base-900 dark:text-base-0">
 			{variableFormIndex === null ? $i18n.t('Add User Variable') : $i18n.t('Edit User Variable')}
 		</h2>
 
-		<div class="mb-1 text-[0.625rem] text-gray-400 dark:text-gray-600">
+		<div class="mb-1 text-[0.625rem] text-base-400 dark:text-base-600">
 			{$i18n.t('Key')}
 		</div>
 		<input
@@ -635,7 +636,7 @@
 			spellcheck="false"
 		/>
 
-		<div class="mb-1 mt-3 text-[0.625rem] text-gray-400 dark:text-gray-600">
+		<div class="mb-1 mt-3 text-[0.625rem] text-base-400 dark:text-base-600">
 			{$i18n.t('Value')}
 		</div>
 		<Textarea
@@ -651,7 +652,7 @@
 			<div>
 				{#if variableFormIndex !== null}
 					<button
-						class="text-xs text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white"
+						class="text-xs text-base-500 transition-colors hover:text-base-900 dark:text-base-500 dark:hover:text-base-0"
 						type="button"
 						on:click={deleteVariableForm}
 					>
@@ -662,7 +663,7 @@
 
 			<div class="flex items-center gap-3">
 				<button
-					class="text-xs text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white"
+					class="text-xs text-base-500 transition-colors hover:text-base-900 dark:text-base-500 dark:hover:text-base-0"
 					type="button"
 					on:click={() => {
 						variableModalOpen = false;
@@ -671,7 +672,7 @@
 					{$i18n.t('Cancel')}
 				</button>
 				<button
-					class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
+					class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-base-0 transition hover:bg-base-1000 disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-base-0"
 					type="submit"
 				>
 					{$i18n.t('Done')}

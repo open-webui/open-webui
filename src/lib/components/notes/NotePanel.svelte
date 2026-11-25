@@ -43,7 +43,7 @@
 				onClose();
 			}}
 		>
-			<div class="h-screen max-h-dvh flex flex-col">
+			<div class="flex max-h-[70dvh] flex-col">
 				<slot />
 			</div>
 		</Drawer>
@@ -66,7 +66,7 @@
 			<div
 				class="w-full z-40 pointer-events-auto overflow-hidden scrollbar-hidden flex flex-col {floating
 					? ''
-					: 'bg-white dark:bg-gray-900'}"
+					: 'bg-base-0 dark:bg-base-900'}"
 			>
 				<slot />
 			</div>

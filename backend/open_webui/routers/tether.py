@@ -25,10 +25,10 @@ router = APIRouter()
 async def changed(user_id):
     """A device connected, left or changed what it offers: drop cached models and tell open pages."""
     from open_webui.routers.openai import get_tether_models
-    from open_webui.socket.main import emit_to_users
+    from open_webui.utils.machines import notify_machines_changed
 
     await get_tether_models.cache.clear()
-    await emit_to_users('events', {'data': {'type': 'terminals:changed'}}, [user_id])
+    await notify_machines_changed([user_id])
 
 
 @router.websocket('/connect')

@@ -7,7 +7,7 @@
 </script>
 
 <div class="px-3">
-	<div class="text-center dark:text-white text-2xl font-normal z-50" role="heading" aria-level="2">
+	<div class="text-center dark:text-base-0 text-2xl font-normal z-50" role="heading" aria-level="2">
 		{#if title}
 			{title}
 		{:else}
@@ -16,7 +16,7 @@
 	</div>
 
 	<slot
-		><div class="px-2 mt-2 text-center text-gray-700 dark:text-gray-200 w-full">
+		><div class="px-2 mt-2 text-center text-base-700 dark:text-base-200 w-full">
 			{#if content}
 				{content}
 			{:else}

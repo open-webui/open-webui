@@ -100,5 +100,7 @@ export function canSearchSetting(
 		return !!canUseTemporaryChats(context);
 	if (stem === 'settings.personal.shortcuts.deleteChat') return canManageChats(context, 'delete');
 	if (stem === 'settings.personal.interface.regenerateMenu') return canRegenerateResponses(context);
+	if (stem === 'settings.admin.general.apps' && tabId === 'admin:integrations')
+		return !!context.config?.features?.enable_apps;
 	return true;
 }

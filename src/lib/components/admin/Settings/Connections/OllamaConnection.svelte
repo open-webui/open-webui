@@ -47,32 +47,27 @@
 
 <div class="group/setting-row flex gap-1.5">
 	<Tooltip
-		className="w-full relative"
+		className="w-full"
 		content={$i18n.t(`WebUI will make requests to "{{url}}/api/chat"`, {
 			url
 		})}
 		placement="top-start"
 	>
-		{#if !(config?.enable ?? true)}
-			<div
-				class="absolute top-0 bottom-0 left-0 right-0 opacity-60 bg-white dark:bg-gray-900 z-10"
-			></div>
-		{/if}
-
-		<input
-			class="text-gray-600 dark:text-gray-400 transition-colors duration-150 group-hover/setting-row:text-gray-900 group-focus-within/setting-row:text-gray-900 dark:group-hover/setting-row:text-white dark:group-focus-within/setting-row:text-white w-full text-sm bg-transparent outline-hidden"
-			placeholder={$i18n.t('Enter URL (e.g. http://localhost:11434)')}
-			aria-label={$i18n.t('URL')}
-			bind:value={url}
-			readonly={true}
-		/>
+		<button
+			type="button"
+			class="block text-left truncate cursor-pointer text-base-600 dark:text-base-400 transition-colors duration-150 group-hover/setting-row:text-base-900 group-focus-within/setting-row:text-base-900 dark:group-hover/setting-row:text-white dark:group-focus-within/setting-row:text-white w-full text-sm bg-transparent outline-hidden"
+			class:opacity-50={!(config?.enable ?? true)}
+			on:click={() => (showConfigModal = true)}
+		>
+			{url || $i18n.t('Enter URL (e.g. http://localhost:11434)')}
+		</button>
 	</Tooltip>
 
 	<div class="flex gap-1 items-center">
 		<Tooltip content={$i18n.t('Manage')} className="self-start">
 			<button
 				aria-label={$i18n.t('Manage')}
-				class="self-center p-1 bg-transparent hover:bg-gray-100 dark:hover:bg-gray-850 rounded-lg transition"
+				class="self-center p-1 bg-transparent hover:bg-base-100 dark:hover:bg-base-850 rounded-lg transition"
 				on:click={() => {
 					showManageModal = true;
 				}}
@@ -85,7 +80,7 @@
 		<Tooltip content={$i18n.t('Configure')} className="self-start">
 			<button
 				aria-label={$i18n.t('Configure')}
-				class="self-center p-1 bg-transparent hover:bg-gray-100 dark:hover:bg-gray-850 rounded-lg transition"
+				class="self-center p-1 bg-transparent hover:bg-base-100 dark:hover:bg-base-850 rounded-lg transition"
 				on:click={() => {
 					showConfigModal = true;
 				}}

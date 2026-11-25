@@ -11,8 +11,9 @@
 
 	export let editHandler: Function;
 	export let cloneHandler: Function;
-	export let runHandler: Function = () => {};
-	export let deleteHandler: Function;
+	// Null hides the item: a shared automation may be view-only, and only its owner (or an admin) deletes it.
+	export let runHandler: Function | null = () => {};
+	export let deleteHandler: Function | null;
 	export let onClose: Function = () => {};
 
 	export let show = false;
@@ -33,7 +34,7 @@
 	<div slot="content">
 		<DropdownMenu className="min-w-[10.625rem]">
 			<button
-				class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"
+				class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-base-900 dark:hover:text-base-100"
 				draggable="false"
 				on:click={() => {
 					editHandler();
@@ -59,7 +60,7 @@
 			</button>
 
 			<button
-				class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"
+				class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-base-900 dark:hover:text-base-100"
 				draggable="false"
 				on:click={() => {
 					cloneHandler();
@@ -70,45 +71,49 @@
 				<div class="flex items-center">{$i18n.t('Clone')}</div>
 			</button>
 
-			<button
-				class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"
-				draggable="false"
-				on:click={() => {
-					runHandler();
-					show = false;
-				}}
-			>
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					fill="none"
-					viewBox="0 0 24 24"
-					stroke-width="1.5"
-					stroke="currentColor"
-					class="size-3.5"
+			{#if runHandler}
+				<button
+					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-base-900 dark:hover:text-base-100"
+					draggable="false"
+					on:click={() => {
+						runHandler?.();
+						show = false;
+					}}
 				>
-					<path
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 010 1.972l-11.54 6.347a1.125 1.125 0 01-1.667-.986V5.653z"
-					/>
-				</svg>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						fill="none"
+						viewBox="0 0 24 24"
+						stroke-width="1.5"
+						stroke="currentColor"
+						class="size-3.5"
+					>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 010 1.972l-11.54 6.347a1.125 1.125 0 01-1.667-.986V5.653z"
+						/>
+					</svg>
 
-				<div class="flex items-center">{$i18n.t('Run Now')}</div>
-			</button>
+					<div class="flex items-center">{$i18n.t('Run Now')}</div>
+				</button>
+			{/if}
 
-			<hr class="border-gray-50 dark:border-gray-850/30 mx-1 my-0.5" />
+			{#if deleteHandler}
+				<hr class="border-base-50 dark:border-base-850/30 mx-1 my-0.5" />
 
-			<button
-				class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"
-				draggable="false"
-				on:click={() => {
-					deleteHandler();
-					show = false;
-				}}
-			>
-				<GarbageBin className="size-3.5" />
-				<div class="flex items-center">{$i18n.t('Delete')}</div>
-			</button>
+				<button
+					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-base-900 dark:hover:text-base-100"
+					draggable="false"
+					on:click={() => {
+						deleteHandler?.();
+						show = false;
+					}}
+				>
+					<GarbageBin className="size-3.5" />
+					<div class="flex items-center">{$i18n.t('Delete')}</div>
+				</button>
+			{/if}
 		</DropdownMenu>
 	</div>
 </Dropdown>

@@ -140,7 +140,7 @@
 		<button
 			type="button"
 			aria-label={$i18n.t('Select version')}
-			class="flex min-w-0 items-center gap-1.5 text-xs text-gray-500 hover:text-gray-900 dark:hover:text-gray-100"
+			class="flex min-w-0 items-center gap-1.5 text-xs text-base-500 hover:text-base-900 dark:hover:text-base-100"
 			disabled={promoting || deleting}
 			on:click={() => {
 				page = 1;
@@ -164,7 +164,7 @@
 					<button type="button" on:click={loadHistory}>{$i18n.t('Retry')}</button>
 				{:else}
 					{#if history.some((entry) => entry.id !== model.version_id)}<hr
-							class="my-1 border-gray-100 dark:border-gray-850"
+							class="my-1 border-base-100 dark:border-base-850"
 						/>{/if}
 					{#each history.filter((entry) => entry.id !== model.version_id) as entry (entry.id)}
 						<VersionMenuItem

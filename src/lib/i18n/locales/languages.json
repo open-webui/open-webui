@@ -17,7 +17,7 @@
 	},
 	{
 		"code": "az-AZ",
-		"title": "Azərbaycanca"
+		"title": "Azerbaijani (Azərbaycanca)"
 	},
 	{
 		"code": "eu-ES",
@@ -29,23 +29,19 @@
 	},
 	{
 		"code": "bs-BA",
-		"title": "Bosanski Latinica"
-	},
-	{
-		"code": "bo-TB",
-		"title": "Tibetan (བོད)"
+		"title": "Bosnian (Bosanski)"
 	},
 	{
 		"code": "bg-BG",
-		"title": "Bulgarian (български)"
+		"title": "Bulgarian (Български)"
 	},
 	{
 		"code": "ca-ES",
-		"title": "Catalan (català)"
+		"title": "Catalan (Català)"
 	},
 	{
 		"code": "ceb-PH",
-		"title": "Cebuano (Filipino)"
+		"title": "Cebuano (Binisaya)"
 	},
 	{
 		"code": "hr-HR",
@@ -53,27 +49,27 @@
 	},
 	{
 		"code": "cs-CZ",
-		"title": "Czech (čeština)"
+		"title": "Czech (Čeština)"
 	},
 	{
 		"code": "da-DK",
-		"title": "Danish (Denmark)"
+		"title": "Danish (Dansk)"
 	},
 	{
 		"code": "nl-NL",
-		"title": "Dutch (Netherlands)"
+		"title": "Dutch (Nederlands)"
 	},
 	{
 		"code": "et-EE",
 		"title": "Estonian (Eesti)"
 	},
 	{
-		"code": "fi-FI",
-		"title": "Finnish (Suomalainen)"
+		"code": "fo-FO",
+		"title": "Faroese (Føroyskt)"
 	},
 	{
-		"code": "fo-FO",
-		"title": "Faroese (Faroe Islands)"
+		"code": "fi-FI",
+		"title": "Finnish (Suomi)"
 	},
 	{
 		"code": "fr-CA",
@@ -97,7 +93,7 @@
 	},
 	{
 		"code": "el-GR",
-		"title": "Greek (Ἑλλάδα)"
+		"title": "Greek (Ελληνικά)"
 	},
 	{
 		"code": "he-IL",
@@ -136,12 +132,12 @@
 		"title": "Korean (한국어)"
 	},
 	{
-		"code": "lt-LT",
-		"title": "Lithuanian (Lietuvių)"
-	},
-	{
 		"code": "lv-LV",
 		"title": "Latvian (Latviešu)"
+	},
+	{
+		"code": "lt-LT",
+		"title": "Lithuanian (Lietuvių)"
 	},
 	{
 		"code": "ms-MY",
@@ -149,7 +145,7 @@
 	},
 	{
 		"code": "nb-NO",
-		"title": "Norwegian Bokmål (Norway)"
+		"title": "Norwegian Bokmål (Norsk bokmål)"
 	},
 	{
 		"code": "fa-IR",
@@ -169,15 +165,15 @@
 	},
 	{
 		"code": "pa-IN",
-		"title": "Punjabi (India)"
+		"title": "Punjabi (ਪੰਜਾਬੀ)"
 	},
 	{
 		"code": "ro-RO",
-		"title": "Romanian (Romania)"
+		"title": "Romanian (Română)"
 	},
 	{
 		"code": "ru-RU",
-		"title": "Russian (Russia)"
+		"title": "Russian (Русский)"
 	},
 	{
 		"code": "sr-RS",
@@ -205,11 +201,15 @@
 	},
 	{
 		"code": "ta-IN",
-		"title": "தமிழ் (இந்தியா)"
+		"title": "Tamil (தமிழ்)"
 	},
 	{
 		"code": "th-TH",
-		"title": "Thailand (ไทย)"
+		"title": "Thai (ไทย)"
+	},
+	{
+		"code": "bo-TB",
+		"title": "Tibetan (བོད་སྐད་)"
 	},
 	{
 		"code": "tr-TR",

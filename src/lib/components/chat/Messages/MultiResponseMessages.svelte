@@ -27,6 +27,7 @@
 	import { getChatContext } from '$lib/components/chat/context';
 
 	const { models } = getChatContext();
+	const exporting = getContext('exporting');
 	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
 	export let chatId;
@@ -237,10 +238,10 @@
 			class="flex snap-x snap-mandatory overflow-x-auto scrollbar-hidden"
 			id="responses-container-{chatId}-{parentMessage.id}"
 		>
-			{#if $settings?.displayMultiModelResponsesInTabs ?? false}
+			{#if !exporting && ($settings?.displayMultiModelResponsesInTabs ?? false)}
 				<div class="w-full">
 					<div
-						class=" flex w-full mb-4.5 border-b border-gray-200 dark:border-gray-850 {compactPreview
+						class=" flex w-full mb-4.5 border-b border-base-200 dark:border-base-850 {compactPreview
 							? 'hidden'
 							: ''}"
 					>
@@ -258,11 +259,13 @@
 									{@const _messageId =
 										groupedMessageIds[modelIdx].messageIds[groupedMessageIdsIdx[modelIdx]]}
 
-									{@const model = $models.find((m) => m.id === history.messages[_messageId]?.model)}
+									{@const model = ($models ?? []).find(
+										(m) => m.id === history.messages[_messageId]?.model
+									)}
 
 									<button
 										class="min-w-fit {selectedModelIdx == modelIdx
-											? ' dark:border-gray-300 '
+											? ' dark:border-base-300 '
 											: ' opacity-35 border-transparent'} pb-1.5 px-2.5 transition border-b-2"
 										on:click={async () => {
 											if (selectedModelIdx != modelIdx) {
@@ -338,10 +341,10 @@
 								? ''
 								: `m-1 border p-5 rounded-2xl ${
 										history.messages[messageId]?.modelIdx == modelIdx
-											? `bg-gray-50 dark:bg-gray-850 border-gray-100 dark:border-gray-800 border-2 ${
+											? `bg-base-50 dark:bg-base-850 border-base-100 dark:border-base-800 border-2 ${
 													$mobile ? 'min-w-full' : 'min-w-80'
 												}`
-											: `border-gray-100/30 dark:border-gray-850/30 border-dashed ${
+											: `border-base-100/30 dark:border-base-850/30 border-dashed ${
 													$mobile ? 'min-w-full' : 'min-w-80'
 												}`
 									}`}"
@@ -425,7 +428,7 @@
 
 								{#if message.timestamp}
 									<div
-										class="mt-0.5 flex justify-start whitespace-nowrap text-gray-600 dark:text-gray-500"
+										class="mt-0.5 flex justify-start whitespace-nowrap text-base-600 dark:text-base-500"
 									>
 										<Tooltip
 											className="flex self-center"
@@ -434,7 +437,7 @@
 										>
 											<time
 												datetime={new Date(message.timestamp * 1000).toISOString()}
-												class="hover-reveal ml-1 shrink-0 whitespace-nowrap text-[0.6875rem] tabular-nums text-gray-400 dark:text-gray-600 select-none"
+												class="hover-reveal ml-1 shrink-0 whitespace-nowrap text-[0.6875rem] tabular-nums text-base-400 dark:text-base-600 select-none"
 											>
 												{formatMessageTimestamp(message.timestamp * 1000, $i18n.language)}
 											</time>
@@ -446,7 +449,7 @@
 					</div>
 
 					{#if isLastMessage && $visibleControls['chat.merge']}
-						<div class=" shrink-0 text-gray-600 dark:text-gray-500 mt-1">
+						<div class=" shrink-0 text-base-600 dark:text-base-500 mt-1">
 							<Tooltip content={$i18n.t('Merge Responses')} placement="bottom">
 								<button
 									aria-label={$i18n.t('Merge Responses')}
@@ -454,7 +457,7 @@
 									id="merge-response-button"
 									class="{true
 										? 'visible'
-										: 'hover-reveal'} p-1 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg dark:hover:text-white hover:text-black transition"
+										: 'hover-reveal'} p-1 hover:bg-base-1000/5 dark:hover:bg-base-0/5 rounded-lg dark:hover:text-base-0 hover:text-base-1000 transition"
 									on:click={() => {
 										mergeResponsesHandler();
 									}}

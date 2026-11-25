@@ -8,8 +8,9 @@
 	import {
 		config,
 		settings,
-		terminalServers,
+		machines,
 		user,
+		showSettings,
 		tools as _tools,
 		skills as _skills,
 		imageModels as _imageModels,
@@ -21,11 +22,7 @@
 	import { getSkills } from '$lib/apis/skills';
 	import { getImageModels } from '$lib/apis/images';
 	import { getVideoModels } from '$lib/apis/videos';
-	import {
-		listTerminalSkills,
-		resolveTerminalTarget,
-		type TerminalSkill
-	} from '$lib/apis/terminal';
+	import { listMachineSkills, resolveMachineTarget, type MachineSkill } from '$lib/apis/machines';
 
 	import { toast } from 'svelte-sonner';
 
@@ -45,13 +42,15 @@
 	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
 	import Check from '$lib/components/icons/Check.svelte';
 	import LinkSlash from '$lib/components/icons/LinkSlash.svelte';
+	import Cog6 from '$lib/components/icons/Cog6.svelte';
 	import { getChatContext } from '$lib/components/chat/context';
+	import { isMachine } from '$lib/utils/machines';
 
 	const { chatId } = getChatContext();
 
 	const i18n = getContext('i18n') as any;
-	export let selectedTerminalId: Readable<string | null>;
-	export let terminalSkills: Writable<any[]>;
+	export let selectedMachineId: Readable<string | null>;
+	export let machineSkills: Writable<any[]>;
 
 	type IntegrationItem = {
 		id: string;
@@ -110,22 +109,25 @@
 	let imageModelQuery = '';
 	let videoModelQuery = '';
 
+	const isDeviceTool = (id: string) =>
+		id.startsWith('server:tether:') || id.startsWith('server:mcp:tether:');
+
 	$: toolIds = Object.keys(tools ?? {});
 	$: toolGroups = [
 		[$i18n.t('Workspace'), toolIds.filter((id) => !id.startsWith('server:'))],
 		[
 			$i18n.t('Tool Servers'),
-			toolIds.filter((id) => id.startsWith('server:') && !id.startsWith('server:tether:'))
+			toolIds.filter((id) => id.startsWith('server:') && !isDeviceTool(id))
 		],
-		[$i18n.t('Your devices'), toolIds.filter((id) => id.startsWith('server:tether:'))]
+		[$i18n.t('Your devices'), toolIds.filter(isDeviceTool)]
 	].filter(([, ids]) => ids.length > 0);
 	$: skillIds = Object.keys(skills ?? {});
 	$: skillGroups = [
-		[$i18n.t('Workspace'), skillIds.filter((id) => skills?.[id]?.source !== 'terminal')],
+		[$i18n.t('Workspace'), skillIds.filter((id) => !isMachine(skills?.[id]?.source))],
 		[
-			($terminalServers ?? []).find((server) => server.id === $selectedTerminalId)?.name ||
-				$i18n.t('Terminal'),
-			skillIds.filter((id) => skills?.[id]?.source === 'terminal')
+			($machines ?? []).find((server) => server.id === $selectedMachineId)?.name ||
+				$i18n.t('Machine'),
+			skillIds.filter((id) => isMachine(skills?.[id]?.source))
 		]
 	].filter(([, ids]) => ids.length > 0);
 
@@ -252,15 +254,13 @@
 		}
 	};
 
-	const getTerminalSkillItems = async (): Promise<TerminalSkill[]> => {
-		const target = resolveTerminalTarget(
-			$selectedTerminalId,
-			$terminalServers ?? [],
-			localStorage.token,
-			{ chatId: $chatId || null, modelId: selectedModels[0] ?? null }
-		);
-		const items = await listTerminalSkills(target).catch(() => []);
-		terminalSkills.set(items);
+	const getMachineSkillItems = async (): Promise<MachineSkill[]> => {
+		const target = resolveMachineTarget($selectedMachineId, $machines ?? [], localStorage.token, {
+			chatId: $chatId || null,
+			modelId: selectedModels[0] ?? null
+		});
+		const items = await listMachineSkills(target).catch(() => []);
+		machineSkills.set(items);
 		return items;
 	};
 
@@ -285,9 +285,9 @@
 			await _skills.set(await getSkills(localStorage.token));
 		}
 		if (requestId !== skillRequestId) return;
-		const terminalItems = await getTerminalSkillItems();
+		const machineItems = await getMachineSkillItems();
 		if (requestId !== skillRequestId) return;
-		setSkills([...($_skills ?? []), ...terminalItems], q);
+		setSkills([...($_skills ?? []), ...machineItems], q);
 	};
 
 	const scheduleToolSearch = () => {
@@ -351,13 +351,13 @@
 </script>
 
 {#if tab === ''}
-	<div class="h-px mx-1 my-1 bg-gray-100 dark:bg-gray-800"></div>
+	<div class="h-px mx-1 my-1 bg-base-100 dark:bg-base-800"></div>
 	<div in:fly={{ x: -20, duration: 150 }}>
 		{#if tools}
 			{#if Object.keys(tools).length > 0}
 				<button
 					role="menuitem"
-					class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+					class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-base-50/40 dark:hover:bg-base-800/40"
 					on:click={() => {
 						tab = 'tools';
 					}}
@@ -367,10 +367,10 @@
 					<div class="flex items-center w-full justify-between">
 						<div class=" line-clamp-1">
 							{$i18n.t('Tools')}
-							<span class="ml-0.5 text-gray-500">{Object.keys(tools).length}</span>
+							<span class="ml-0.5 text-base-500">{Object.keys(tools).length}</span>
 						</div>
 
-						<div class="flex shrink-0 items-center gap-2 text-gray-500">
+						<div class="flex shrink-0 items-center gap-2 text-base-500">
 							{#if selectedToolIds.length > 0}
 								<span class="text-xs">
 									{$i18n.t('{{COUNT}} selected', { COUNT: selectedToolIds.length })}
@@ -385,7 +385,7 @@
 			{#if skills && Object.keys(skills).length > 0}
 				<button
 					role="menuitem"
-					class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+					class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-base-50/40 dark:hover:bg-base-800/40"
 					on:click={() => {
 						tab = 'skills';
 					}}
@@ -395,10 +395,10 @@
 					<div class="flex items-center w-full justify-between">
 						<div class=" line-clamp-1">
 							{$i18n.t('Skills')}
-							<span class="ml-0.5 text-gray-500">{Object.keys(skills).length}</span>
+							<span class="ml-0.5 text-base-500">{Object.keys(skills).length}</span>
 						</div>
 
-						<div class="flex shrink-0 items-center gap-2 text-gray-500">
+						<div class="flex shrink-0 items-center gap-2 text-base-500">
 							{#if selectedSkillIds.length > 0}
 								<span class="text-xs">
 									{$i18n.t('{{COUNT}} selected', { COUNT: selectedSkillIds.length })}
@@ -427,7 +427,7 @@
 					placement="top-start"
 				>
 					<div
-						class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40 has-[[role^=menuitem]:focus-visible]:outline-2 has-[[role^=menuitem]:focus-visible]:-outline-offset-2 has-[[role^=menuitem]:focus-visible]:outline-blue-500"
+						class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-base-50/40 dark:hover:bg-base-800/40 has-[[role^=menuitem]:focus-visible]:outline-2 has-[[role^=menuitem]:focus-visible]:-outline-offset-2 has-[[role^=menuitem]:focus-visible]:outline-blue-500"
 						role="presentation"
 						on:click={() => {
 							if (selectedFilterIds.includes(filter.id)) {
@@ -472,7 +472,7 @@
 								<Tooltip content={$i18n.t('Valves')}>
 									<button
 										aria-label={$i18n.t('Valves')}
-										class="self-center w-fit text-sm text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition rounded-full"
+										class="self-center w-fit text-sm text-base-600 dark:text-base-400 hover:text-base-700 dark:hover:text-base-300 transition rounded-full"
 										type="button"
 										on:click={(e) => {
 											e.stopPropagation();
@@ -500,7 +500,7 @@
 		{#if showImageGenerationButton}
 			<Tooltip content={$i18n.t('Generate an image')} placement="top-start">
 				<div
-					class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40 has-[[role^=menuitem]:focus-visible]:outline-2 has-[[role^=menuitem]:focus-visible]:-outline-offset-2 has-[[role^=menuitem]:focus-visible]:outline-blue-500"
+					class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-base-50/40 dark:hover:bg-base-800/40 has-[[role^=menuitem]:focus-visible]:outline-2 has-[[role^=menuitem]:focus-visible]:-outline-offset-2 has-[[role^=menuitem]:focus-visible]:outline-blue-500"
 					role="presentation"
 					on:click={() => {
 						imageGenerationEnabled = !imageGenerationEnabled;
@@ -520,7 +520,7 @@
 							<div class=" truncate">
 								{$i18n.t('Image')}
 								{#if imageModelOptions.length > 1}
-									<span class="ml-0.5 text-xs text-gray-500">
+									<span class="ml-0.5 text-xs text-base-500">
 										{selectedImageModel?.name ?? $i18n.t('Default')}
 									</span>
 								{/if}
@@ -533,7 +533,7 @@
 							<button
 								type="button"
 								role="menuitem"
-								class="flex items-center text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition"
+								class="flex items-center text-base-500 hover:text-base-700 dark:hover:text-base-300 transition"
 								aria-label={$i18n.t('Choose image model')}
 								on:click={(e) => {
 									e.stopPropagation();
@@ -555,7 +555,7 @@
 		{#if showVideoGenerationButton}
 			<Tooltip content={$i18n.t('Generate a video')} placement="top-start">
 				<div
-					class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40 has-[[role^=menuitem]:focus-visible]:outline-2 has-[[role^=menuitem]:focus-visible]:-outline-offset-2 has-[[role^=menuitem]:focus-visible]:outline-blue-500"
+					class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-base-50/40 dark:hover:bg-base-800/40 has-[[role^=menuitem]:focus-visible]:outline-2 has-[[role^=menuitem]:focus-visible]:-outline-offset-2 has-[[role^=menuitem]:focus-visible]:outline-blue-500"
 					role="presentation"
 					on:click={() => {
 						videoGenerationEnabled = !videoGenerationEnabled;
@@ -575,7 +575,7 @@
 							<div class=" truncate">
 								{$i18n.t('Video')}
 								{#if videoModelOptions.length > 1}
-									<span class="ml-0.5 text-xs text-gray-500">
+									<span class="ml-0.5 text-xs text-base-500">
 										{selectedVideoModel?.name ?? $i18n.t('Default')}
 									</span>
 								{/if}
@@ -588,7 +588,7 @@
 							<button
 								type="button"
 								role="menuitem"
-								class="flex items-center text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition"
+								class="flex items-center text-base-500 hover:text-base-700 dark:hover:text-base-300 transition"
 								aria-label={$i18n.t('Choose video model')}
 								on:click={(e) => {
 									e.stopPropagation();
@@ -610,7 +610,7 @@
 		{#if showWebSearchButton}
 			<Tooltip content={$i18n.t('Search the internet')} placement="top-start">
 				<button
-					class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+					class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-base-50/40 dark:hover:bg-base-800/40"
 					role="menuitemcheckbox"
 					aria-checked={webSearchEnabled}
 					on:click={() => {
@@ -642,7 +642,7 @@
 		{#if showCodeInterpreterButton}
 			<Tooltip content={$i18n.t('Execute code for analysis')} placement="top-start">
 				<button
-					class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+					class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-base-50/40 dark:hover:bg-base-800/40"
 					role="menuitemcheckbox"
 					aria-checked={codeInterpreterEnabled}
 					on:click={() => {
@@ -668,40 +668,60 @@
 	</div>
 {:else if tab === 'tools' && tools}
 	<div class="flex min-h-0 flex-col gap-0.5 overflow-hidden" in:fly={{ x: 20, duration: 150 }}>
-		<button
-			role="menuitem"
-			class="flex w-full shrink-0 justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
-			on:click={() => {
-				toolQuery = '';
-				tab = '';
-			}}
+		<div
+			class="flex shrink-0 items-center rounded-xl hover:bg-base-50/40 dark:hover:bg-base-800/40"
 		>
-			<ChevronLeft />
+			<button
+				role="menuitem"
+				class="flex flex-1 min-w-0 justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl"
+				on:click={() => {
+					toolQuery = '';
+					tab = '';
+				}}
+			>
+				<ChevronLeft />
 
-			<div class="flex items-center w-full justify-between">
-				<div>
-					{$i18n.t('Tools')}
-					<span class="ml-0.5 text-gray-500">{toolIds.length}</span>
+				<div class="flex items-center w-full justify-between">
+					<div>
+						{$i18n.t('Tools')}
+						<span class="ml-0.5 text-base-500">{toolIds.length}</span>
+					</div>
 				</div>
-			</div>
-		</button>
+			</button>
+
+			{#if $user?.role === 'admin'}
+				<Tooltip content={$i18n.t('Settings')} placement="top">
+					<button
+						type="button"
+						aria-label={$i18n.t('Settings')}
+						class="mr-1.5 p-0.5 rounded-md text-base-400 hover:text-base-600 dark:text-base-500 dark:hover:text-base-300 transition"
+						on:click|stopPropagation={() => {
+							show = false;
+							showSettings.set('admin:integrations');
+						}}
+					>
+						<Cog6 className="size-3.5" />
+					</button>
+				</Tooltip>
+			{/if}
+		</div>
 
 		<SearchInput bind:value={toolQuery} placeholder={$i18n.t('Search tools')} />
 
 		<div class="min-h-0 flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin">
 			{#if toolIds.length === 0}
-				<div class="text-center text-xs text-gray-500 py-3">{$i18n.t('No tools found')}</div>
+				<div class="text-center text-xs text-base-500 py-3">{$i18n.t('No tools found')}</div>
 			{:else}
 				<div class="flex flex-col gap-0.5">
 					{#each toolGroups as [label, ids]}
 						{#if toolGroups.length > 1}
-							<div class="truncate px-2 pt-1.5 pb-0.5 text-xs text-gray-400 dark:text-gray-500">
+							<div class="truncate px-2 pt-1.5 pb-0.5 text-xs text-base-400 dark:text-base-500">
 								{label}
 							</div>
 						{/if}
 						{#each ids as toolId}
 							<div
-								class="relative flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40 has-[[role^=menuitem]:focus-visible]:outline-2 has-[[role^=menuitem]:focus-visible]:-outline-offset-2 has-[[role^=menuitem]:focus-visible]:outline-blue-500"
+								class="relative flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-base-50/40 dark:hover:bg-base-800/40 has-[[role^=menuitem]:focus-visible]:outline-2 has-[[role^=menuitem]:focus-visible]:-outline-offset-2 has-[[role^=menuitem]:focus-visible]:outline-blue-500"
 								role="presentation"
 								on:click={async (e) => {
 									await toggleTool(toolId, e);
@@ -748,7 +768,7 @@
 										<Tooltip content={$i18n.t('Disconnect OAuth')}>
 											<button
 												aria-label={$i18n.t('Disconnect OAuth')}
-												class="self-center w-fit text-sm text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition rounded-full"
+												class="self-center w-fit text-sm text-base-600 dark:text-base-400 hover:text-base-700 dark:hover:text-base-300 transition rounded-full"
 												type="button"
 												on:click={async (e) => {
 													e.stopPropagation();
@@ -782,7 +802,7 @@
 										<Tooltip content={$i18n.t('Valves')}>
 											<button
 												aria-label={$i18n.t('Valves')}
-												class="self-center w-fit text-sm text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition rounded-full"
+												class="self-center w-fit text-sm text-base-600 dark:text-base-400 hover:text-base-700 dark:hover:text-base-300 transition rounded-full"
 												type="button"
 												on:click={(e) => {
 													e.stopPropagation();
@@ -813,7 +833,7 @@
 	<div class="flex min-h-0 flex-col gap-0.5 overflow-hidden" in:fly={{ x: 20, duration: 150 }}>
 		<button
 			role="menuitem"
-			class="flex w-full shrink-0 justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+			class="flex w-full shrink-0 justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-base-50/40 dark:hover:bg-base-800/40"
 			on:click={() => {
 				skillQuery = '';
 				tab = '';
@@ -824,7 +844,7 @@
 			<div class="flex items-center w-full justify-between">
 				<div>
 					{$i18n.t('Skills')}
-					<span class="ml-0.5 text-gray-500">{skillIds.length}</span>
+					<span class="ml-0.5 text-base-500">{skillIds.length}</span>
 				</div>
 			</div>
 		</button>
@@ -833,18 +853,18 @@
 
 		<div class="min-h-0 flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin">
 			{#if skillIds.length === 0}
-				<div class="text-center text-xs text-gray-500 py-3">{$i18n.t('No skills found')}</div>
+				<div class="text-center text-xs text-base-500 py-3">{$i18n.t('No skills found')}</div>
 			{:else}
 				<div class="flex flex-col gap-0.5">
 					{#each skillGroups as [label, ids]}
-						{#if skillGroups.length > 1 || skills?.[ids[0]]?.source === 'terminal'}
-							<div class="truncate px-2 pt-1.5 pb-0.5 text-xs text-gray-400 dark:text-gray-500">
+						{#if skillGroups.length > 1 || isMachine(skills?.[ids[0]]?.source)}
+							<div class="truncate px-2 pt-1.5 pb-0.5 text-xs text-base-400 dark:text-base-500">
 								{label}
 							</div>
 						{/if}
 						{#each ids as skillId}
 							<button
-								class="relative flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+								class="relative flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-base-50/40 dark:hover:bg-base-800/40"
 								role="menuitemcheckbox"
 								aria-checked={selectedSkillIds.includes(skillId)}
 								on:click={async () => {
@@ -890,7 +910,7 @@
 	<div class="flex min-h-0 flex-col gap-0.5 overflow-hidden" in:fly={{ x: 20, duration: 150 }}>
 		<button
 			role="menuitem"
-			class="flex w-full shrink-0 justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+			class="flex w-full shrink-0 justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-base-50/40 dark:hover:bg-base-800/40"
 			on:click={() => {
 				imageModelQuery = '';
 				tab = '';
@@ -901,7 +921,7 @@
 			<div class="flex items-center w-full justify-between">
 				<div>
 					{$i18n.t('Image model')}
-					<span class="ml-0.5 text-gray-500">{imageModelOptions.length}</span>
+					<span class="ml-0.5 text-base-500">{imageModelOptions.length}</span>
 				</div>
 			</div>
 		</button>
@@ -917,7 +937,7 @@
 						type="button"
 						role="menuitemradio"
 						aria-checked={!selectedImageModelId}
-						class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+						class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-base-50/40 dark:hover:bg-base-800/40"
 						on:click={() => {
 							selectedImageModelId = '';
 							imageGenerationEnabled = true;
@@ -933,7 +953,7 @@
 
 				{#each imageModelGroups as [label, models] (label)}
 					{#if imageModelGroups.length > 1}
-						<div class="truncate px-2 pt-1.5 pb-0.5 text-xs text-gray-400 dark:text-gray-500">
+						<div class="truncate px-2 pt-1.5 pb-0.5 text-xs text-base-400 dark:text-base-500">
 							{label}
 						</div>
 					{/if}
@@ -943,7 +963,7 @@
 							type="button"
 							role="menuitemradio"
 							aria-checked={selectedImageModelId === model.id}
-							class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+							class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-base-50/40 dark:hover:bg-base-800/40"
 							on:click={() => {
 								selectedImageModelId = model.id;
 								imageGenerationEnabled = true;
@@ -953,7 +973,7 @@
 						>
 							<div class="flex min-w-0 items-center gap-2">
 								<div class="truncate">{model.name}</div>
-								<div class="shrink-0 text-xs text-gray-400 dark:text-gray-500">
+								<div class="shrink-0 text-xs text-base-400 dark:text-base-500">
 									{#if model.image_generation && model.image_edit}
 										{$i18n.t('Generate and edit')}
 									{:else if model.image_edit}
@@ -968,7 +988,7 @@
 						</button>
 					{/each}
 				{:else}
-					<div class="text-center text-xs text-gray-500 py-3">
+					<div class="text-center text-xs text-base-500 py-3">
 						{$i18n.t('No image models found')}
 					</div>
 				{/each}
@@ -979,7 +999,7 @@
 	<div class="flex min-h-0 flex-col gap-0.5 overflow-hidden" in:fly={{ x: 20, duration: 150 }}>
 		<button
 			role="menuitem"
-			class="flex w-full shrink-0 justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+			class="flex w-full shrink-0 justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-base-50/40 dark:hover:bg-base-800/40"
 			on:click={() => {
 				videoModelQuery = '';
 				tab = '';
@@ -990,7 +1010,7 @@
 			<div class="flex items-center w-full justify-between">
 				<div>
 					{$i18n.t('Video model')}
-					<span class="ml-0.5 text-gray-500">{videoModelOptions.length}</span>
+					<span class="ml-0.5 text-base-500">{videoModelOptions.length}</span>
 				</div>
 			</div>
 		</button>
@@ -1006,7 +1026,7 @@
 						type="button"
 						role="menuitemradio"
 						aria-checked={!selectedVideoModelId}
-						class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+						class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-base-50/40 dark:hover:bg-base-800/40"
 						on:click={() => {
 							selectedVideoModelId = '';
 							videoGenerationEnabled = true;
@@ -1022,7 +1042,7 @@
 
 				{#each videoModelGroups as [label, models] (label)}
 					{#if videoModelGroups.length > 1}
-						<div class="truncate px-2 pt-1.5 pb-0.5 text-xs text-gray-400 dark:text-gray-500">
+						<div class="truncate px-2 pt-1.5 pb-0.5 text-xs text-base-400 dark:text-base-500">
 							{label}
 						</div>
 					{/if}
@@ -1032,7 +1052,7 @@
 							type="button"
 							role="menuitemradio"
 							aria-checked={selectedVideoModelId === model.id}
-							class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+							class="flex w-full justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-base-50/40 dark:hover:bg-base-800/40"
 							on:click={() => {
 								selectedVideoModelId = model.id;
 								videoGenerationEnabled = true;
@@ -1050,7 +1070,7 @@
 						</button>
 					{/each}
 				{:else}
-					<div class="text-center text-xs text-gray-500 py-3">
+					<div class="text-center text-xs text-base-500 py-3">
 						{$i18n.t('No video models found')}
 					</div>
 				{/each}

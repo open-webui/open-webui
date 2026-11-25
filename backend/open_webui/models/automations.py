@@ -1,12 +1,15 @@
 import logging
+import secrets
 import time
 from typing import Literal, Optional
 from uuid import uuid4
 
 from open_webui.models.notifications import emit_changes
+from open_webui.models.access_grants import AccessGrant, AccessGrantResponse, AccessGrants
+from open_webui.models.users import UserResponse
 from open_webui.internal.db import Base, get_async_db_context
 from open_webui.utils.misc import json_text_variants
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, model_validator
 from sqlalchemy import JSON, BigInteger, Boolean, Column, Index, String, Text, cast, delete, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -57,7 +60,7 @@ class AutomationRun(Base):
 # Pydantic Models
 
 
-class AutomationTerminalConfig(BaseModel):
+class AutomationMachineConfig(BaseModel):
     server_id: str
     cwd: Optional[str] = None
 
@@ -65,14 +68,76 @@ class AutomationTerminalConfig(BaseModel):
 class AutomationTarget(BaseModel):
     type: Literal['chat', 'channel'] = 'chat'
     channel_id: Optional[str] = None
+    # Off: every run continues one chat (or channel thread). The first run creates it and saves its id here.
+    new_chat: bool = True
+    chat_id: Optional[str] = None
+    new_thread: bool = True
+    thread_id: Optional[str] = None
+    # False: the reply posts in the channel instead of under the run's message. Unset replies in a thread, as does an ongoing thread.
+    reply_in_thread: Optional[bool] = None
+
+
+def keep_target_refs(target: Optional[dict], previous: Optional[dict]) -> Optional[dict]:
+    """The ongoing chat or thread is the runner's, not the form's: keep it while the target still continues there."""
+    if not target:
+        return target
+    previous = previous or {}
+    target = {**target, 'chat_id': None, 'thread_id': None}
+    if target.get('type', 'chat') == 'chat':
+        if not target.get('new_chat', True) and previous.get('type', 'chat') == 'chat':
+            target['chat_id'] = previous.get('chat_id')
+    elif (
+        not target.get('new_thread', True)
+        and previous.get('type') == 'channel'
+        and previous.get('channel_id') == target.get('channel_id')
+    ):
+        target['thread_id'] = previous.get('thread_id')
+    return target
+
+
+class AutomationWebhook(BaseModel):
+    token: Optional[str] = None  # server-owned
+    allow_get: bool = False
+
+
+def has_webhook(data: Optional[dict]) -> bool:
+    return bool((data or {}).get('webhook'))
+
+
+def hide_webhook_token(data: dict) -> dict:
+    if not (data.get('webhook') or {}).get('token'):
+        return data
+    return {**data, 'webhook': {**data['webhook'], 'token': None}}
+
+
+def new_webhook_token() -> str:
+    return secrets.token_urlsafe(32)
+
+
+def keep_webhook_token(webhook: Optional[dict], previous: Optional[dict]) -> Optional[dict]:
+    if not webhook:
+        return None
+    return {**webhook, 'token': (previous or {}).get('token') or new_webhook_token()}
 
 
 class AutomationData(BaseModel):
     prompt: str
     model_id: str
-    rrule: str
-    terminal: Optional[AutomationTerminalConfig] = None
+    rrule: str = ''  # empty: no schedule
+    machine: Optional[AutomationMachineConfig] = None
     target: Optional[AutomationTarget] = None
+    webhook: Optional[AutomationWebhook] = None
+
+    @model_validator(mode='before')
+    @classmethod
+    def _former_machine_key(cls, data):
+        # Automations saved before Terminals became Machines keep their settings under `terminal`.
+        if isinstance(data, dict) and 'terminal' in data:
+            data = {**data}
+            legacy = data.pop('terminal')
+            if not data.get('machine'):
+                data['machine'] = legacy
+        return data
 
 
 class AutomationModel(BaseModel):
@@ -114,6 +179,10 @@ class AutomationForm(BaseModel):
 class AutomationResponse(AutomationModel):
     last_run: Optional[AutomationRunModel] = None
     next_runs: Optional[list[int]] = None
+    user: Optional[UserResponse] = None  # the owner, shown like on workspace items
+    # Rename, reschedule, pause and run. What a run does stays the owner's: it runs as them.
+    write_access: Optional[bool] = None
+    access_grants: Optional[list[AccessGrantResponse]] = None  # for the owner or an admin
 
 
 class AutomationListResponse(BaseModel):
@@ -134,12 +203,14 @@ class AutomationTable:
     ) -> AutomationModel:
         async with get_async_db_context(db) as db:
             now = int(time.time_ns())
+            data = form.data.model_dump()
+            data['webhook'] = keep_webhook_token(data.get('webhook'), None)
             row = Automation(
                 id=str(uuid4()),
                 user_id=user_id,
                 folder_id=form.folder_id,
                 name=form.name,
-                data=form.data.model_dump(),
+                data=data,
                 meta=form.meta,
                 is_active=form.is_active,
                 next_run_at=next_run_at,
@@ -184,10 +255,25 @@ class AutomationTable:
         folder_id: Optional[str] = None,
         skip: int = 0,
         limit: int = 30,
+        view: Literal['all', 'mine', 'shared'] = 'mine',
+        group_ids: Optional[list[str]] = None,
         db: Optional[AsyncSession] = None,
     ) -> 'AutomationListResponse':
         async with get_async_db_context(db) as db:
-            stmt = select(Automation).filter_by(user_id=user_id)
+            if view == 'mine':
+                stmt = select(Automation).filter_by(user_id=user_id)
+            else:
+                # Owned plus shared directly; folder-shared ones are listed in their folder.
+                stmt = AccessGrants.has_permission_filter(
+                    select(Automation),
+                    Automation,
+                    {'user_id': user_id, 'group_ids': group_ids or []},
+                    'automation',
+                    'read',
+                    db=db,
+                )
+                if view == 'shared':
+                    stmt = stmt.filter(Automation.user_id != user_id)
 
             if folder_id:
                 stmt = stmt.filter(Automation.folder_id == folder_id)
@@ -238,11 +324,37 @@ class AutomationTable:
                 return None
             row.name = form.name
             row.folder_id = form.folder_id
-            row.data = form.data.model_dump()
+            data = form.data.model_dump()
+            data['target'] = keep_target_refs(data.get('target'), (row.data or {}).get('target'))
+            data['webhook'] = keep_webhook_token(data.get('webhook'), (row.data or {}).get('webhook'))
+            row.data = data
             row.meta = form.meta
             if form.is_active is not None:
                 row.is_active = form.is_active
             row.next_run_at = next_run_at
+            row.updated_at = int(time.time_ns())
+            await db.commit()
+            return AutomationModel.model_validate(row)
+
+    async def set_target_ref(self, id: str, key: Literal['chat_id', 'thread_id'], value: Optional[str]) -> None:
+        """Save the ongoing chat or thread a run created, without counting as an edit."""
+        async with get_async_db_context() as db:
+            row = await db.get(Automation, id, with_for_update=True)
+            if not row:
+                return
+            data = dict(row.data or {})
+            data['target'] = {**(data.get('target') or {'type': 'chat'}), key: value}
+            row.data = data
+            await db.commit()
+
+    async def regenerate_webhook_token(self, id: str, db: Optional[AsyncSession] = None) -> Optional[AutomationModel]:
+        async with get_async_db_context(db) as db:
+            row = await db.get(Automation, id, with_for_update=True)
+            if not row or not has_webhook(row.data):
+                return None
+            data = dict(row.data or {})
+            data['webhook'] = {**data['webhook'], 'token': new_webhook_token()}
+            row.data = data
             row.updated_at = int(time.time_ns())
             await db.commit()
             return AutomationModel.model_validate(row)
@@ -297,6 +409,7 @@ class AutomationTable:
             from open_webui.models.notifications import delete_notifications
 
             recipients = await delete_notifications(resource_type='automation', resource_ids=[id], db=db)
+            await db.execute(delete(AccessGrant).filter_by(resource_type='automation', resource_id=id))
             await db.delete(row)
             await db.commit()
             await emit_changes(recipients)
@@ -457,15 +570,13 @@ class AutomationRunTable:
         automation_id: str,
         skip: int = 0,
         limit: int = 50,
+        direction: str = 'desc',
         db: Optional[AsyncSession] = None,
     ) -> list[AutomationRunModel]:
+        order = AutomationRun.created_at.asc() if direction == 'asc' else AutomationRun.created_at.desc()
         async with get_async_db_context(db) as db:
             result = await db.execute(
-                select(AutomationRun)
-                .filter_by(automation_id=automation_id)
-                .order_by(AutomationRun.created_at.desc())
-                .offset(skip)
-                .limit(limit)
+                select(AutomationRun).filter_by(automation_id=automation_id).order_by(order).offset(skip).limit(limit)
             )
             rows = result.scalars().all()
             return [AutomationRunModel.model_validate(r) for r in rows]

@@ -34,7 +34,7 @@
 					>
 						<button
 							id="sidebar-toggle-button"
-							class=" cursor-pointer flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 transition cursor-"
+							class=" cursor-pointer flex rounded-lg hover:bg-base-100 dark:hover:bg-base-850 transition cursor-"
 							aria-label={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
 							on:click={() => {
 								showSidebar.set(!$showSidebar);
@@ -55,14 +55,14 @@
 					<a
 						class="min-w-fit p-1.5 {$pageUrl.pathname.includes('/home/notes')
 							? ''
-							: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+							: 'text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-base-0'} transition"
 						href="/playground/notes">{$i18n.t('Notes')}</a
 					>
 
 					<a
 						class="min-w-fit p-1.5 {$pageUrl.pathname.includes('/playground/calendar')
 							? ''
-							: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+							: 'text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-base-0'} transition"
 						href="/playground/completions">{$i18n.t('Calendar')}</a
 					>
 				</div>

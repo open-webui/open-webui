@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { getContext, onMount, onDestroy } from 'svelte';
 	import { toast } from 'svelte-sonner';
-	import { getCwd, setCwd, type TerminalTarget } from '$lib/apis/terminal';
-	import { loadRecentFolders, rememberRecentFolder } from '$lib/apis/terminal/recentFolders';
+	import { getCwd, setCwd, type MachineTarget } from '$lib/apis/machines';
+	import { loadRecentFolders, rememberRecentFolder } from '$lib/apis/machines/recentFolders';
 	import { selectedFolder, showFileNav } from '$lib/stores';
-	import type { TerminalContext } from '$lib/types';
+	import type { MachineContext } from '$lib/types';
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
 	import Modal from '$lib/components/common/Modal.svelte';
@@ -17,13 +17,13 @@
 	import SearchInput from './InputMenu/SearchInput.svelte';
 	import Check from '$lib/components/icons/Check.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
-	import FileNav from '../FileNav.svelte';
+	import { machineIdOf } from '$lib/utils/machines';
 
 	const i18n = getContext<any>('i18n');
-	export let target: TerminalTarget;
+	export let target: MachineTarget;
 	export let chatId: string | null = null;
 	export let userId: string;
-	export let terminalContext: TerminalContext | null = null;
+	export let machineContext: MachineContext | null = null;
 	export let disabled = false;
 	export let inMenu = false;
 	export let tab = '';
@@ -47,7 +47,7 @@
 	const folderName = (path: string) => path.replace(/\/+$/, '').split('/').pop() || '/';
 	const normalize = (path: string) => path.replace(/\/+$/, '') || '/';
 
-	$: if (terminalContext?.terminalId === target.selector) cwd = terminalContext.currentDirectory;
+	$: if (machineContext?.machineId === target.selector) cwd = machineContext.currentDirectory;
 	$: directory = cwd;
 	$: options = [...new Set([directory, ...recent].filter(Boolean).map(normalize))].filter((path) =>
 		path.toLowerCase().includes(search.trim().toLowerCase())
@@ -65,7 +65,7 @@
 				if (disposed) return;
 				home = result?.home ?? '';
 			}
-			if (!home) throw new Error('Terminal home is unavailable');
+			if (!home) throw new Error('Machine home is unavailable');
 			const paths = await loadRecentFolders(target, home, userId);
 			if (disposed || version !== historyVersion) return;
 			recent = paths;
@@ -77,17 +77,16 @@
 	}
 
 	onMount(() => {
-		if (!chatId && terminalContext?.terminalId !== target.selector) {
-			terminalContext = {
-				terminalId: target.selector,
+		if (!chatId && machineContext?.machineId !== target.selector) {
+			machineContext = {
+				machineId: target.selector,
 				currentDirectory:
-					$selectedFolder?.data?.terminal_id === target.selector
+					machineIdOf($selectedFolder?.data) === target.selector
 						? ($selectedFolder.data.working_directory ?? '')
 						: ''
 			};
 		}
-		const selectedContext =
-			terminalContext?.terminalId === target.selector ? terminalContext : null;
+		const selectedContext = machineContext?.machineId === target.selector ? machineContext : null;
 		if (selectedContext) cwd = selectedContext.currentDirectory;
 		initialization = getCwd(target).then((result) => {
 			if (disposed) return;
@@ -102,7 +101,7 @@
 	async function selectDirectory(path: string) {
 		if (disabled || saving) return;
 		saving = true;
-		// A draft has no terminal session yet; submission applies this choice after creating the chat.
+		// A draft has no machine session yet; submission applies this choice after creating the chat.
 		const result = chatId ? await setCwd(target, path) : { cwd: path || home };
 		if (disposed) return;
 		if (!result?.cwd) {
@@ -110,9 +109,9 @@
 			toast.error($i18n.t('Failed to load folder'));
 			return;
 		}
-		// An empty path resets the terminal to its default directory.
+		// An empty path resets the machine to its default directory.
 		cwd = path ? result.cwd : '';
-		terminalContext = { terminalId: target.selector, currentDirectory: cwd };
+		machineContext = { machineId: target.selector, currentDirectory: cwd };
 		try {
 			await onSelect(cwd);
 		} catch (error) {
@@ -148,15 +147,15 @@
 
 {#snippet menuItems()}
 	<SearchInput bind:value={search} placeholder={$i18n.t('Search folders')} />
-	<hr class="mx-1 my-0.5 border-gray-50/30 dark:border-gray-800/30" />
+	<hr class="mx-1 my-0.5 border-base-50/30 dark:border-base-800/30" />
 	<button
 		type="button"
 		role="menuitemradio"
 		aria-checked={!directory}
 		disabled={saving || disabled}
 		class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] font-normal cursor-pointer disabled:cursor-not-allowed disabled:opacity-40 {!directory
-			? 'bg-gray-50/40 dark:bg-gray-800/40'
-			: 'hover:bg-gray-50/40 dark:hover:bg-gray-800/40'}"
+			? 'bg-base-50/40 dark:bg-base-800/40'
+			: 'hover:bg-base-50/40 dark:hover:bg-base-800/40'}"
 		on:click={() => selectDirectory('')}
 	>
 		<Folder className="size-3.5 shrink-0" strokeWidth="2" />
@@ -167,12 +166,12 @@
 	</button>
 	{#if options.length > 0}
 		<div
-			class="px-2 py-1 text-[0.625rem] font-normal text-gray-400 dark:text-gray-500 uppercase tracking-wider"
+			class="px-2 py-1 text-[0.625rem] font-normal text-base-400 dark:text-base-500 uppercase tracking-wider"
 		>
 			{$i18n.t('Recently Used')}
 		</div>
 		{#if historyError}
-			<div role="status" class="px-2 py-1 text-[0.6875rem] text-gray-500 dark:text-gray-400">
+			<div role="status" class="px-2 py-1 text-[0.6875rem] text-base-500 dark:text-base-400">
 				{historyError}
 			</div>
 		{/if}
@@ -180,7 +179,7 @@
 			{#each options as path}
 				{@const selected = !!directory && normalize(directory) === path}
 				<div
-					class="group/directory relative rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+					class="group/directory relative rounded-xl hover:bg-base-50/40 dark:hover:bg-base-800/40"
 				>
 					<button
 						type="button"
@@ -191,8 +190,8 @@
 						class="flex h-[1.6875rem] w-full items-center justify-between gap-2 rounded-xl pl-2 {selected
 							? 'pr-14'
 							: 'pr-8'} text-[0.8125rem] font-normal cursor-pointer disabled:cursor-not-allowed disabled:opacity-40 {selected
-							? 'bg-gray-50/40 dark:bg-gray-800/40'
-							: 'hover:bg-gray-50/40 dark:hover:bg-gray-800/40'}"
+							? 'bg-base-50/40 dark:bg-base-800/40'
+							: 'hover:bg-base-50/40 dark:hover:bg-base-800/40'}"
 						on:click={() => selectDirectory(path)}
 					>
 						<div class="flex min-w-0 flex-1 items-center gap-2">
@@ -216,11 +215,11 @@
 								type="button"
 								aria-label={$i18n.t('Open folder')}
 								disabled={saving || disabled}
-								class="flex size-6 shrink-0 items-center justify-center rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 focus-visible:outline focus-visible:outline-2 disabled:cursor-not-allowed disabled:opacity-40"
+								class="flex size-6 shrink-0 items-center justify-center rounded-lg text-base-400 hover:text-base-700 dark:hover:text-base-200 focus-visible:outline focus-visible:outline-2 disabled:cursor-not-allowed disabled:opacity-40"
 								on:click|stopPropagation={() => {
 									closeMenu();
 									showFileNav.set({
-										terminalId: target.selector,
+										machineId: target.selector,
 										directory: path,
 										chatId
 									});
@@ -232,11 +231,11 @@
 			{/each}
 		</div>
 	{/if}
-	<hr class="mx-1 my-0.5 border-gray-50/30 dark:border-gray-800/30" />
+	<hr class="mx-1 my-0.5 border-base-50/30 dark:border-base-800/30" />
 	<button
 		type="button"
 		disabled={saving || disabled}
-		class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-start text-[0.8125rem] font-normal cursor-pointer hover:bg-gray-50/40 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-gray-800/40"
+		class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-start text-[0.8125rem] font-normal cursor-pointer hover:bg-base-50/40 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-base-800/40"
 		on:click={() => {
 			closeMenu();
 			showPicker = true;
@@ -254,7 +253,7 @@
 				type="button"
 				role="menuitem"
 				disabled={disabled || saving}
-				class="flex w-full min-w-0 gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl text-left hover:bg-gray-50/40 dark:hover:bg-gray-800/40 disabled:cursor-not-allowed disabled:opacity-40"
+				class="flex w-full min-w-0 gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl text-left hover:bg-base-50/40 dark:hover:bg-base-800/40 disabled:cursor-not-allowed disabled:opacity-40"
 				on:click={() => {
 					tab = 'directory';
 					search = '';
@@ -265,14 +264,14 @@
 				<span class="flex-1 truncate"
 					>{directory ? folderName(directory) : $i18n.t('Working Directory')}</span
 				>
-				<div class="text-gray-500"><ChevronRight /></div>
+				<div class="text-base-500"><ChevronRight /></div>
 			</button>
 		</div>
 	{:else if tab === 'directory'}
 		<div class="flex min-h-0 flex-col overflow-hidden" in:fly={{ x: 20, duration: 150 }}>
 			<button
 				role="menuitem"
-				class="flex w-full shrink-0 justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer rounded-xl hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+				class="flex w-full shrink-0 justify-between gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal select-none cursor-pointer rounded-xl hover:bg-base-50/40 dark:hover:bg-base-800/40"
 				on:click={() => {
 					tab = '';
 				}}
@@ -304,10 +303,10 @@
 					aria-label={$i18n.t('Choose working directory')}
 					class="flex min-w-0 items-center text-[0.8125rem] transition gap-1.5 translate-y-[1px] rounded-lg p-1 {disabled ||
 					saving
-						? 'cursor-not-allowed opacity-40 text-gray-400 dark:text-gray-600'
+						? 'cursor-not-allowed opacity-40 text-base-400 dark:text-base-600'
 						: directory
-							? 'cursor-pointer text-gray-600 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-200'
-							: 'cursor-pointer text-gray-300 hover:text-gray-500 dark:text-gray-600 dark:hover:text-gray-400'}"
+							? 'cursor-pointer text-base-600 hover:text-base-700 dark:text-base-300 dark:hover:text-base-200'
+							: 'cursor-pointer text-base-300 hover:text-base-500 dark:text-base-600 dark:hover:text-base-400'}"
 				>
 					<Folder className="size-3.5 shrink-0" strokeWidth="2" />
 					{#if directory}
@@ -334,21 +333,23 @@
 				<button
 					type="button"
 					aria-label={$i18n.t('Close')}
-					class="text-gray-500 hover:text-gray-900 dark:hover:text-gray-100"
+					class="text-base-500 hover:text-base-900 dark:hover:text-base-100"
 					on:click={() => (showPicker = false)}
 				>
 					<XMark className="size-4" />
 				</button>
 			</div>
 			<div class="h-[60dvh] min-h-0" aria-busy={saving}>
-				<FileNav
-					terminalId={target.selector}
-					{chatId}
-					initialDirectory={directory || null}
-					manageFileRequests={false}
-					showTerminalDock={false}
-					onSelectDirectory={selectDirectory}
-				/>
+				{#await import('../FileNav.svelte') then { default: FileNav }}
+					<FileNav
+						machineId={target.selector}
+						{chatId}
+						initialDirectory={directory || null}
+						manageFileRequests={false}
+						showTerminalDock={false}
+						onSelectDirectory={selectDirectory}
+					/>
+				{/await}
 			</div>
 		</div>
 	</Modal>

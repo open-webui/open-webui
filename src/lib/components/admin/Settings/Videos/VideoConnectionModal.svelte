@@ -17,6 +17,10 @@
 	import Textarea from '$lib/components/common/Textarea.svelte';
 	import AccessButton from '$lib/components/common/AccessButton.svelte';
 	import AccessControlModal from '$lib/components/workspace/common/AccessControlModal.svelte';
+	import ComfyUIWorkflow from '$lib/components/admin/Settings/Images/ComfyUIWorkflow.svelte';
+
+	type ConnectionType = 'openai' | 'comfyui';
+	type WorkflowNode = { type: string; key: string; node_ids: string };
 
 	export let onSubmit: Function = () => {};
 	export let onDelete: Function = () => {};
@@ -26,6 +30,21 @@
 
 	export let connection: any = null;
 
+	// Input keys of the usual nodes in a Wan, LTX-Video or HunyuanVideo workflow.
+	const VIDEO_WORKFLOW_NODES: WorkflowNode[] = [
+		{ type: 'prompt', key: 'text', node_ids: '' },
+		{ type: 'negative_prompt', key: 'text', node_ids: '' },
+		{ type: 'model', key: 'unet_name', node_ids: '' },
+		{ type: 'image', key: 'image', node_ids: '' },
+		{ type: 'width', key: 'width', node_ids: '' },
+		{ type: 'height', key: 'height', node_ids: '' },
+		{ type: 'length', key: 'length', node_ids: '' },
+		{ type: 'fps', key: 'fps', node_ids: '' },
+		{ type: 'steps', key: 'steps', node_ids: '' },
+		{ type: 'seed', key: 'seed', node_ids: '' }
+	];
+
+	let connectionType: ConnectionType = 'openai';
 	let name = '';
 	let url = '';
 	let key = '';
@@ -43,6 +62,9 @@
 	let provider = '';
 	let params = '';
 	let headers = '';
+	let fps = '';
+	let workflow = '';
+	let nodes: WorkflowNode[] = [];
 
 	let loading = false;
 	let showDeleteConfirmDialog = false;
@@ -50,9 +72,38 @@
 	let showAdvanced = false;
 
 	const inputClass =
-		'bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700';
+		'bg-transparent outline-hidden placeholder:text-base-300 dark:placeholder:text-base-700';
 	const selectClass =
-		'bg-transparent pr-5 outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700';
+		'bg-transparent pr-5 outline-hidden placeholder:text-base-300 dark:placeholder:text-base-700';
+
+	$: typeLabel = {
+		openai: $i18n.t('OpenAI compatible'),
+		comfyui: $i18n.t('ComfyUI')
+	}[connectionType];
+
+	// Only OpenAI compatible connections authenticate the way chat model connections do.
+	$: if (connectionType !== 'openai' && !['none', 'bearer'].includes(auth_type)) {
+		auth_type = 'bearer';
+	}
+
+	const mapNodes = (defaults: WorkflowNode[], saved: any[] = []) =>
+		defaults.map((node) => {
+			const match = saved.find((n) => n.type === node.type) ?? node;
+			return {
+				type: match.type,
+				key: match.key,
+				node_ids: Array.isArray(match.node_ids) ? match.node_ids.join(',') : (match.node_ids ?? '')
+			};
+		});
+
+	const toNodeConfig = (workflowNodes: WorkflowNode[]) =>
+		workflowNodes.map((node) => ({
+			...node,
+			node_ids: node.node_ids
+				.split(',')
+				.map((id) => id.trim())
+				.filter(Boolean)
+		}));
 
 	const formatJSON = (value: any) => {
 		if (!value) return '';
@@ -85,6 +136,21 @@
 			toast.error($i18n.t('Enter Video Length in seconds (e.g. 8)'));
 			return false;
 		}
+		if (connectionType === 'comfyui') {
+			if (!workflow.trim()) {
+				toast.error($i18n.t('Upload a ComfyUI workflow to generate videos'));
+				return false;
+			}
+			if (!isJSONObject(workflow)) {
+				toast.error($i18n.t('Invalid JSON format for ComfyUI Workflow.'));
+				return false;
+			}
+			if (fps !== '' && !(Number(fps) > 0)) {
+				showAdvanced = true;
+				toast.error($i18n.t('Enter Frame Rate in frames per second (e.g. 24)'));
+				return false;
+			}
+		}
 		if (headers.trim() && !isJSONObject(headers)) {
 			showAdvanced = true;
 			toast.error($i18n.t('Headers must be a valid JSON object'));
@@ -100,10 +166,10 @@
 
 	const buildConnection = () => ({
 		...(connection?.id ? { id: connection.id } : {}),
-		name: name.trim() || $i18n.t('OpenAI compatible'),
-		type: 'openai',
+		name: name.trim() || typeLabel,
+		type: connectionType,
 		url,
-		key,
+		key: connectionType !== 'openai' && auth_type === 'none' ? '' : key,
 		config: {
 			enable,
 			model_ids: modelIds,
@@ -111,10 +177,13 @@
 			size: size.trim(),
 			seconds: seconds === '' ? null : Number(seconds),
 			api_version: apiVersion.trim(),
-			provider,
+			provider: connectionType === 'openai' ? provider : '',
 			auth_type,
-			headers: headers.trim() ? JSON.parse(headers) : {},
-			params: params.trim() ? JSON.parse(params) : {}
+			headers: connectionType === 'openai' && headers.trim() ? JSON.parse(headers) : {},
+			params: connectionType === 'openai' && params.trim() ? JSON.parse(params) : {},
+			workflow: connectionType === 'comfyui' ? workflow.trim() : '',
+			nodes: connectionType === 'comfyui' ? toNodeConfig(nodes) : [],
+			fps: connectionType === 'comfyui' && fps !== '' ? Number(fps) : null
 		}
 	});
 
@@ -183,6 +252,7 @@
 		showAdvanced = false;
 		modelId = '';
 
+		connectionType = connection?.type ?? 'openai';
 		name = connection?.name ?? '';
 		url = connection?.url ?? '';
 		key = connection?.key ?? '';
@@ -197,6 +267,9 @@
 		provider = config.provider ?? '';
 		params = formatJSON(config.params);
 		headers = formatJSON(config.headers);
+		fps = config.fps === null || config.fps === undefined ? '' : `${config.fps}`;
+		workflow = formatJSON(config.workflow);
+		nodes = mapNodes(VIDEO_WORKFLOW_NODES, config.nodes ?? []);
 	};
 
 	$: if (show) {
@@ -214,8 +287,8 @@
 	bind:show
 >
 	<div>
-		<div class=" flex justify-between dark:text-gray-100 px-5 pt-4 pb-1.5">
-			<h1 class="text-lg font-medium self-center font-primary">
+		<div class=" flex justify-between dark:text-base-100 px-4 pt-3 pb-1.5">
+			<h1 class="text-sm font-medium self-center">
 				{#if edit}
 					{$i18n.t('Edit Connection')}
 				{:else}
@@ -229,11 +302,11 @@
 					show = false;
 				}}
 			>
-				<XMark className={'size-5'} />
+				<XMark className={'size-4'} />
 			</button>
 		</div>
 
-		<div class="flex flex-col md:flex-row w-full px-4 pb-4 md:space-x-4 dark:text-gray-200">
+		<div class="flex flex-col md:flex-row w-full px-4 pb-4 md:space-x-4 dark:text-base-200">
 			<div class=" flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6">
 				<form
 					class="flex flex-col w-full"
@@ -242,10 +315,30 @@
 						submitHandler();
 					}}
 				>
-					<div class="px-1">
+					<div>
+						<div class="flex flex-row justify-between items-center w-full mb-2">
+							<label for="video-connection-type-select" class="text-xs text-base-500"
+								>{$i18n.t('Connection Type')}</label
+							>
+
+							<div>
+								<select
+									id="video-connection-type-select"
+									bind:value={connectionType}
+									on:change={() => {
+										availableModelIds = [];
+									}}
+									class="text-xs text-base-700 dark:text-base-300 bg-transparent pr-5 outline-hidden"
+								>
+									<option value="openai">{$i18n.t('OpenAI compatible')}</option>
+									<option value="comfyui">{$i18n.t('ComfyUI')}</option>
+								</select>
+							</div>
+						</div>
+
 						<div class="flex gap-2">
 							<div class="flex flex-col w-full">
-								<label for="video-connection-name" class="mb-0.5 text-xs text-gray-500"
+								<label for="video-connection-name" class="mb-0.5 text-xs text-base-500"
 									>{$i18n.t('Name')}</label
 								>
 
@@ -264,7 +357,7 @@
 
 						<div class="flex gap-2 mt-2">
 							<div class="flex flex-col w-full">
-								<label for="video-connection-url" class="mb-0.5 text-xs text-gray-500"
+								<label for="video-connection-url" class="mb-0.5 text-xs text-base-500"
 									>{$i18n.t('URL')}</label
 								>
 
@@ -274,9 +367,11 @@
 										class={`w-full text-sm ${inputClass}`}
 										type="text"
 										bind:value={url}
-										placeholder={$i18n.t('API Base URL')}
+										placeholder={connectionType === 'comfyui'
+											? 'http://localhost:8188'
+											: $i18n.t('API Base URL')}
 										autocomplete="off"
-										list="video-connection-openai-urls"
+										list={connectionType === 'openai' ? 'video-connection-openai-urls' : undefined}
 										required
 									/>
 
@@ -289,7 +384,7 @@
 
 							<Tooltip content={$i18n.t('Verify Connection')} className="self-end -mb-1">
 								<button
-									class="self-center p-1 bg-transparent hover:bg-gray-100 dark:hover:bg-gray-850 rounded-lg transition"
+									class="self-center p-1 bg-transparent hover:bg-base-100 dark:hover:bg-base-850 rounded-lg transition"
 									on:click={() => {
 										verifyHandler();
 									}}
@@ -324,7 +419,7 @@
 
 						<div class="flex gap-2 mt-2">
 							<div class="flex flex-col w-full">
-								<label for="video-connection-auth" class="text-xs text-gray-500"
+								<label for="video-connection-auth" class="text-xs text-base-500"
 									>{$i18n.t('Auth')}</label
 								>
 
@@ -337,9 +432,11 @@
 										>
 											<option value="none">{$i18n.t('None')}</option>
 											<option value="bearer">{$i18n.t('Bearer')}</option>
-											<option value="session">{$i18n.t('Session')}</option>
-											<option value="system_oauth">{$i18n.t('OAuth')}</option>
-											<option value="microsoft_entra_id">{$i18n.t('Entra ID')}</option>
+											{#if connectionType === 'openai'}
+												<option value="session">{$i18n.t('Session')}</option>
+												<option value="system_oauth">{$i18n.t('OAuth')}</option>
+												<option value="microsoft_entra_id">{$i18n.t('Entra ID')}</option>
+											{/if}
 										</select>
 									</div>
 
@@ -351,19 +448,19 @@
 												required={false}
 											/>
 										{:else if auth_type === 'none'}
-											<div class={`text-xs self-center translate-y-[1px] text-gray-500`}>
+											<div class={`text-xs self-center translate-y-[1px] text-base-500`}>
 												{$i18n.t('No authentication')}
 											</div>
 										{:else if auth_type === 'session'}
-											<div class={`text-xs self-center translate-y-[1px] text-gray-500`}>
+											<div class={`text-xs self-center translate-y-[1px] text-base-500`}>
 												{$i18n.t('Forwards system user session credentials to authenticate')}
 											</div>
 										{:else if auth_type === 'system_oauth'}
-											<div class={`text-xs self-center translate-y-[1px] text-gray-500`}>
+											<div class={`text-xs self-center translate-y-[1px] text-base-500`}>
 												{$i18n.t('Forwards system user OAuth access token to authenticate')}
 											</div>
 										{:else if auth_type === 'microsoft_entra_id'}
-											<div class={`text-xs self-center translate-y-[1px] text-gray-500`}>
+											<div class={`text-xs self-center translate-y-[1px] text-base-500`}>
 												{$i18n.t('Uses DefaultAzureCredential to authenticate')}
 											</div>
 										{/if}
@@ -374,7 +471,7 @@
 
 						<div class="flex flex-col w-full mt-2">
 							<div class="mb-1 flex justify-between">
-								<div class="mb-0.5 text-xs text-gray-500">
+								<div class="mb-0.5 text-xs text-base-500">
 									{$i18n.t('Model IDs')}
 								</div>
 							</div>
@@ -403,11 +500,15 @@
 									{/each}
 								</ul>
 							{:else}
-								<div class={`text-gray-500 text-xs text-center py-2 px-10`}>
-									{$i18n.t(
-										'Leave empty to include all video models from "{{url}}/models" endpoint, or the server\'s default model if it does not mark which models make videos',
-										{ url }
-									)}
+								<div class={`text-base-500 text-xs text-center py-2 px-10`}>
+									{#if connectionType === 'comfyui'}
+										{$i18n.t('Leave empty to use the model set in the workflow')}
+									{:else}
+										{$i18n.t(
+											'Leave empty to include all video models from "{{url}}/models" endpoint, or the server\'s default model if it does not mark which models make videos',
+											{ url }
+										)}
+									{/if}
 								</div>
 							{/if}
 						</div>
@@ -417,7 +518,7 @@
 								>{$i18n.t('Add a model ID')}</label
 							>
 							<input
-								class={`w-full text-sm ${inputClass} ${modelId ? '' : 'text-gray-500'}`}
+								class={`w-full text-sm ${inputClass} ${modelId ? '' : 'text-base-500'}`}
 								bind:value={modelId}
 								id="add-video-model-id-input"
 								placeholder={$i18n.t('Add a model ID')}
@@ -450,10 +551,26 @@
 							</div>
 						</div>
 
+						{#if connectionType === 'comfyui'}
+							<ComfyUIWorkflow
+								id="video-connection-workflow"
+								label={$i18n.t('Video Workflow')}
+								description={$i18n.t(
+									'Upload a workflow.json file exported as API format from ComfyUI. It must save its result with a Save Video node.'
+								)}
+								bind:workflow
+								bind:nodes
+								requiredTypes={['prompt']}
+								requiredNote={$i18n.t(
+									'*Prompt node ID(s) are required. Length is set in frames; the image node takes the starting frame.'
+								)}
+							/>
+						{/if}
+
 						<div class="flex items-center justify-between">
 							<button
 								type="button"
-								class="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition mt-2"
+								class="flex items-center gap-1 text-xs text-base-500 dark:text-base-400 hover:text-base-700 dark:hover:text-base-200 transition mt-2"
 								on:click={() => (showAdvanced = !showAdvanced)}
 							>
 								<svg
@@ -476,14 +593,13 @@
 								on:click={() => {
 									showAccessControlModal = true;
 								}}
-								label={$i18n.t('Access Control')}
 							/>
 						</div>
 
 						{#if showAdvanced}
 							<div class="flex gap-2 mt-2">
 								<div class="flex flex-col w-full">
-									<label for="video-connection-size" class="mb-0.5 text-xs text-gray-500"
+									<label for="video-connection-size" class="mb-0.5 text-xs text-base-500"
 										>{$i18n.t('Video Size')}</label
 									>
 									<input
@@ -497,7 +613,7 @@
 								</div>
 
 								<div class="flex flex-col w-full">
-									<label for="video-connection-seconds" class="mb-0.5 text-xs text-gray-500"
+									<label for="video-connection-seconds" class="mb-0.5 text-xs text-base-500"
 										>{$i18n.t('Video Length')}</label
 									>
 									<input
@@ -511,92 +627,110 @@
 								</div>
 							</div>
 
-							<div class="flex flex-row justify-between items-center w-full mt-2">
-								<label for="video-connection-provider" class="mb-0.5 text-xs text-gray-500"
-									>{$i18n.t('Provider')}</label
-								>
-
-								<div>
-									<select
-										id="video-connection-provider"
-										bind:value={provider}
-										class="text-xs text-gray-700 dark:text-gray-300 bg-transparent pr-5 outline-hidden"
-									>
-										<option value="">{$i18n.t('Default')}</option>
-										<option value="openrouter">{$i18n.t('OpenRouter')}</option>
-									</select>
-								</div>
-							</div>
-
-							{#if provider !== 'openrouter' && !url.includes('openrouter.ai')}
+							{#if connectionType === 'comfyui'}
 								<div class="flex gap-2 mt-2">
 									<div class="flex flex-col w-full">
-										<label for="video-connection-api-version" class="mb-0.5 text-xs text-gray-500"
-											>{$i18n.t('API Version')}</label
+										<label for="video-connection-fps" class="mb-0.5 text-xs text-base-500"
+											>{$i18n.t('Frame Rate')}</label
 										>
 										<input
-											id="video-connection-api-version"
+											id="video-connection-fps"
 											class={`w-full text-sm ${inputClass}`}
 											type="text"
-											bind:value={apiVersion}
-											placeholder={$i18n.t('API Version')}
+											bind:value={fps}
+											placeholder={$i18n.t("Leave empty to use the workflow's frame rate")}
 											autocomplete="off"
 										/>
 									</div>
 								</div>
-							{/if}
-
-							<div class="flex gap-2 mt-2">
-								<div class="flex flex-col w-full">
-									<label for="video-connection-headers" class="mb-0.5 text-xs text-gray-500"
-										>{$i18n.t('Headers')}</label
+							{:else}
+								<div class="flex flex-row justify-between items-center w-full mt-2">
+									<label for="video-connection-provider" class="mb-0.5 text-xs text-base-500"
+										>{$i18n.t('Provider')}</label
 									>
 
-									<div class="flex-1">
-										<Tooltip
-											content={$i18n.t(
-												'Enter additional headers in JSON format (e.g. {"X-Custom-Header": "value"}'
-											)}
+									<div>
+										<select
+											id="video-connection-provider"
+											bind:value={provider}
+											class="text-xs text-base-700 dark:text-base-300 bg-transparent pr-5 outline-hidden"
 										>
+											<option value="">{$i18n.t('Default')}</option>
+											<option value="openrouter">{$i18n.t('OpenRouter')}</option>
+										</select>
+									</div>
+								</div>
+
+								{#if provider !== 'openrouter' && !url.includes('openrouter.ai')}
+									<div class="flex gap-2 mt-2">
+										<div class="flex flex-col w-full">
+											<label for="video-connection-api-version" class="mb-0.5 text-xs text-base-500"
+												>{$i18n.t('API Version')}</label
+											>
+											<input
+												id="video-connection-api-version"
+												class={`w-full text-sm ${inputClass}`}
+												type="text"
+												bind:value={apiVersion}
+												placeholder={$i18n.t('API Version')}
+												autocomplete="off"
+											/>
+										</div>
+									</div>
+								{/if}
+
+								<div class="flex gap-2 mt-2">
+									<div class="flex flex-col w-full">
+										<label for="video-connection-headers" class="mb-0.5 text-xs text-base-500"
+											>{$i18n.t('Headers')}</label
+										>
+
+										<div class="flex-1">
+											<Tooltip
+												content={$i18n.t(
+													'Enter additional headers in JSON format (e.g. {"X-Custom-Header": "value"}'
+												)}
+											>
+												<Textarea
+													id="video-connection-headers"
+													className="w-full text-sm outline-hidden"
+													bind:value={headers}
+													placeholder={$i18n.t('Enter additional headers in JSON format')}
+													required={false}
+													minSize={30}
+												/>
+											</Tooltip>
+										</div>
+									</div>
+								</div>
+
+								<div class="flex gap-2 mt-2">
+									<div class="flex flex-col w-full">
+										<label for="video-connection-params" class="mb-0.5 text-xs text-base-500"
+											>{$i18n.t('Additional Parameters')}</label
+										>
+
+										<div class="flex-1">
 											<Textarea
-												id="video-connection-headers"
+												id="video-connection-params"
 												className="w-full text-sm outline-hidden"
-												bind:value={headers}
-												placeholder={$i18n.t('Enter additional headers in JSON format')}
+												bind:value={params}
+												placeholder={$i18n.t('Enter additional parameters in JSON format')}
 												required={false}
 												minSize={30}
 											/>
-										</Tooltip>
+										</div>
 									</div>
 								</div>
-							</div>
-
-							<div class="flex gap-2 mt-2">
-								<div class="flex flex-col w-full">
-									<label for="video-connection-params" class="mb-0.5 text-xs text-gray-500"
-										>{$i18n.t('Additional Parameters')}</label
-									>
-
-									<div class="flex-1">
-										<Textarea
-											id="video-connection-params"
-											className="w-full text-sm outline-hidden"
-											bind:value={params}
-											placeholder={$i18n.t('Enter additional parameters in JSON format')}
-											required={false}
-											minSize={30}
-										/>
-									</div>
-								</div>
-							</div>
+							{/if}
 						{/if}
 					</div>
 
-					<div class="flex justify-between items-center pt-3 text-sm font-medium">
+					<div class="flex justify-between items-center pt-3 text-xs">
 						<div>
 							{#if edit}
 								<button
-									class="px-1 py-1.5 text-sm font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:underline transition"
+									class="px-1 py-1.5 text-xs text-base-500 hover:text-base-700 dark:text-base-400 dark:hover:text-base-200 hover:underline transition"
 									type="button"
 									on:click={() => {
 										showDeleteConfirmDialog = true;
@@ -608,7 +742,7 @@
 						</div>
 
 						<button
-							class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white disabled:cursor-not-allowed"
+							class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-base-0 transition hover:bg-base-1000 disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-base-0 disabled:cursor-not-allowed"
 							type="submit"
 							disabled={loading}
 						>

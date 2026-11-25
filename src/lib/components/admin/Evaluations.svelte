@@ -39,7 +39,7 @@
 		const entries = res?.entries ?? [];
 		const modelMap = new Map(($_models ?? []).map((model) => [model.id, model]));
 		const activeModelCount = ($_models ?? []).filter(
-			(model) => model?.owned_by !== 'arena' && !model?.info?.meta?.hidden
+			(model) => model?.owned_by !== 'router' && !model?.info?.meta?.hidden
 		).length;
 		const evaluatedModelCount = entries.filter((entry) => !modelMap.has(entry.model_id)).length;
 
@@ -80,7 +80,7 @@
 	<div class="flex flex-col lg:flex-row w-full h-full pb-2 lg:space-x-4">
 		<div
 			id="users-tabs-container"
-			class="tabs mx-2 px-2 sm:mx-2.5 lg:mx-0 lg:px-2.5 flex flex-row overflow-x-auto gap-2.5 max-w-full lg:gap-0 lg:flex-col lg:flex-none lg:w-50 dark:text-gray-200 text-sm font-normal text-left scrollbar-none"
+			class="tabs mx-2 px-2 sm:mx-2.5 lg:mx-0 lg:px-2.5 flex flex-row overflow-x-auto gap-2.5 max-w-full lg:gap-0 lg:flex-col lg:flex-none lg:w-50 dark:text-base-200 text-sm font-normal text-left scrollbar-none"
 		>
 			<a
 				id="leaderboard"
@@ -89,7 +89,7 @@
 				class="px-0.5 py-1 min-w-fit rounded-lg lg:flex-none flex items-center gap-1.5 text-right transition select-none {selectedTab ===
 				'leaderboard'
 					? ''
-					: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+					: ' text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-base-0'}"
 			>
 				<div class="self-center">{$i18n.t('Leaderboard')}</div>
 				{#if formattedLeaderboardCount !== null}
@@ -106,7 +106,7 @@
 				class="px-0.5 py-1 min-w-fit rounded-lg lg:flex-none flex items-center gap-1.5 text-right transition select-none {selectedTab ===
 				'feedback'
 					? ''
-					: ' text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'}"
+					: ' text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-base-0'}"
 			>
 				<div class="self-center">{$i18n.t('Feedback')}</div>
 				{#if formattedFeedbackCount !== null}

@@ -1,10 +1,12 @@
 <script lang="ts">
+	import { withListFocus } from '$lib/utils/listFocus';
 	import { getContext } from 'svelte';
 	import { settings } from '$lib/stores';
 	import type { CalendarModel } from '$lib/apis/calendar';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import Pencil from '$lib/components/icons/Pencil.svelte';
 
+	let listElement: HTMLElement;
 	const i18n = getContext('i18n');
 
 	export let calendars: CalendarModel[] = [];
@@ -32,7 +34,8 @@
 
 	function confirmDelete() {
 		if (deleteTargetCalendar) {
-			onDeleteCalendar(deleteTargetCalendar.id);
+			const { id } = deleteTargetCalendar;
+			withListFocus(listElement, id, onDeleteCalendar);
 		}
 		deleteTargetCalendar = null;
 	}
@@ -105,7 +108,7 @@
 	onConfirm={confirmDelete}
 />
 
-<div class="flex flex-col gap-4">
+<div bind:this={listElement} class="flex flex-col gap-4">
 	<!-- Mini Month Calendar -->
 	<div>
 		<div class="flex items-center justify-between px-1 mb-1.5 mt-1.5">
@@ -114,7 +117,7 @@
 				<button
 					class="{($settings?.highContrastMode ?? false)
 						? 'p-1.5'
-						: 'p-0.5'} rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+						: 'p-0.5'} rounded hover:bg-base-100 dark:hover:bg-base-800 transition"
 					aria-label={$i18n.t('Previous month')}
 					on:click={() => navigateMini(-1)}
 				>
@@ -135,7 +138,7 @@
 				<button
 					class="{($settings?.highContrastMode ?? false)
 						? 'p-1.5'
-						: 'p-0.5'} rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+						: 'p-0.5'} rounded hover:bg-base-100 dark:hover:bg-base-800 transition"
 					aria-label={$i18n.t('Next month')}
 					on:click={() => navigateMini(1)}
 				>
@@ -157,7 +160,7 @@
 		</div>
 
 		<div
-			class="grid grid-cols-7 text-center text-[0.5625rem] text-gray-400 dark:text-gray-500 mb-0.5"
+			class="grid grid-cols-7 text-center text-[0.5625rem] text-base-400 dark:text-base-500 mb-0.5"
 		>
 			{#each ['S', 'M', 'T', 'W', 'T', 'F', 'S'] as d}
 				<div class="py-0.5">{d}</div>
@@ -168,17 +171,17 @@
 			{#each miniDays as day}
 				<button
 					class="w-6 h-6 flex items-center justify-center rounded-full transition
-						{day.getMonth() !== miniMonth ? 'text-gray-300 dark:text-gray-600' : ''}
+						{day.getMonth() !== miniMonth ? 'text-base-300 dark:text-base-600' : ''}
 						{isToday(day)
 						? ($settings?.highContrastMode ?? false)
 							? 'bg-blue-600 text-white'
 							: 'bg-blue-500 text-white'
 						: ''}
 						{day.toDateString() === currentDate.toDateString() && !isToday(day)
-						? 'bg-gray-200 dark:bg-gray-700'
+						? 'bg-base-200 dark:bg-base-700'
 						: ''}
 						{!isToday(day) && day.toDateString() !== currentDate.toDateString()
-						? 'hover:bg-gray-100 dark:hover:bg-gray-800'
+						? 'hover:bg-base-100 dark:hover:bg-base-800'
 						: ''}"
 					on:click={() => onDateSelect(day)}
 				>
@@ -191,12 +194,13 @@
 	<!-- Calendar List -->
 	<div>
 		<div class="flex items-center justify-between mb-1 px-1">
-			<div class="text-[0.6875rem] text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+			<div class="text-[0.6875rem] text-base-400 dark:text-base-500 uppercase tracking-wider">
 				{$i18n.t('Calendars')}
 			</div>
 			<button
-				class="p-0.5 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+				class="p-0.5 rounded hover:bg-base-100 dark:hover:bg-base-800 transition"
 				title={$i18n.t('New calendar')}
+				data-focus-fallback
 				on:click={onCreateCalendar}
 			>
 				<svg
@@ -205,7 +209,7 @@
 					viewBox="0 0 24 24"
 					stroke-width="2"
 					stroke="currentColor"
-					class="size-3 text-gray-400 dark:text-gray-500"
+					class="size-3 text-base-400 dark:text-base-500"
 					><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg
 				>
 			</button>
@@ -214,10 +218,11 @@
 		{#each calendars as cal (cal.id)}
 			<div
 				class="group flex items-center w-full rounded-lg text-xs transition
-					hover:bg-gray-50 dark:hover:bg-gray-800/50"
+					hover:bg-base-50 dark:hover:bg-base-800/50"
 			>
 				<button
 					class="flex items-center gap-2 px-2 py-1 flex-1 text-left min-w-0"
+					data-focus-row={cal.id}
 					on:click={() => onToggle(cal.id)}
 				>
 					<span
@@ -231,7 +236,7 @@
 					<span
 						class="truncate flex-1 {visibleCalendarIds.has(cal.id)
 							? ''
-							: 'text-gray-400 dark:text-gray-500'}"
+							: 'text-base-400 dark:text-base-500'}"
 					>
 						{cal.name}
 					</span>

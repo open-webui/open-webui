@@ -25,6 +25,7 @@ from fastapi import HTTPException, Request
 from langchain_core.utils.function_calling import (
     convert_to_openai_function as convert_pydantic_model_to_openai_function_spec,
 )
+from open_webui.utils.machines import is_machine_ref
 from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
 from open_webui.env import (
     AIOHTTP_CLIENT_ALLOW_REDIRECTS,
@@ -91,6 +92,7 @@ from open_webui.tools.builtin import (
     search_notes,
     search_users,
     search_web,
+    send_message,
     timer,
     toggle_automation,
     update_automation,
@@ -129,9 +131,10 @@ from open_webui.utils.plugin import (
     load_tool_module_by_id,
     set_tool_module_in_cache,
 )
-from open_webui.utils.tether import RelayInterrupted, get_tether_connections, get_terminal_client
-from open_webui.utils.terminals import (
-    get_terminal_server_url,
+from open_webui.utils.tether import RelayInterrupted, get_tether_connections
+from open_webui.utils.machines import (
+    get_machine_client,
+    get_machine_url,
 )
 from open_webui.utils.voice_avatar import avatar_animation_tools
 from pydantic import BaseModel, Field, create_model
@@ -146,6 +149,7 @@ async def build_tool_server_headers(
     user,
     server_id: str = '',
     metadata: dict | None = None,
+    refresh: bool = False,
 ) -> tuple[dict, dict]:
     """Build auth headers and cookies for a tool server connection.
 
@@ -175,7 +179,7 @@ async def build_tool_server_headers(
             oauth_server_id = splits[-1] if len(splits) > 1 else server_id
             connection_type = connection.get('type', 'openapi')
             oauth_token = await request.app.state.oauth_client_manager.get_oauth_token(
-                user.id, f'{connection_type}:{oauth_server_id}'
+                user.id, f'{connection_type}:{oauth_server_id}', force_refresh=refresh
             )
             if oauth_token:
                 headers.update(bearer_auth_header(oauth_token.get('access_token', '')))
@@ -251,17 +255,18 @@ async def connect_mcp_server(
 
     metadata = extra_params.get('__metadata__', {})
 
-    async def get_headers():
+    async def get_headers(refresh=False):
         headers, _ = await build_tool_server_headers(
-            mcp_server_connection, request, user, server_id=server_id, metadata=metadata
+            mcp_server_connection, request, user, server_id=server_id, metadata=metadata, refresh=refresh
         )
         return headers
 
-    auth = OAuthTokenAuth(get_headers) if mcp_server_connection.get('auth_type') == 'system_oauth' else None
-    headers = {} if auth else await get_headers()
-
-    if mcp_server_connection.get('auth_type') in ('oauth_2.1', 'oauth_2.1_static') and not headers.get('Authorization'):
+    auth_type = mcp_server_connection.get('auth_type')
+    if auth_type in ('oauth_2.1', 'oauth_2.1_static') and not (await get_headers()).get('Authorization'):
         raise HTTPException(status_code=401, detail='Auth required')
+
+    auth = OAuthTokenAuth(get_headers) if auth_type in ('system_oauth', 'oauth_2.1', 'oauth_2.1_static') else None
+    headers = {} if auth else await get_headers()
 
     client = MCPClient(
         event_caller=extra_params.get('__event_call__') if metadata.get('session_id') else None,
@@ -607,7 +612,7 @@ async def get_tools(request: Request, tool_ids: list[str], user: UserModel, extr
                     while function_name in tools_dict:
                         log.warning(f'Tool {function_name} already exists in another tools!')
                         # Prepend server ID to function name
-                        function_name = f'{server_id}_{function_name}'
+                        function_name = re.sub(r'[^a-zA-Z0-9_-]', '_', f'{server_id}_{function_name}')
 
                     tool_dict['spec'] = {**tool_dict['spec'], 'name': function_name}
                     tools_dict[function_name] = tool_dict
@@ -698,7 +703,6 @@ async def get_builtin_tools(
         'calendar.enable',
         'ui.enable_user_webhooks',
         'subagents.enable',
-        'subagents.background_enabled',
         'chat.visualizations.prompt_template',
     )
 
@@ -762,7 +766,7 @@ async def get_builtin_tools(
     if is_builtin_tool_enabled('time'):
         builtin_functions.extend([get_current_timestamp, calculate_timestamp])
 
-    if is_builtin_tool_enabled('user_input', True):
+    if is_builtin_tool_enabled('user_input', True) and getattr(request.state, 'subagent', False) is not True:
         builtin_functions.append(ask_user)
 
     metadata = extra_params.get('__metadata__') or {}
@@ -827,18 +831,24 @@ async def get_builtin_tools(
                 ]
             )
 
-    # Chats tools - search chat history and the user directory
+    # Chats tools - search chat history
     if is_builtin_tool_enabled('chats'):
-        builtin_functions.extend([search_chats, view_chat, search_users])
+        builtin_functions.extend([search_chats, view_chat])
+
+    # Users tools - search the user directory (e.g. to resolve @mentions)
+    if is_builtin_tool_enabled('users'):
+        builtin_functions.append(search_users)
 
     if (
         is_builtin_tool_enabled('subagents')
         and config.get('subagents.enable')
-        and getattr(request.state, 'internal', False) is not True
         and not is_temporary_chat_id(metadata.get('chat_id'))
         and await has_user_permission('subagents')
     ):
-        builtin_functions.extend([delegate_task, timer])
+        if is_saved_chat_id(metadata.get('chat_id')):
+            builtin_functions.append(send_message)
+        if not getattr(request.state, 'subagent', False):
+            builtin_functions.extend([delegate_task, timer])
 
     # Add memory tools when memory is enabled and the model allows this builtin category.
     if (
@@ -913,8 +923,10 @@ async def get_builtin_tools(
         builtin_functions.append(execute_code)
 
     # Notes tools - search, view, create, and update user's notes
-    if is_note_chat or (
-        is_builtin_tool_enabled('notes') and config.get('notes.enable') and await has_user_permission('notes')
+    if (
+        (is_note_chat or is_builtin_tool_enabled('notes'))
+        and config.get('notes.enable')
+        and await has_user_permission('notes')
     ):
         builtin_functions.extend([search_notes, view_note, write_note, replace_note_content])
 
@@ -931,7 +943,7 @@ async def get_builtin_tools(
 
     # Skills tools - overview, targeted search, and bounded reads of relevant passages.
     skill_ids = sorted(set(extra_params.get('__skill_ids__') or []))
-    workspace_skill_ids = [skill_id for skill_id in skill_ids if not skill_id.startswith('terminal:')]
+    workspace_skill_ids = [skill_id for skill_id in skill_ids if not is_machine_ref(skill_id)]
     if is_builtin_tool_enabled('skills'):
         if skill_ids:
             builtin_functions.extend([view_skill, read_skill_file, grep_skill_files])
@@ -976,7 +988,7 @@ async def get_builtin_tools(
     ):
         builtin_functions.append(notify)
 
-    if getattr(request.state, 'internal', False) is True:
+    if getattr(request.state, 'internal', False) is True or getattr(request.state, 'subagent', False) is True:
         from open_webui.utils.subagents import MUTATING_MEMORY_TOOLS
 
         builtin_functions = [func for func in builtin_functions if func.__name__ not in MUTATING_MEMORY_TOOLS]
@@ -1007,11 +1019,6 @@ async def get_builtin_tools(
 
             parameters = spec.get('parameters', {})
             properties = parameters.get('properties', {})
-            if not config.get('subagents.background_enabled'):
-                properties.pop('background', None)
-                if isinstance(parameters.get('required'), list):
-                    parameters['required'] = [name for name in parameters['required'] if name != 'background']
-
             subagent_models = await get_subagent_models(request, UserModel(**user), model) if user else []
             if subagent_models:
                 properties['model_id']['enum'] = [model['id'] for model in subagent_models]
@@ -1409,6 +1416,8 @@ async def get_tool_servers(request: Request):
                         tool_servers = None
             except Exception as e:
                 log.error(f'Error fetching tool_servers from Redis: {e}')
+        elif request.app.state.TOOL_SERVERS:
+            tool_servers = request.app.state.TOOL_SERVERS
 
         if tool_servers is None:
             tool_servers = await set_tool_servers(request)
@@ -1419,7 +1428,7 @@ async def get_tool_servers(request: Request):
         return getattr(request.app.state, 'TOOL_SERVERS', None) or []
 
 
-async def get_terminal_cwd(
+async def get_machine_cwd(
     base_url: str,
     headers: dict,
     cookies: dict | None = None,
@@ -1428,7 +1437,7 @@ async def get_terminal_cwd(
     """Fetch the current working directory from a terminal server."""
     try:
         cwd_url = f'{base_url.rstrip("/")}/files/cwd'
-        async with get_terminal_client(
+        async with get_machine_client(
             base_url,
             headers.get('X-User-Id'),
             service=service,
@@ -1446,7 +1455,7 @@ async def get_terminal_cwd(
     return None
 
 
-async def get_terminal_system_prompt(
+async def get_machine_system_prompt(
     base_url: str,
     headers: dict,
     cookies: dict | None = None,
@@ -1460,7 +1469,7 @@ async def get_terminal_system_prompt(
     """
     base = base_url.rstrip('/')
     try:
-        async with get_terminal_client(
+        async with get_machine_client(
             base_url,
             headers.get('X-User-Id'),
             service=service,
@@ -1489,15 +1498,15 @@ async def get_terminal_system_prompt(
     return None
 
 
-async def set_terminal_servers(request: Request):
-    """Load and cache OpenAPI specs from all TERMINAL_SERVER_CONNECTIONS."""
+async def set_machines(request: Request):
+    """Load and cache OpenAPI specs from all machine connections."""
     if not ENABLE_TOOL_SERVERS:
         return []
 
-    connections = await Config.get('terminal_server.connections', []) or []
+    connections = await Config.get('machines.connections', []) or []
 
     # Build server configs compatible with get_tool_servers_data
-    # Terminal connections store id/name at top level; translate to info dict
+    # Machine connections store id/name at top level; translate to info dict
     server_configs = []
     for connection in connections:
         if not connection.get('url') or connection.get('server_type') == 'orchestrator':
@@ -1505,7 +1514,7 @@ async def set_terminal_servers(request: Request):
 
         enabled = connection.get('enabled', True)
 
-        base_url = get_terminal_server_url(connection)
+        base_url = get_machine_url(connection)
 
         # Spec discovery has no user, so Session connections use the orchestrator key
         auth_type = connection.get('auth_type', 'bearer')
@@ -1528,7 +1537,7 @@ async def set_terminal_servers(request: Request):
             }
         )
 
-    request.app.state.TERMINAL_SERVERS = await get_tool_servers_data(server_configs)
+    request.app.state.MACHINES = await get_tool_servers_data(server_configs)
 
     # Fetch system prompts concurrently (runs at cache time, not per-request)
     connections_by_id = {c.get('id'): c for c in connections if c.get('id')}
@@ -1540,59 +1549,59 @@ async def set_terminal_servers(request: Request):
         headers = {}
         if connection.get('auth_type', 'bearer') == 'bearer':
             headers.update(bearer_auth_header(connection.get('key', '')))
-        prompt = await get_terminal_system_prompt(server['url'], headers)
+        prompt = await get_machine_system_prompt(server['url'], headers)
         if prompt:
             server['system_prompt'] = prompt
 
     await asyncio.gather(
-        *[_fetch_system_prompt(s) for s in request.app.state.TERMINAL_SERVERS],
+        *[_fetch_system_prompt(s) for s in request.app.state.MACHINES],
         return_exceptions=True,
     )
 
     if request.app.state.redis is not None:
-        await request.app.state.redis.set(
-            f'{REDIS_KEY_PREFIX}:terminal_servers', JSONCodec.dumps(request.app.state.TERMINAL_SERVERS)
-        )
+        await request.app.state.redis.set(f'{REDIS_KEY_PREFIX}:machines', JSONCodec.dumps(request.app.state.MACHINES))
 
-    return request.app.state.TERMINAL_SERVERS
+    return request.app.state.MACHINES
 
 
-async def get_terminal_servers(request: Request):
+async def get_machines(request: Request):
     """Return cached terminal server specs, loading if needed."""
     if not ENABLE_TOOL_SERVERS:
         return []
 
-    terminal_servers = None
+    machines = None
     if request.app.state.redis is not None:
         try:
-            data = await request.app.state.redis.get(f'{REDIS_KEY_PREFIX}:terminal_servers')
+            data = await request.app.state.redis.get(f'{REDIS_KEY_PREFIX}:machines')
             if data is not None:
-                terminal_servers = JSONCodec.loads(data)
-                connections = await Config.get('terminal_server.connections', []) or []
-                if terminal_servers or not any(
+                machines = JSONCodec.loads(data)
+                connections = await Config.get('machines.connections', []) or []
+                if machines or not any(
                     connection.get('url') and connection.get('enabled', True) for connection in connections
                 ):
-                    request.app.state.TERMINAL_SERVERS = terminal_servers
+                    request.app.state.MACHINES = machines
                 else:
-                    terminal_servers = None
+                    machines = None
         except Exception as e:
-            log.error(f'Error fetching terminal_servers from Redis: {e}')
+            log.error(f'Error fetching machines from Redis: {e}')
+    elif request.app.state.MACHINES:
+        machines = request.app.state.MACHINES
 
-    if terminal_servers is None:
-        terminal_servers = await set_terminal_servers(request)
+    if machines is None:
+        machines = await set_machines(request)
 
-    return terminal_servers
+    return machines
 
 
-async def get_terminal_tools(
+async def get_machine_tools(
     request: Request,
-    terminal_id: str,
+    machine_id: str,
     user: UserModel,
     extra_params: dict,
 ) -> dict[str, dict] | tuple[dict[str, dict], str | None]:
-    """Resolve tools for a terminal server identified by terminal_id.
+    """Resolve tools for a terminal server identified by machine_id.
 
-    - Finds the connection in TERMINAL_SERVER_CONNECTIONS
+    - Finds the connection in machines.connections
     - Checks access_grants
     - Loads specs from cache
     - Builds callables that route through the terminal proxy
@@ -1600,27 +1609,25 @@ async def get_terminal_tools(
     if not ENABLE_TOOL_SERVERS:
         return {}
 
-    from open_webui.utils.terminals import find_terminal_connection, terminal_headers
+    from open_webui.utils.machines import find_machine_connection, machine_headers
 
-    connection = await find_terminal_connection(
-        user, terminal_id, extra_params.get('__metadata__', {}), request=request
-    )
+    connection = await find_machine_connection(user, machine_id, extra_params.get('__metadata__', {}), request=request)
     if connection is None:
-        raise RuntimeError(f"Terminal server '{terminal_id}' not found")
+        raise RuntimeError(f"Machine '{machine_id}' not found")
     if not connection.get('enabled', True):
-        raise RuntimeError(f"Terminal server '{terminal_id}' is disabled")
+        raise RuntimeError(f"Machine '{machine_id}' is disabled")
 
     user_group_ids = {group.id for group in await Groups.get_groups_by_member_id(user.id, include_inherited=True)}
     if not await has_connection_access(user, connection, user_group_ids):
-        raise RuntimeError(f'Access denied to terminal {terminal_id}')
+        raise RuntimeError(f'Access denied to machine {machine_id}')
 
-    # Find the cached spec data for this terminal
+    # Find the cached spec data for this machine
     if connection.get('template_id'):
-        url = get_terminal_server_url(connection)
-        discovery_headers = {**bearer_auth_header(connection['key']), **terminal_headers(connection)}
+        url = get_machine_url(connection)
+        discovery_headers = {**bearer_auth_header(connection['key']), **machine_headers(connection)}
         openapi = await get_tool_server_data(url + '/openapi.json', discovery_headers)
         server_data = {
-            'id': terminal_id,
+            'id': machine_id,
             'url': url,
             'openapi': openapi,
             'specs': convert_openapi_to_tool_payload(openapi),
@@ -1630,21 +1637,21 @@ async def get_terminal_tools(
         service = connection.get('service', 'open_terminal')
         openapi = await get_tool_server_data(url + '/openapi.json', {'X-User-Id': user.id}, service=service)
         server_data = {
-            'id': terminal_id,
+            'id': machine_id,
             'url': url,
             'openapi': openapi,
             'specs': convert_openapi_to_tool_payload(openapi),
             'service': service,
         }
     else:
-        terminal_servers = await get_terminal_servers(request)
-        server_data = next((server for server in terminal_servers if server.get('id') == terminal_id), None)
+        machines = await get_machines(request)
+        server_data = next((server for server in machines if server.get('id') == machine_id), None)
     if server_data is None:
-        raise RuntimeError(f"Terminal server '{terminal_id}' is unavailable")
+        raise RuntimeError(f"Machine '{machine_id}' is unavailable")
 
     specs = server_data.get('specs', [])
     if not specs:
-        raise RuntimeError(f"Terminal server '{terminal_id}' has no available tools")
+        raise RuntimeError(f"Machine '{machine_id}' has no available tools")
 
     # Build auth headers
     auth_type = connection.get('auth_type', 'bearer')
@@ -1667,19 +1674,19 @@ async def get_terminal_tools(
     if session_id:
         headers['X-Session-Id'] = session_id
 
-    headers.update(terminal_headers(connection))
+    headers.update(machine_headers(connection))
 
     # Fetch live with the user's credentials so prompt changes apply without a restart
     connection_config = connection.get('config') or {}
-    terminal_cwd = None
+    machine_cwd = None
     if connection_config.get('working_directory_context', True):
         service = server_data.get('service', 'open_terminal')
-        terminal_cwd, system_prompt = await asyncio.gather(
-            get_terminal_cwd(server_data['url'], headers, cookies, service),
-            get_terminal_system_prompt(server_data['url'], headers, cookies, service),
+        machine_cwd, system_prompt = await asyncio.gather(
+            get_machine_cwd(server_data['url'], headers, cookies, service),
+            get_machine_system_prompt(server_data['url'], headers, cookies, service),
         )
     else:
-        system_prompt = await get_terminal_system_prompt(
+        system_prompt = await get_machine_system_prompt(
             server_data['url'], headers, cookies, server_data.get('service', 'open_terminal')
         )
     if not system_prompt:
@@ -1692,21 +1699,21 @@ async def get_terminal_tools(
             get_builtin_tool_spec(display_file) if function_name == 'display_file' else spec
         )
 
-        if function_name == 'run_command' and terminal_cwd:
+        if function_name == 'run_command' and machine_cwd:
             tool_spec['description'] = (
-                tool_spec.get('description', '') + f'\n\nThe current working directory is: {terminal_cwd}'
+                tool_spec.get('description', '') + f'\n\nThe current working directory is: {machine_cwd}'
             )
 
         async def make_tool_function(fn_name, srv_data, hdrs, cks):
             async def tool_function(**kwargs):
                 call_headers = dict(hdrs)
                 if connection.get('template_id'):
-                    current = await find_terminal_connection(
-                        user, terminal_id, {**metadata, 'scope': connection.get('scope')}, request=request
+                    current = await find_machine_connection(
+                        user, machine_id, {**metadata, 'scope': connection.get('scope')}, request=request
                     )
                     if current is None:
-                        raise HTTPException(403, 'Terminal access revoked')
-                    call_headers.update(terminal_headers(current))
+                        raise HTTPException(403, 'Machine access revoked')
+                    call_headers.update(machine_headers(current))
                 params = dict(kwargs)
                 if fn_name == 'display_file':
                     params.pop('page', None)
@@ -1725,7 +1732,7 @@ async def get_terminal_tools(
         callable = await get_async_tool_function_and_apply_extra_params(tool_function, {})
 
         tools_dict[function_name] = {
-            'tool_id': f'terminal:{terminal_id}',
+            'tool_id': f'machine:{machine_id}',
             'callable': callable,
             'spec': tool_spec,
             'type': 'terminal',
@@ -1752,7 +1759,7 @@ async def get_tool_server_data(
     error = None
     try:
         timeout = aiohttp.ClientTimeout(total=AIOHTTP_CLIENT_TIMEOUT_TOOL_SERVER_DATA)
-        async with get_terminal_client(
+        async with get_machine_client(
             url, user_id or _headers.get('X-User-Id'), service=service, timeout=timeout, trust_env=True
         ) as session:
             async with session.get(url, headers=_headers, ssl=AIOHTTP_CLIENT_SESSION_TOOL_SERVER_SSL) as response:
@@ -2035,7 +2042,7 @@ async def execute_tool_server(
             else:
                 body_params = params
 
-        async with get_terminal_client(
+        async with get_machine_client(
             url,
             server_data.get('user_id') or (headers or {}).get('X-User-Id'),
             service=server_data.get('service', 'open_terminal'),

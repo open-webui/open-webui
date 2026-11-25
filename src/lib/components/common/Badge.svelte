@@ -7,8 +7,8 @@
 		success: 'bg-green-500/20 text-green-700 dark:text-green-200',
 		warning: 'bg-yellow-500/20 text-yellow-700 dark:text-yellow-200',
 		error: 'bg-red-500/20 text-red-700 dark:text-red-200',
-		muted: 'bg-gray-500/20 text-gray-700 dark:text-gray-200',
-		subtle: 'bg-gray-100/80 text-gray-500 dark:bg-gray-800/50 dark:text-gray-400'
+		muted: 'bg-base-500/20 text-base-700 dark:text-base-200',
+		subtle: 'bg-base-100/80 text-base-500 dark:bg-base-800/50 dark:text-base-400'
 	};
 </script>
 

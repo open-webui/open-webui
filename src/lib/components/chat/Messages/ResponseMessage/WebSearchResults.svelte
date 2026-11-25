@@ -13,7 +13,7 @@
 <Collapsible grow={true} className="w-full" buttonClassName="w-full" bind:open={state}>
 	<button
 		type="button"
-		class="pointer-events-auto flex w-full items-center gap-2 text-gray-500 transition"
+		class="pointer-events-auto flex w-full items-center gap-2 text-base-500 transition"
 		aria-expanded={state}
 	>
 		<slot />
@@ -25,14 +25,14 @@
 	</button>
 
 	<div
-		class="pointer-events-auto text-sm border border-gray-50 dark:border-gray-850/30 rounded-xl my-1.5 p-2 w-full"
+		class="pointer-events-auto text-sm border border-base-50 dark:border-base-850/30 rounded-xl my-1.5 p-2 w-full"
 		slot="content"
 	>
 		{#if status?.query}
 			<a
 				href="https://www.google.com/search?q={status.query}"
 				target="_blank"
-				class="flex w-full items-center p-1 px-3 group/item justify-between text-gray-800 dark:text-gray-300 font-normal! no-underline!"
+				class="flex w-full items-center p-1 px-3 group/item justify-between text-base-800 dark:text-base-300 font-normal! no-underline!"
 			>
 				<div class="flex gap-2 items-center">
 					<Search />
@@ -43,7 +43,7 @@
 				</div>
 
 				<div
-					class=" ml-1 text-white dark:text-gray-900 group-hover/item:text-gray-600 dark:group-hover/item:text-white transition"
+					class=" ml-1 text-white dark:text-base-900 group-hover/item:text-base-600 dark:group-hover/item:text-white transition"
 				>
 					<svg
 						xmlns="http://www.w3.org/2000/svg"
@@ -66,7 +66,7 @@
 				<a
 					href={safeLinkUrl(item.link)}
 					target="_blank"
-					class="flex w-full items-center p-1 px-3 group/item justify-between text-gray-800 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-850 rounded-lg font-normal! no-underline! mb-1"
+					class="flex w-full items-center p-1 px-3 group/item justify-between text-base-800 dark:text-base-300 hover:bg-base-50 dark:hover:bg-base-850 rounded-lg font-normal! no-underline! mb-1"
 				>
 					<div class=" flex justify-center items-center gap-3">
 						<div class="w-fit">
@@ -83,7 +83,7 @@
 					</div>
 
 					<div
-						class=" ml-1 text-white dark:text-gray-900 group-hover/item:text-gray-600 dark:group-hover/item:text-white transition"
+						class=" ml-1 text-white dark:text-base-900 group-hover/item:text-base-600 dark:group-hover/item:text-white transition"
 					>
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
@@ -105,7 +105,7 @@
 				<a
 					href={safeLinkUrl(url)}
 					target="_blank"
-					class="flex w-full items-center p-1 px-3 group/item justify-between text-gray-800 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-850 rounded-lg no-underline mb-1"
+					class="flex w-full items-center p-1 px-3 group/item justify-between text-base-800 dark:text-base-300 hover:bg-base-50 dark:hover:bg-base-850 rounded-lg no-underline mb-1"
 				>
 					<div class=" flex justify-center items-center gap-3">
 						<div class="w-fit">
@@ -122,7 +122,7 @@
 					</div>
 
 					<div
-						class=" ml-1 text-white dark:text-gray-900 group-hover/item:text-gray-600 dark:group-hover/item:text-white transition"
+						class=" ml-1 text-white dark:text-base-900 group-hover/item:text-base-600 dark:group-hover/item:text-white transition"
 					>
 						<svg
 							xmlns="http://www.w3.org/2000/svg"

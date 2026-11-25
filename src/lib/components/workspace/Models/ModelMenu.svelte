@@ -68,6 +68,7 @@
 		<button
 			type="button"
 			class="focus-ring rounded-lg"
+			data-focus-row={model.id}
 			aria-label={`${$i18n.t('More')}: ${resolveLocalizedModelName(model, $i18n.language)}`}
 			aria-haspopup="menu"
 			aria-expanded={show}
@@ -84,7 +85,7 @@
 		<DropdownMenu className="min-w-[10.625rem]">
 			{#if writeAccess}
 				<button
-					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"
+					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-base-900 dark:hover:text-base-100"
 					on:click={() => runAndClose(editHandler)}
 				>
 					<Pencil />
@@ -101,7 +102,7 @@
 			{#if accessHandler && writeAccess}
 				<button
 					type="button"
-					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"
+					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-base-900 dark:hover:text-base-100"
 					on:click={() => {
 						runAndClose(() => accessHandler?.());
 					}}
@@ -113,7 +114,7 @@
 
 			{#if writeAccess}
 				<button
-					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"
+					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-base-900 dark:hover:text-base-100"
 					on:click={() => runAndClose(hideHandler)}
 				>
 					{#if model?.meta?.hidden ?? false}
@@ -165,7 +166,7 @@
 
 			{#if $visibleControls['models.pin']}
 				<button
-					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"
+					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-base-900 dark:hover:text-base-100"
 					on:click={() => runAndClose(() => pinModelHandler(model?.id))}
 				>
 					{#if $pinnedModels.includes(model?.id)}
@@ -186,7 +187,7 @@
 
 			{#if writeAccess}
 				<button
-					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"
+					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-base-900 dark:hover:text-base-100"
 					on:click={() => runAndClose(cloneHandler)}
 				>
 					<DocumentDuplicate />
@@ -196,11 +197,11 @@
 			{/if}
 
 			{#if writeAccess}
-				<hr class="border-gray-50/30 dark:border-gray-800/30 my-1" />
+				<hr class="border-base-50/30 dark:border-base-800/30 my-1" />
 			{/if}
 
 			<button
-				class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"
+				class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-base-900 dark:hover:text-base-100"
 				on:click={() => runAndClose(copyLinkHandler)}
 			>
 				<Link />
@@ -210,7 +211,7 @@
 
 			{#if writeAccess && ($currentUser?.role === 'admin' || $currentUser?.permissions?.workspace?.models_export)}
 				<button
-					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"
+					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-base-900 dark:hover:text-base-100"
 					on:click={() => runAndClose(exportHandler)}
 				>
 					<Download />
@@ -221,7 +222,7 @@
 
 			{#if writeAccess && $config?.features.enable_community_sharing}
 				<button
-					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"
+					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-base-900 dark:hover:text-base-100"
 					on:click={() => runAndClose(shareHandler)}
 				>
 					<Share />
@@ -230,10 +231,10 @@
 			{/if}
 
 			{#if writeAccess}
-				<hr class="border-gray-50/30 dark:border-gray-800/30 my-1" />
+				<hr class="border-base-50/30 dark:border-base-800/30 my-1" />
 
 				<button
-					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"
+					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-base-900 dark:hover:text-base-100"
 					on:click={() => runAndClose(deleteHandler)}
 				>
 					<GarbageBin />

@@ -4,7 +4,9 @@ import hashlib
 import re
 from urllib.parse import quote
 
-from open_webui.models.chats import ChatModel, Chats
+from open_webui.utils.machines import normalize_machine_id
+from open_webui.models.chat_messages import ChatMessages
+from open_webui.models.chats import Chats
 from open_webui.utils.auth import decode_token
 
 
@@ -13,11 +15,12 @@ def model_id(state):
     if model != state['model']:
         # Keeps CLI model names apart that only differ in the replaced characters.
         model = f'{model}-{hashlib.sha256(state["model"].encode()).hexdigest()[:8]}'
-    return f'agent:{quote(state["terminal_id"], safe="")}:{state["provider"]}:{model}'
+    return f'agent:{quote(state["machine_id"], safe="")}:{state["provider"]}:{model}'
 
 
 async def ensure_chat_selections(chat):
-    if all(key in (chat.chat or {}) for key in ('models', 'terminal_id', 'working_directory')):
+    data = normalize_machine_id(dict(chat.chat or {}))
+    if all(key in data for key in ('models', 'machine_id', 'working_directory')):
         return chat
     state = await get_session(chat)
     if not state:
@@ -26,20 +29,20 @@ async def ensure_chat_selections(chat):
         if row is None:
             return chat
         # Check missing fields under the lock so concurrent selection changes win.
-        data = dict(row.chat or {})
+        data = normalize_machine_id(dict(row.chat or {}))
         data.setdefault('models', [model_id(state)])
-        data.setdefault('terminal_id', state['terminal_id'])
-        if data['terminal_id'] == state['terminal_id']:
+        data.setdefault('machine_id', state['machine_id'])
+        if data['machine_id'] == state['machine_id']:
             data.setdefault('working_directory', state['cwd'])
         row.chat = data
-        chat = ChatModel.model_validate(row)
+        chat = chat.model_copy(update={'chat': {**(chat.chat or {}), **data}})
     return chat
 
 
 def _state(message):
     token = (message.get('meta') or {}).get('agent')
     state = decode_token(token) if isinstance(token, str) else None
-    return state if state and state.get('typ') == 'agent_session' else None
+    return normalize_machine_id(state) if state and state.get('typ') == 'agent_session' else None
 
 
 def _find(chat, messages, message_id, user_id=None):
@@ -62,7 +65,7 @@ def _find(chat, messages, message_id, user_id=None):
                 return None, None
             if all(
                 isinstance(state.get(key), str) and state[key]
-                for key in ('terminal_id', 'provider', 'model', 'cwd', 'user')
+                for key in ('machine_id', 'provider', 'model', 'cwd', 'user')
             ):
                 return state, message_id
         message_id = message.get('parentId')
@@ -75,7 +78,7 @@ async def get_session(chat, message_id=None):
     )
     if not message_id:
         return None
-    messages = await Chats.get_messages_map_by_chat_id(chat.id) or {}
+    messages = await ChatMessages.get_message_metadata_map_by_chat_id(chat.id) or {}
     return _find(chat, messages, message_id)[0]
 
 
@@ -107,7 +110,7 @@ async def get_resume_point(chat, message_id, user_id, exclude=None):
             and other_state.get('chat') == state['chat']
             and other_state.get('session_id') == state['session_id']
             and other_state.get('provider') == state.get('provider')
-            and other_state.get('terminal_id') == state.get('terminal_id')
+            and other_state.get('machine_id') == state.get('machine_id')
         ):
             return state, True, copied
     return state, False, copied

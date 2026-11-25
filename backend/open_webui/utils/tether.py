@@ -555,10 +555,10 @@ async def notify(user_id, notification_id, title, body, path):
             )
 
 
-async def get_terminal_connections(user, include_templates=True):
+async def get_machine_connections(user, include_templates=True):
     """Resolve personal targets alongside existing configured servers."""
     user_id = user['id'] if isinstance(user, dict) else user.id
-    connections = list(await Config.get('terminal_server.connections', []) or [])
+    connections = list(await Config.get('machines.connections', []) or [])
     for presence in await hub.presences(user_id):
         if 'open_terminal' not in presence.get('services', []):
             continue
@@ -580,7 +580,7 @@ async def get_terminal_connections(user, include_templates=True):
                 },
             }
         )
-    # Terminals the user added in Tether: like the built-in one, but each under its own service.
+    # Machines the user added in Tether: like the built-in one, but each under its own service.
     for presence, item in await get_tether_connections(user_id, 'terminal'):
         connections.append(
             {
@@ -598,7 +598,7 @@ async def get_terminal_connections(user, include_templates=True):
             }
         )
     if include_templates:
-        from open_webui.utils.terminals import list_template_connections
+        from open_webui.utils.machines import list_template_connections
 
         managed = [c for c in connections if c.get('server_type') == 'orchestrator']
         connections = [c for c in connections if c.get('server_type') != 'orchestrator']
@@ -784,7 +784,7 @@ class RelayClient:
         device, path = parsed.hostname, parsed.path or '/'
         headers = dict(kwargs.get('headers') or {})
         if self.service == 'open_terminal':
-            # Only the built-in terminal reads this; never send it to the user's own servers.
+            # Only the built-in Open Terminal reads this; never send it to the user's own servers.
             headers['X-User-Id'] = self.user_id
         query = parsed.query
         if kwargs.get('params'):
@@ -866,9 +866,3 @@ class RelayClient:
             if interrupted is error:
                 raise
             raise interrupted from error
-
-
-def get_terminal_client(url, user_id=None, service='open_terminal', **kwargs):
-    if str(url).startswith('tether://'):
-        return RelayClient(user_id, service=service, timeout=kwargs.get('timeout'))
-    return aiohttp.ClientSession(**kwargs)

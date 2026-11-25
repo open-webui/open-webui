@@ -30,7 +30,7 @@
 </script>
 
 <div
-	class="px-4 py-3 shadow-md rounded-xl dark:bg-black bg-white border border-gray-100 dark:border-gray-900 w-60 h-20 group"
+	class="px-4 py-3 shadow-md rounded-xl dark:bg-base-1000 bg-base-0 border border-base-100 dark:border-base-900 w-60 h-20 group"
 >
 	<Tooltip
 		content={data?.message?.error ? data.message.error.content : messageContent}
@@ -45,7 +45,7 @@
 				/>
 				<div class="ml-2 flex-1 min-w-0">
 					<div class=" flex justify-between items-center">
-						<div class="text-xs text-black dark:text-white font-normal line-clamp-1">
+						<div class="text-xs text-base-1000 dark:text-base-0 font-normal line-clamp-1">
 							{data?.user?.name ?? 'User'}
 						</div>
 					</div>
@@ -55,7 +55,7 @@
 							{data.message.error.content}
 						</div>
 					{:else}
-						<div class="text-gray-500 {previewClass}">
+						<div class="text-base-500 {previewClass}">
 							{messageContent}
 						</div>
 					{/if}
@@ -64,13 +64,13 @@
 		{:else}
 			<div class="flex w-full">
 				<ProfileImage
-					src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${data.model?.id ?? data.message.model}&lang=${$i18n.language}`}
+					src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${data.model?.id ?? data.message.model}&lang=${$i18n.language}&v=${data.model?.info?.updated_at}`}
 					className={'size-5 -translate-y-[1px] flex-shrink-0'}
 				/>
 
 				<div class="ml-2 flex-1 min-w-0">
 					<div class=" flex justify-between items-center">
-						<div class="text-xs text-black dark:text-white font-normal line-clamp-1">
+						<div class="text-xs text-base-1000 dark:text-base-0 font-normal line-clamp-1">
 							{modelName}
 						</div>
 
@@ -97,7 +97,7 @@
 							{data.message.error.content}
 						</div>
 					{:else}
-						<div class="text-gray-500 {previewClass}">
+						<div class="text-base-500 {previewClass}">
 							{messageContent}
 						</div>
 					{/if}
@@ -107,7 +107,7 @@
 	</Tooltip>
 	{#if isCompacted}
 		<div
-			class="ms-7 mt-0.5 w-fit max-w-[calc(100%-1.75rem)] truncate rounded bg-gray-100 px-1.5 text-[10px] leading-4 text-gray-500 dark:bg-gray-900 dark:text-gray-400"
+			class="ms-7 mt-0.5 w-fit max-w-[calc(100%-1.75rem)] truncate rounded bg-base-100 px-1.5 text-[10px] leading-4 text-base-500 dark:bg-base-900 dark:text-base-400"
 		>
 			{$i18n.t('Context compacted')}
 		</div>
@@ -115,11 +115,11 @@
 	<Handle
 		type="target"
 		position={data?.direction === 'horizontal' ? Position.Left : Position.Top}
-		class="w-2 rounded-full dark:bg-gray-900"
+		class="w-2 rounded-full dark:bg-base-900"
 	/>
 	<Handle
 		type="source"
 		position={data?.direction === 'horizontal' ? Position.Right : Position.Bottom}
-		class="w-2 rounded-full dark:bg-gray-900"
+		class="w-2 rounded-full dark:bg-base-900"
 	/>
 </div>

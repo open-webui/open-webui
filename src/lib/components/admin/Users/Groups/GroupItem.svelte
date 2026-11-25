@@ -9,6 +9,8 @@
 
 	/** @type {import('../Groups.svelte').GroupListItem[]} */
 	export let groups = [];
+	/** @type {() => Promise<void>} */
+	export let onDeleted;
 	export let draggable = false;
 	/** @type {(event: DragEvent) => void} */
 	export let onDragStart = () => {};
@@ -55,7 +57,7 @@
 
 		if (res) {
 			toast.success($i18n.t('Group deleted successfully'));
-			await setGroups();
+			await onDeleted();
 		}
 		return !!res;
 	};
@@ -81,6 +83,7 @@
 />
 
 <button
+	data-focus-row={group.id}
 	class="group flex cursor-pointer text-left w-full px-1.5 py-1.5"
 	{draggable}
 	on:dragstart={onDragStart}
@@ -95,20 +98,20 @@
 			<div class="flex min-w-0 flex-1 items-center gap-3 pl-1">
 				<div class="flex min-w-0 items-center gap-2 sm:shrink-0 sm:max-w-[55%]">
 					<div
-						class="text-sm font-normal line-clamp-1 text-gray-900 group-hover:underline dark:text-gray-100"
+						class="text-sm font-normal line-clamp-1 text-base-900 group-hover:underline dark:text-base-100"
 					>
 						{group.name}
 					</div>
 
 					<div
-						class="shrink-0 rounded-md bg-gray-500/10 px-1.5 py-0.5 text-[0.6875rem] font-normal leading-none text-gray-600 dark:text-gray-300"
+						class="shrink-0 rounded-md bg-base-500/10 px-1.5 py-0.5 text-[0.6875rem] font-normal leading-none text-base-600 dark:text-base-300"
 					>
 						<!-- {$i18n.t('{{COUNT}} members', { COUNT: group?.member_count ?? 0 })} -->
 						{$i18n.t('{{COUNT}} direct members', { COUNT: group?.member_count ?? 0 })}
 					</div>
 				</div>
 
-				<div class="hidden min-w-0 items-center gap-1.5 text-xs text-gray-500 sm:flex">
+				<div class="hidden min-w-0 items-center gap-1.5 text-xs text-base-500 sm:flex">
 					<div class="line-clamp-1 min-w-0">
 						{#if group?.description}
 							{group.description}
@@ -117,7 +120,7 @@
 						{/if}
 					</div>
 
-					<div class="shrink-0 text-gray-300 dark:text-gray-700">/</div>
+					<div class="shrink-0 text-base-300 dark:text-base-700">/</div>
 
 					<div class="shrink-0">
 						{#if hasCustomPermissions}
@@ -130,7 +133,7 @@
 			</div>
 
 			<div
-				class="shrink-0 px-1.5 text-xs text-gray-500 transition group-hover:text-gray-800 dark:text-gray-400 dark:group-hover:text-gray-200"
+				class="shrink-0 px-1.5 text-xs text-base-500 transition group-hover:text-base-800 dark:text-base-400 dark:group-hover:text-base-200"
 			>
 				{$i18n.t('Edit')}
 			</div>

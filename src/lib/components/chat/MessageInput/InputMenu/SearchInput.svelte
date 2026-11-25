@@ -14,7 +14,7 @@
 
 	<input
 		bind:value
-		class="w-full bg-transparent text-[0.8125rem] font-normal outline-hidden placeholder:text-gray-400 dark:placeholder:text-gray-500"
+		class="w-full bg-transparent text-[0.8125rem] font-normal outline-hidden placeholder:text-base-400 dark:placeholder:text-base-500"
 		placeholder={placeholder ?? $i18n.t('Search')}
 		autocomplete="off"
 		aria-label={placeholder ?? $i18n.t('Search')}

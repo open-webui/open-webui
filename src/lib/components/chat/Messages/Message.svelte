@@ -6,7 +6,7 @@
 	const i18n = getContext('i18n');
 
 	import { settings } from '$lib/stores';
-	import { copyToClipboard } from '$lib/utils';
+	import { copyToClipboard, isInternalMessage } from '$lib/utils';
 
 	import MultiResponseMessages from './MultiResponseMessages.svelte';
 	import ResponseMessage from './ResponseMessage.svelte';
@@ -52,9 +52,19 @@
 	export let onInsertToNote: ((content: string) => void) | null = null;
 	export let onOpenArtifacts: ((code?: string) => void) | null = null;
 
-	// Keep the latest turn's real height when assigning a chat ID remounts the message list.
-	$: isCurrentTurn =
-		messageId === history.currentId || messageId === history.messages[history.currentId]?.parentId;
+	// Shown at the top of the reply to it.
+	$: shownInReply =
+		isInternalMessage(history.messages[messageId]) &&
+		history.messages[messageId].childrenIds?.length > 0;
+
+	// Keep the latest turn's real height when assigning a chat ID remounts the message list, and once
+	// it is no longer the latest: virtualizing it on screen blanks it before it is drawn again.
+	let wasCurrentTurn = false;
+	$: if (
+		messageId === history.currentId ||
+		messageId === history.messages[history.currentId]?.parentId
+	)
+		wasCurrentTurn = true;
 
 	// WebKit's content-visibility implementation has paint bugs that leave
 	// on-screen messages blank (#26712), so skip virtualization there
@@ -72,7 +82,8 @@
 	class="flex flex-col justify-between px-3.5 mb-3 w-full {($settings?.widescreenMode ?? null)
 		? 'max-w-full'
 		: 'max-w-[58rem]'} mx-auto rounded-lg group message-listitem"
-	class:message-virtualized={!isWebKit && !isFirefox && !isCurrentTurn}
+	class:hidden={shownInReply}
+	class:message-virtualized={!isWebKit && !isFirefox && !wasCurrentTurn}
 >
 	{#if history.messages[messageId]}
 		{#if history.messages[messageId].role === 'user'}

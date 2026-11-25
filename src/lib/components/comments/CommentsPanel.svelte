@@ -61,6 +61,8 @@
 	let connection: import('socket.io-client').Socket | null = null;
 	let refreshVersion = 0;
 	let revision = 0;
+	// Deleted comments stay as tombstones only while they still anchor live replies.
+	$: visibleItems = items.filter((comment) => !comment.deleted_at || comment.reply_count > 0);
 	let previousView = view;
 	$: if (view !== previousView) {
 		previousView = view;
@@ -224,12 +226,12 @@
 </script>
 
 <svelte:window on:focus={refresh} />
-<div class="flex flex-col min-h-0 w-full h-full {embedded ? '' : 'bg-white dark:bg-gray-900'}">
+<div class="flex flex-col min-h-0 w-full h-full {embedded ? '' : 'bg-base-0 dark:bg-base-900'}">
 	{#if !embedded}
 		<header class="sticky top-0 flex min-h-10 shrink-0 items-center justify-between px-4 py-1.5">
 			<h2 class="flex items-center gap-1 font-normal text-sm" {title}>
 				{$i18n.t('Comments')}{#if total !== null && total > 0}<span
-						class="text-[0.8125rem] leading-none text-gray-400/70 dark:text-gray-500/70 font-normal"
+						class="text-[0.8125rem] leading-none text-base-400/70 dark:text-base-500/70 font-normal"
 						>{total}</span
 					>{/if}
 			</h2>
@@ -237,7 +239,7 @@
 				<button
 					type="button"
 					aria-label={$i18n.t('Close')}
-					class="flex h-7 items-center justify-center rounded-lg text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 px-0"
+					class="flex h-7 items-center justify-center rounded-lg text-base-500 hover:text-base-700 dark:text-base-400 dark:hover:text-base-300 px-0"
 					on:click={onClose}><XMark className="size-4" /></button
 				>
 			</Tooltip>
@@ -245,7 +247,7 @@
 	{/if}
 	{#if modal && resource && title}
 		<div class="flex min-w-0 shrink-0 items-baseline gap-1.5 px-4 pb-1 leading-4">
-			<span class="shrink-0 text-[0.6875rem] text-gray-500 dark:text-gray-400">
+			<span class="shrink-0 text-[0.6875rem] text-base-500 dark:text-base-400">
 				{$i18n.t(resourceLabels[resource.resource_type])}
 			</span>
 			<span class="truncate text-xs font-normal" {title}>{title}</span>
@@ -265,20 +267,20 @@
 					? 'px-4 py-2'
 					: 'flex flex-1 flex-col items-center justify-center px-4 py-6 text-center'}
 			>
-				<p role="alert" class="text-xs text-gray-500 dark:text-gray-400">{error}</p>
+				<p role="alert" class="text-xs text-base-500 dark:text-base-400">{error}</p>
 				<button
 					type="button"
-					class="mt-1 text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+					class="mt-1 text-xs text-base-500 hover:text-base-700 dark:hover:text-base-300"
 					on:click={setup}>{$i18n.t('Retry')}</button
 				>
 			</div>{/if}
 		{#if resource && !loading}
-			{#if !items.length && !error}<div
-					class="flex flex-1 items-center justify-center px-4 py-6 text-center text-xs text-gray-500"
+			{#if !visibleItems.length && !error}<div
+					class="flex flex-1 items-center justify-center px-4 py-6 text-center text-xs text-base-500"
 				>
 					{$i18n.t('No comments yet')}
 				</div>{/if}
-			{#each items as comment (comment.id)}
+			{#each visibleItems as comment (comment.id)}
 				<div class="mx-1.5 my-0.5">
 					<CommentItem {comment} onReply={reply} onChange={refresh} />
 
@@ -316,7 +318,7 @@
 			{/each}
 			{#if cursor}<button
 					type="button"
-					class="mx-4 my-3 text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+					class="mx-4 my-3 text-xs text-base-500 hover:text-base-700 dark:hover:text-base-300"
 					disabled={loadingMore}
 					on:click={more}>{$i18n.t('Load more')}</button
 				>{/if}

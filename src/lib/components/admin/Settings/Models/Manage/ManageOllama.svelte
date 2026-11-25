@@ -65,11 +65,11 @@
 	let deleteModelTag = '';
 
 	const inputClass =
-		'h-7 w-full rounded-lg border border-gray-100/50 bg-gray-50/40 px-2.5 text-left text-xs text-gray-700 outline-hidden transition-colors focus:border-blue-400 disabled:opacity-50 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:focus:border-blue-500';
+		'h-7 w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2.5 text-left text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 disabled:opacity-50 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-300 dark:focus:border-blue-500';
 	const textareaClass =
-		'w-full rounded-lg border border-gray-100/50 bg-gray-50/40 px-2.5 py-2 text-xs text-gray-700 outline-hidden transition-colors focus:border-blue-400 disabled:opacity-50 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:focus:border-blue-500';
+		'w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2.5 py-2 text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 disabled:opacity-50 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-300 dark:focus:border-blue-500';
 	const iconButtonClass =
-		'inline-flex h-7 items-center justify-center rounded-lg border border-gray-100/50 bg-gray-50/40 px-2.5 text-gray-700 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:hover:bg-white/[0.06]';
+		'inline-flex h-7 items-center justify-center rounded-lg border border-base-100/50 bg-base-50/40 px-2.5 text-base-700 transition-colors hover:bg-base-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-300 dark:hover:bg-base-0/[0.06]';
 
 	const updateModelsHandler = async () => {
 		updateCancelled = false;
@@ -640,10 +640,10 @@
 						</Tooltip>
 					</div>
 
-					<div class="mt-2 mb-1 text-xs text-gray-400 dark:text-gray-500">
+					<div class="mt-2 mb-1 text-xs text-base-400 dark:text-base-500">
 						{$i18n.t('To access the available model names for downloading,')}
 						<a
-							class=" text-gray-500 dark:text-gray-300 font-normal underline"
+							class=" text-base-500 dark:text-base-300 font-normal underline"
 							href="https://ollama.com/library"
 							target="_blank">{$i18n.t('click here.')}</a
 						>
@@ -658,14 +658,14 @@
 
 							<Tooltip content={$i18n.t('Cancel')}>
 								<button
-									class="text-gray-800 dark:text-gray-100"
+									class="text-base-800 dark:text-base-100"
 									aria-label={$i18n.t('Cancel')}
 									on:click={() => {
 										cancelUpdateModelHandler(updateModelId);
 									}}
 								>
 									<svg
-										class="w-4 h-4 text-gray-800 dark:text-white"
+										class="w-4 h-4 text-base-800 dark:text-base-0"
 										aria-hidden="true"
 										xmlns="http://www.w3.org/2000/svg"
 										width="24"
@@ -695,7 +695,7 @@
 										<div class="flex flex-row justify-between space-x-4 pr-2">
 											<div class=" flex-1">
 												<div
-													class="dark:bg-gray-600 bg-gray-500 text-xs font-normal text-gray-100 text-center p-0.5 leading-none rounded-full"
+													class="dark:bg-base-600 bg-base-500 text-xs font-normal text-base-100 text-center p-0.5 leading-none rounded-full"
 													style="width: {Math.max(
 														15,
 														$MODEL_DOWNLOAD_POOL[model].pullProgress ?? 0
@@ -707,14 +707,14 @@
 
 											<Tooltip content={$i18n.t('Cancel')}>
 												<button
-													class="text-gray-800 dark:text-gray-100"
+													class="text-base-800 dark:text-base-100"
 													aria-label={$i18n.t('Cancel')}
 													on:click={() => {
 														cancelModelPullHandler(model);
 													}}
 												>
 													<svg
-														class="w-4 h-4 text-gray-800 dark:text-white"
+														class="w-4 h-4 text-base-800 dark:text-base-0"
 														aria-hidden="true"
 														xmlns="http://www.w3.org/2000/svg"
 														width="24"
@@ -734,7 +734,7 @@
 											</Tooltip>
 										</div>
 										{#if 'digest' in $MODEL_DOWNLOAD_POOL[model]}
-											<div class="mt-1 text-xs dark:text-gray-500" style="font-size: 0.5rem;">
+											<div class="mt-1 text-xs dark:text-base-500" style="font-size: 0.5rem;">
 												{$MODEL_DOWNLOAD_POOL[model].digest}
 											</div>
 										{/if}
@@ -757,7 +757,7 @@
 								<option value="" disabled selected>{$i18n.t('Select a model')}</option>
 
 								{#each ollamaModels as model}
-									<option value={model.id} class="bg-gray-50 dark:bg-gray-700"
+									<option value={model.id} class="bg-base-50 dark:bg-base-700"
 										>{model.name + ' (' + (model.size / 1024 ** 3).toFixed(1) + ' GB)'}</option
 									>
 								{/each}
@@ -852,7 +852,7 @@
 								<div class="flex flex-row justify-between space-x-4 pr-2">
 									<div class=" flex-1">
 										<div
-											class="dark:bg-gray-600 bg-gray-500 text-xs font-normal text-gray-100 text-center p-0.5 leading-none rounded-full"
+											class="dark:bg-base-600 bg-base-500 text-xs font-normal text-base-100 text-center p-0.5 leading-none rounded-full"
 											style="width: {Math.max(15, createModelPullProgress ?? 0)}%"
 										>
 											{createModelPullProgress ?? 0}%
@@ -860,7 +860,7 @@
 									</div>
 								</div>
 								{#if createModelDigest}
-									<div class="mt-1 text-xs dark:text-gray-500" style="font-size: 0.5rem;">
+									<div class="mt-1 text-xs dark:text-base-500" style="font-size: 0.5rem;">
 										{createModelDigest}
 									</div>
 								{/if}
@@ -873,7 +873,7 @@
 					<div class="flex justify-between items-center text-xs">
 						<div class="text-sm font-normal"><ExperimentalBadge /></div>
 						<button
-							class=" text-xs font-normal text-gray-500"
+							class=" text-xs font-normal text-base-500"
 							type="button"
 							on:click={() => {
 								showExperimentalOllama = !showExperimentalOllama;
@@ -1013,10 +1013,10 @@
 							{/if}
 						</div>
 
-						<div class=" mt-1 text-xs text-gray-400 dark:text-gray-500">
+						<div class=" mt-1 text-xs text-base-400 dark:text-base-500">
 							{$i18n.t('To access the GGUF models available for downloading,')}
 							<a
-								class=" text-gray-500 dark:text-gray-300 font-normal underline"
+								class=" text-base-500 dark:text-base-300 font-normal underline"
 								href="https://huggingface.co/models?search=gguf"
 								target="_blank">{$i18n.t('click here.')}</a
 							>
@@ -1026,15 +1026,15 @@
 							<div class="mt-2">
 								<div class=" mb-2 text-xs">{$i18n.t('Upload Progress')}</div>
 
-								<div class="w-full rounded-full dark:bg-gray-800">
+								<div class="w-full rounded-full dark:bg-base-800">
 									<div
-										class="dark:bg-gray-600 bg-gray-500 text-xs font-normal text-gray-100 text-center p-0.5 leading-none rounded-full"
+										class="dark:bg-base-600 bg-base-500 text-xs font-normal text-base-100 text-center p-0.5 leading-none rounded-full"
 										style="width: 100%"
 									>
 										{uploadMessage}
 									</div>
 								</div>
-								<div class="mt-1 text-xs dark:text-gray-500" style="font-size: 0.5rem;">
+								<div class="mt-1 text-xs dark:text-base-500" style="font-size: 0.5rem;">
 									{modelFileDigest}
 								</div>
 							</div>
@@ -1042,15 +1042,15 @@
 							<div class="mt-2">
 								<div class=" mb-2 text-xs">{$i18n.t('Upload Progress')}</div>
 
-								<div class="w-full rounded-full dark:bg-gray-800">
+								<div class="w-full rounded-full dark:bg-base-800">
 									<div
-										class="dark:bg-gray-600 bg-gray-500 text-xs font-normal text-gray-100 text-center p-0.5 leading-none rounded-full"
+										class="dark:bg-base-600 bg-base-500 text-xs font-normal text-base-100 text-center p-0.5 leading-none rounded-full"
 										style="width: {Math.max(15, uploadProgress ?? 0)}%"
 									>
 										{uploadProgress ?? 0}%
 									</div>
 								</div>
-								<div class="mt-1 text-xs dark:text-gray-500" style="font-size: 0.5rem;">
+								<div class="mt-1 text-xs dark:text-base-500" style="font-size: 0.5rem;">
 									{modelFileDigest}
 								</div>
 							</div>

@@ -73,7 +73,7 @@
 
 	$: detailButtonClassName = `py-0.5 ${
 		compactPreview ? 'text-xs' : 'text-[0.90625rem]'
-	} text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition`;
+	} text-base-500 hover:text-base-700 dark:hover:text-base-300 transition`;
 
 	$: displayItems = buildOutputDisplayItems(output) as OutputDisplayItem[];
 </script>
@@ -218,7 +218,7 @@
 			</div>
 		</ConsecutiveDetailsGroup>
 	{:else if displayItem.type === 'file'}
-		{#if displayItem.item?.displayed || $settings?.terminalFileDisplay === 'inline'}
+		{#if displayItem.item?.displayed || ($settings?.machineFileDisplay ?? $settings?.terminalFileDisplay) === 'inline'}
 			<ToolOutputFile item={displayItem.item} {chatId} modelId={model?.id ?? null} />
 		{/if}
 	{:else if displayItem.type === 'context_compaction'}

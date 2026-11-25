@@ -119,7 +119,7 @@
 	}}
 />
 <div
-	class="flex h-full min-h-0 overflow-hidden rounded-2xl border border-gray-100/80 bg-gray-50/60 dark:border-white/[0.04] dark:bg-white/[0.03]"
+	class="flex h-full min-h-0 overflow-hidden rounded-2xl border border-base-100/80 bg-base-50/60 dark:border-base-0/[0.04] dark:bg-base-0/[0.03]"
 >
 	{#if $mobile}{@render sidebar()}
 	{:else}<ResizableSidePanel
@@ -146,7 +146,7 @@
 {#snippet sidebar()}
 	<div class="flex h-full min-h-0 w-full flex-col">
 		<div class="flex shrink-0 items-center p-1.5">
-			<Search className="mx-1 size-3.5 shrink-0 text-gray-400" /><input
+			<Search className="mx-1 size-3.5 shrink-0 text-base-400" /><input
 				aria-label={$i18n.t('Search Files')}
 				placeholder={$i18n.t('Search Files')}
 				bind:value={inputQuery}
@@ -160,7 +160,7 @@
 				><button
 					type="button"
 					aria-label={$i18n.t('Filter and sort')}
-					class="flex h-7 w-6 shrink-0 items-center justify-center px-1 text-gray-500"
+					class="flex h-7 w-6 shrink-0 items-center justify-center px-1 text-base-500"
 					><AdjustmentsHorizontal className="size-3.5" /></button
 				>
 				<div slot="content">
@@ -173,7 +173,7 @@
 							on:click={() => (includeContent = !includeContent)}
 							>{includeContent ? '✓ ' : ''}{$i18n.t('Search file content')}</button
 						>
-						<hr class="border-gray-100 dark:border-gray-800" />
+						<hr class="border-base-100 dark:border-base-800" />
 						{#each [{ value: null, label: $i18n.t('All') }, { value: 'created', label: $i18n.t('Created by you') }, { value: 'shared', label: $i18n.t('Shared with you') }] as option}<button
 								type="button"
 								role="menuitemradio"
@@ -181,7 +181,7 @@
 								on:click={() => (viewOption = option.value)}
 								>{viewOption === option.value ? '✓ ' : ''}{option.label}</button
 							>{/each}
-						<hr class="border-gray-100 dark:border-gray-800" />
+						<hr class="border-base-100 dark:border-base-800" />
 						{#each [{ value: 'name', label: $i18n.t('Name') }, { value: 'created_at', label: $i18n.t('Created') }, { value: 'updated_at', label: $i18n.t('Updated') }] as option}<button
 								type="button"
 								role="menuitemradio"
@@ -209,7 +209,7 @@
 					onReset={() => guard(onReset)}
 				/>{/if}
 		</div>
-		{#if syncing}<p class="px-3 py-1 text-xs text-gray-500">{syncing}</p>{/if}
+		{#if syncing}<p class="px-3 py-1 text-xs text-base-500">{syncing}</p>{/if}
 		<Files
 			bind:this={tree}
 			{knowledge}
@@ -238,7 +238,7 @@
 				onSaved={refresh}
 			/>{/key}
 	{:else}<div
-			class="flex min-w-0 flex-1 items-center justify-center bg-white text-xs text-gray-400 dark:bg-gray-900"
+			class="flex min-w-0 flex-1 items-center justify-center bg-base-0 text-xs text-base-400 dark:bg-base-900"
 		>
 			{$i18n.t('Select a file to preview')}
 		</div>{/if}

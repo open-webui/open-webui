@@ -22,7 +22,7 @@
 	aria-valuemin={160}
 	aria-valuemax={max}
 	aria-valuenow={Math.round(width)}
-	class="relative z-10 hidden w-px shrink-0 @min-[560px]:block touch-none cursor-col-resize border-l border-gray-100/50 dark:border-white/2 hover:border-gray-200 dark:hover:border-gray-800 transition"
+	class="relative z-10 hidden w-px shrink-0 @min-[560px]:block touch-none cursor-col-resize border-l border-base-100/50 dark:border-base-0/2 hover:border-base-200 dark:hover:border-base-800 transition"
 	on:pointerdown={(event) => {
 		if (event.button !== 0) return;
 		event.preventDefault();

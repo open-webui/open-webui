@@ -194,15 +194,15 @@
 					<Spinner />
 				</div>
 			{:else if items.length === 0}
-				<div class="py-4 text-center text-sm text-gray-500 dark:text-gray-400">
+				<div class="py-4 text-center text-sm text-base-500 dark:text-base-400">
 					{$i18n.t('No knowledge bases found.')}
 				</div>
 			{:else}
 				{#each items as item, idx (item.id)}
 					<div
-						class=" h-[1.6875rem] px-2 rounded-xl w-full text-left flex justify-between items-center text-[0.8125rem] font-normal hover:bg-gray-50/40 hover:text-gray-900 dark:hover:bg-gray-800/40 dark:hover:text-gray-100 {idx ===
+						class=" h-[1.6875rem] px-2 rounded-xl w-full text-left flex justify-between items-center text-[0.8125rem] font-normal hover:bg-base-50/40 hover:text-base-900 dark:hover:bg-base-800/40 dark:hover:text-base-100 {idx ===
 						selectedIdx
-							? ' bg-gray-50/40 dark:bg-gray-800/40 dark:text-gray-100 selected-command-option-button'
+							? ' bg-base-50/40 dark:bg-base-800/40 dark:text-base-100 selected-command-option-button'
 							: ''}"
 					>
 						<button
@@ -224,7 +224,9 @@
 							}}
 							data-selected={idx === selectedIdx}
 						>
-							<div class="w-full text-left text-black dark:text-gray-100 flex items-center gap-1">
+							<div
+								class="w-full text-left text-base-1000 dark:text-base-100 flex items-center gap-1"
+							>
 								<Tooltip content={$i18n.t('Knowledge Base')} placement="top">
 									<Database className="size-3.5" />
 								</Tooltip>
@@ -270,13 +272,13 @@
 									<Spinner className="size-3" />
 								</div>
 							{:else if selectedFileItemsTotal === 0}
-								<div class=" text-xs text-gray-500 dark:text-gray-400 italic py-0.5 px-2">
+								<div class=" text-xs text-base-500 dark:text-base-400 italic py-0.5 px-2">
 									{$i18n.t('No files in this knowledge base.')}
 								</div>
 							{:else}
 								{#each selectedFileItems as file, fileIdx (file.id)}
 									<button
-										class=" h-[1.6875rem] px-2 rounded-xl w-full text-left flex justify-between items-center text-[0.8125rem] font-normal hover:bg-gray-50/40 hover:text-gray-900 dark:hover:bg-gray-800/40 dark:hover:text-gray-100"
+										class=" h-[1.6875rem] px-2 rounded-xl w-full text-left flex justify-between items-center text-[0.8125rem] font-normal hover:bg-base-50/40 hover:text-base-900 dark:hover:bg-base-800/40 dark:hover:text-base-100"
 										type="button"
 										on:click={() => {
 											console.log(file);

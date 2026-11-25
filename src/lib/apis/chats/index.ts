@@ -203,13 +203,30 @@ export const getChatList = async (
 	token: string = '',
 	page: number | null = null,
 	include_pinned: boolean = false,
-	include_folders: boolean = false
+	include_folders: boolean = false,
+	view: {
+		sortBy?: 'updated_at' | 'created_at';
+		status?: 'active' | 'archived' | 'all';
+		limit?: number;
+	} = {}
 ) => {
 	let error = null;
 	const searchParams = new URLSearchParams();
 
 	if (page !== null) {
 		searchParams.append('page', `${page}`);
+	}
+
+	if (view.limit) {
+		searchParams.append('limit', `${view.limit}`);
+	}
+
+	if (view.sortBy) {
+		searchParams.append('sort_by', view.sortBy);
+	}
+
+	if (view.status) {
+		searchParams.append('status', view.status);
 	}
 
 	if (include_folders) {
@@ -249,9 +266,10 @@ export const getChatList = async (
 		return [];
 	}
 
+	// Date headings follow the date the list is sorted by.
 	return res.map((chat) => ({
 		...chat,
-		time_range: getTimeRange(chat.updated_at)
+		time_range: getTimeRange(view.sortBy === 'created_at' ? chat.created_at : chat.updated_at)
 	}));
 };
 
@@ -1459,6 +1477,26 @@ export const resolveChatMessageToolCall = async (
 	}
 
 	return res;
+};
+
+export type ChatChild = {
+	id: string;
+	title: string;
+	type: 'subagent' | 'timer';
+	status: 'waiting' | 'running' | 'scheduled' | 'done';
+	created_at: number;
+	due_at: number | null;
+};
+
+export const getChatChildren = async (token: string, id: string): Promise<ChatChild[]> => {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/${id}/children`, {
+		headers: {
+			Accept: 'application/json',
+			authorization: `Bearer ${token}`
+		}
+	});
+	if (!res.ok) throw getErrorDetail(await res.json());
+	return res.json();
 };
 
 export const deleteChatById = async (token: string, id: string) => {

@@ -20,7 +20,14 @@
 	const i18n = getContext<any>('i18n');
 	type CommentPage = { items: ResourceComment[]; next_cursor: string | null };
 	let items: ResourceComment[] = [];
-	$: children = groupReplies(items, parent.id);
+	$: children = visibleReplies(items, parent.id);
+	// A deleted reply stays as a tombstone only while it still anchors a live reply below it.
+	const visibleReplies = (all: ResourceComment[], rootId: string) => {
+		const replies = groupReplies(all, rootId);
+		const live = (comment: ResourceComment): boolean =>
+			!comment.deleted_at || (replies.get(comment.id) ?? []).some(live);
+		return groupReplies(all.filter(live), rootId);
+	};
 	let cursor: string | null = null;
 	let loading = false;
 	let alive = true;
@@ -115,7 +122,7 @@
 		{#if children.has(comment.id)}
 			<div
 				id={`comment-replies-${comment.id}`}
-				class="ms-4 border-s border-gray-200/40 dark:border-gray-700/30"
+				class="ms-4 border-s border-base-200/40 dark:border-base-700/30"
 			>
 				{@render branch(comment.id)}
 			</div>
@@ -123,11 +130,11 @@
 	{/each}
 {/snippet}
 
-{#if items.length || loading}
+{#if children.size || loading || cursor}
 	<div
 		id={`comment-replies-${parent.id}`}
 		aria-busy={loading}
-		class="ms-4 border-s border-gray-200/40 dark:border-gray-700/30"
+		class="ms-4 border-s border-base-200/40 dark:border-base-700/30"
 	>
 		{@render branch(parent.id)}
 		{#if loading && !items.length}<div class="flex justify-center py-2">
@@ -135,7 +142,7 @@
 			</div>{/if}
 		{#if cursor}<button
 				type="button"
-				class="mx-4 my-2 text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+				class="mx-4 my-2 text-xs text-base-500 hover:text-base-700 dark:hover:text-base-300"
 				disabled={loading}
 				on:click={more}>{$i18n.t('Load more')}</button
 			>{/if}

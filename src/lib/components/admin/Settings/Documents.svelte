@@ -171,7 +171,11 @@
 		),
 		RAG_EMBEDDING_QUERY_PREFIX: $i18n.t('settings.admin.documents.embeddingQueryPrefix.label'),
 		RAG_EMBEDDING_CONTENT_PREFIX: $i18n.t('settings.admin.documents.embeddingContentPrefix.label'),
-		RAG_FULL_TEXT_CHAR_THRESHOLD: $i18n.t('settings.admin.documents.fullTextCharThreshold.label'),
+		RAG_FULL_TEXT_THRESHOLD_TYPE: $i18n.t('settings.admin.documents.fullTextThresholdType.label'),
+		RAG_FULL_TEXT_THRESHOLD:
+			RAGConfig?.RAG_FULL_TEXT_THRESHOLD_TYPE === 'token'
+				? $i18n.t('settings.admin.documents.fullTextTokenThreshold.label')
+				: $i18n.t('settings.admin.documents.fullTextCharThreshold.label'),
 		RAG_FULL_CONTEXT: $i18n.t('settings.admin.documents.fullContextMode.label'),
 		ENABLE_RAG_HYBRID_SEARCH: $i18n.t('settings.admin.documents.hybridSearch.label'),
 		ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS: $i18n.t(
@@ -214,11 +218,11 @@
 		'RAG_EXTERNAL_RERANKER_API_KEY'
 	];
 	const inputClass =
-		'w-full h-7 rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
+		'w-full h-7 rounded-lg border border-base-100/50 bg-base-50/40 px-2 text-xs text-base-700 outline-hidden transition-colors placeholder:text-base-300 focus:border-blue-400 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-300 dark:placeholder:text-base-700 dark:focus:border-blue-500';
 	const actionButtonClass =
-		'shrink-0 text-xs text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white';
+		'shrink-0 text-xs text-base-500 transition-colors hover:text-base-900 dark:text-base-500 dark:hover:text-base-0';
 	const textareaClass =
-		'w-full rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
+		'w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors placeholder:text-base-300 focus:border-blue-400 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-300 dark:placeholder:text-base-700 dark:focus:border-blue-500';
 
 	const embeddingModelUpdateHandler = async () => {
 		if (updateEmbeddingModelLoading) return;
@@ -590,11 +594,11 @@
 		submitHandler();
 	}}
 >
-	<h2 class="text-sm font-medium text-gray-900 dark:text-white mb-4">
+	<h2 class="text-sm font-medium text-base-900 dark:text-base-0 mb-4">
 		{$i18n.t('settings.admin.documents.title')}
 	</h2>
 	{#if $config?.features?.slim === true}
-		<p class="mb-4 text-xs text-gray-500">
+		<p class="mb-4 text-xs text-base-500">
 			{$i18n.t(
 				'Slim requires external services for embeddings, vector storage, and document extraction. Basic text files can be read locally.'
 			)}
@@ -831,26 +835,26 @@
 						</Tooltip>
 						<button
 							type="button"
-							class="mt-1 text-[0.6875rem] text-gray-400 transition-colors hover:text-gray-700 dark:text-gray-600 dark:hover:text-gray-300"
+							class="mt-1 text-[0.6875rem] text-base-400 transition-colors hover:text-base-700 dark:text-base-600 dark:hover:text-base-300"
 							on:click={() =>
 								(showExternalDocumentLoaderHeadersHint = !showExternalDocumentLoaderHeadersHint)}
 						>
 							{$i18n.t('settings.admin.documents.headerVariables.label')}
 						</button>
 						{#if showExternalDocumentLoaderHeadersHint}
-							<div class="mt-1 text-[0.6875rem] leading-5 text-gray-500 dark:text-gray-400">
+							<div class="mt-1 text-[0.6875rem] leading-5 text-base-500 dark:text-base-400">
 								<div>{$i18n.t('No additional headers are sent unless configured.')}</div>
 								<div>
 									{$i18n.t('Example')}:
-									<code class="text-gray-700 dark:text-gray-300"
+									<code class="text-base-700 dark:text-base-300"
 										>{'{"X-OpenWebUI-File-Id": "{{FILE_ID}}"}'}</code
 									>
 								</div>
 								<div>
 									{$i18n.t('Available variables')}:
-									<code class="text-gray-700 dark:text-gray-300">{'{{FILE_ID}}'}</code>,
-									<code class="text-gray-700 dark:text-gray-300">{'{{FILE_NAME}}'}</code>,
-									<code class="text-gray-700 dark:text-gray-300">{'{{FILE_CONTENT_TYPE}}'}</code>
+									<code class="text-base-700 dark:text-base-300">{'{{FILE_ID}}'}</code>,
+									<code class="text-base-700 dark:text-base-300">{'{{FILE_NAME}}'}</code>,
+									<code class="text-base-700 dark:text-base-300">{'{{FILE_CONTENT_TYPE}}'}</code>
 								</div>
 							</div>
 						{/if}
@@ -1095,7 +1099,7 @@
 					>
 						<input
 							id={`${labelId}-control`}
-							class="w-16 rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-right text-xs text-gray-700 outline-hidden transition-colors focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:focus:border-blue-500"
+							class="w-16 rounded-lg border border-base-100/50 bg-base-50/40 px-2 text-right text-xs text-base-700 outline-hidden transition-colors focus:border-blue-400 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-300 dark:focus:border-blue-500"
 							type="number"
 							min="1"
 							bind:value={RAGConfig.MINERU_API_TIMEOUT}
@@ -1391,7 +1395,7 @@
 
 							{#if RAG_EMBEDDING_ENGINE === ''}
 								<button
-									class="flex size-7 shrink-0 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-black/5 hover:text-gray-900 dark:text-gray-500 dark:hover:bg-white/5 dark:hover:text-white"
+									class="flex size-7 shrink-0 items-center justify-center rounded-lg text-base-500 transition-colors hover:bg-base-1000/5 hover:text-base-900 dark:text-base-500 dark:hover:bg-base-0/5 dark:hover:text-base-0"
 									type="button"
 									on:click={() => {
 										embeddingModelUpdateHandler();
@@ -1419,7 +1423,7 @@
 								</button>
 							{/if}
 						</div>
-						<div class="mt-1 text-[0.6875rem] text-gray-400 dark:text-gray-600">
+						<div class="mt-1 text-[0.6875rem] text-base-400 dark:text-base-600">
 							{$i18n.t(
 								'After changing the embedding model, reindex knowledge, knowledge search, and memory vectors for changes to take effect.'
 							)}
@@ -1471,7 +1475,7 @@
 					<Collapsible
 						title={$i18n.t('Advanced')}
 						bind:open={showEmbeddingAdvanced}
-						buttonClassName="w-full py-1 text-xs text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors"
+						buttonClassName="w-full py-1 text-xs text-base-600 hover:text-base-900 dark:text-base-400 dark:hover:text-base-0 transition-colors"
 					>
 						<div slot="content" class="flex flex-col gap-2.5 pt-2.5">
 							<AdminSettingField
@@ -1506,16 +1510,35 @@
 
 			<AdminSettingSection title={$i18n.t('settings.admin.documents.sections.retrieval.title')}>
 				{#if !RAGConfig.BYPASS_EMBEDDING_AND_RETRIEVAL}
+					<AdminSettingRow
+						label={$i18n.t('settings.admin.documents.fullTextThresholdType.label')}
+						description={$i18n.t('settings.admin.documents.fullTextThresholdType.description')}
+						let:labelId
+					>
+						<SettingsSelect
+							id={`${labelId}-control`}
+							bind:value={RAGConfig.RAG_FULL_TEXT_THRESHOLD_TYPE}
+							disabled={RAGConfig.RAG_FULL_CONTEXT}
+						>
+							<option value="">{$i18n.t('Default')} ({$i18n.t('Character')})</option>
+							<option value="token">{$i18n.t('Token')} ({$i18n.t('Tiktoken')})</option>
+						</SettingsSelect>
+					</AdminSettingRow>
+
 					<AdminSettingField
-						label={$i18n.t('settings.admin.documents.fullTextCharThreshold.label')}
-						description={$i18n.t('settings.admin.documents.fullTextCharThreshold.description')}
-						forId="full-text-char-threshold"
+						label={RAGConfig.RAG_FULL_TEXT_THRESHOLD_TYPE === 'token'
+							? $i18n.t('settings.admin.documents.fullTextTokenThreshold.label')
+							: $i18n.t('settings.admin.documents.fullTextCharThreshold.label')}
+						description={RAGConfig.RAG_FULL_TEXT_THRESHOLD_TYPE === 'token'
+							? $i18n.t('settings.admin.documents.fullTextTokenThreshold.description')
+							: $i18n.t('settings.admin.documents.fullTextCharThreshold.description')}
+						forId="full-text-threshold"
 					>
 						<input
-							id="full-text-char-threshold"
+							id="full-text-threshold"
 							class={inputClass}
 							type="number"
-							bind:value={RAGConfig.RAG_FULL_TEXT_CHAR_THRESHOLD}
+							bind:value={RAGConfig.RAG_FULL_TEXT_THRESHOLD}
 							disabled={RAGConfig.RAG_FULL_CONTEXT}
 							min="0"
 							step="1"
@@ -1723,10 +1746,10 @@
 											max="1"
 											step="0.05"
 											bind:value={RAGConfig.HYBRID_BM25_WEIGHT}
-											class="h-2 w-full cursor-pointer appearance-none rounded-lg dark:bg-gray-700"
+											class="h-2 w-full cursor-pointer appearance-none rounded-lg dark:bg-base-700"
 										/>
 										<div
-											class="flex justify-between py-0.5 text-[0.6875rem] text-gray-400 dark:text-gray-600"
+											class="flex justify-between py-0.5 text-[0.6875rem] text-base-400 dark:text-base-600"
 										>
 											<div>{$i18n.t('semantic')}</div>
 											<div>{$i18n.t('lexical')}</div>
@@ -1769,7 +1792,7 @@
 					</Tooltip>
 
 					{#if RAGConfig.RAG_TEMPLATE && (RAGConfig.RAG_TEMPLATE.match(/\[context\]/g) || []).length + (RAGConfig.RAG_TEMPLATE.match(/\{\{CONTEXT\}\}/g) || []).length > 1}
-						<div class="mt-1 text-[0.6875rem] text-gray-400 dark:text-gray-600">
+						<div class="mt-1 text-[0.6875rem] text-base-400 dark:text-base-600">
 							{$i18n.t(
 								'This template contains multiple context placeholders ([context] or {{CONTEXT}}). Context will be injected at each occurrence.'
 							)}

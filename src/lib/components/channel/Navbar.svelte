@@ -77,7 +77,7 @@
 				<div
 					class="{$showSidebar
 						? 'md:hidden'
-						: ''} col-start-1 row-start-1 mr-1.5 self-start flex flex-none items-center text-gray-600 dark:text-gray-400"
+						: ''} col-start-1 row-start-1 mr-1.5 self-start flex flex-none items-center text-base-600 dark:text-base-400"
 				>
 					<Tooltip
 						content={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
@@ -85,7 +85,7 @@
 					>
 						<button
 							id="sidebar-toggle-button"
-							class="flex cursor-pointer rounded-lg text-gray-500 transition hover:bg-gray-50/40 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800/40 dark:hover:text-gray-200"
+							class="flex cursor-pointer rounded-lg text-base-500 transition hover:bg-base-50/40 hover:text-base-700 dark:text-base-400 dark:hover:bg-base-800/40 dark:hover:text-base-200"
 							aria-label={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
 							on:click={() => {
 								showSidebar.set(!$showSidebar);
@@ -114,7 +114,7 @@
 										<img
 											src={`${WEBUI_API_BASE_URL}/users/${u.id}/profile/image`}
 											alt={u.name}
-											class=" size-5.5 rounded-full object-cover border border-white dark:border-gray-900 {index ===
+											class=" size-5.5 rounded-full object-cover border border-base-0 dark:border-base-900 {index ===
 											1
 												? '-ml-2'
 												: ''}"
@@ -128,7 +128,7 @@
 													class="relative inline-flex size-2 rounded-full {channelMembers[0]
 														?.is_active
 														? 'bg-green-500'
-														: 'bg-gray-300 dark:bg-gray-700'} border-[1.5px] border-white dark:border-gray-900"
+														: 'bg-base-300 dark:bg-base-700'} border-[1.5px] border-base-0 dark:border-base-900"
 												></span>
 											</span>
 										</div>
@@ -148,7 +148,7 @@
 						{/if}
 
 						<div
-							class="min-w-0 truncate text-left text-[0.9375rem] font-normal text-gray-700 dark:text-gray-300"
+							class="min-w-0 truncate text-left text-[0.9375rem] font-normal text-base-700 dark:text-base-300"
 						>
 							{#if channel?.name}
 								{channel.name}
@@ -165,13 +165,13 @@
 			</div>
 
 			<div
-				class="col-start-3 row-start-1 self-center flex flex-none items-center text-gray-600 dark:text-gray-400 gap-1 shrink-0"
+				class="col-start-3 row-start-1 self-center flex flex-none items-center text-base-600 dark:text-base-400 gap-1 shrink-0"
 			>
 				<slot name="actions">
 					{#if channel}
 						<Tooltip content={$i18n.t('Pinned Messages')}>
 							<button
-								class="flex size-6 items-center justify-center cursor-pointer rounded-lg text-gray-500 transition hover:bg-gray-50/40 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800/40 dark:hover:text-gray-200"
+								class="flex size-6 items-center justify-center cursor-pointer rounded-lg text-base-500 transition hover:bg-base-50/40 hover:text-base-700 dark:text-base-400 dark:hover:bg-base-800/40 dark:hover:text-base-200"
 								aria-label={$i18n.t('Pinned Messages')}
 								type="button"
 								on:click={() => {
@@ -187,7 +187,7 @@
 						{#if channel?.user_count !== undefined}
 							<Tooltip content={$i18n.t('Users')}>
 								<button
-									class="flex h-6 items-center cursor-pointer shrink-0 px-1.5 rounded-lg text-gray-500 transition hover:bg-gray-50/40 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800/40 dark:hover:text-gray-200"
+									class="flex h-6 items-center cursor-pointer shrink-0 px-1.5 rounded-lg text-base-500 transition hover:bg-base-50/40 hover:text-base-700 dark:text-base-400 dark:hover:bg-base-800/40 dark:hover:text-base-200"
 									type="button"
 									on:click={() => {
 										showChannelInfoModal = true;
@@ -206,7 +206,7 @@
 						{/if}
 						<Tooltip content={$i18n.t('Search')}>
 							<button
-								class="flex size-6 items-center justify-center cursor-pointer rounded-lg text-gray-500 transition hover:bg-gray-50/40 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800/40 dark:hover:text-gray-200"
+								class="flex size-6 items-center justify-center cursor-pointer rounded-lg text-base-500 transition hover:bg-base-50/40 hover:text-base-700 dark:text-base-400 dark:hover:bg-base-800/40 dark:hover:text-base-200"
 								aria-label={$i18n.t('Search')}
 								type="button"
 								on:click={() => {

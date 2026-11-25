@@ -5,7 +5,6 @@
 	const defaultOpts: PanZoomOptions = {
 		bounds: true,
 		boundsPadding: 0.1,
-		pinchSpeed: 3.5,
 		beforeWheel: () => true
 	};
 
@@ -73,8 +72,19 @@
 		instance = localInstance;
 		updateZoomLevel();
 		localInstance.on('zoom', updateZoomLevel);
+
+		// panzoom cancels every touch on its parent, so a tap on a button would never click
+		const parent = containerElement.parentElement!;
+		const stopPanzoomOnButtons = (e: Event) => {
+			const isPinch = ((e as TouchEvent).touches?.length ?? 0) > 1;
+			if (!isPinch && (e.target as Element).closest('button')) e.stopPropagation();
+		};
+		parent.addEventListener('touchstart', stopPanzoomOnButtons, true);
+		parent.addEventListener('dblclick', stopPanzoomOnButtons, true);
 		return () => {
 			localInstance.dispose();
+			parent.removeEventListener('touchstart', stopPanzoomOnButtons, true);
+			parent.removeEventListener('dblclick', stopPanzoomOnButtons, true);
 		};
 	});
 </script>

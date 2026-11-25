@@ -1,9 +1,9 @@
 <script lang="ts">
-	import type { TerminalTarget } from '$lib/apis/terminal';
-	export let target: TerminalTarget;
+	import type { MachineTarget } from '$lib/apis/machines';
+	export let target: MachineTarget;
 	import { getContext, onMount, onDestroy } from 'svelte';
 	import { LinkPreview } from 'bits-ui';
-	import { readFile, downloadFileBlob, type FileEntry } from '$lib/apis/terminal';
+	import { readFile, downloadFileBlob, type FileEntry } from '$lib/apis/machines';
 	import { formatFileSize } from '$lib/utils';
 	import { supportsComments } from '$lib/utils/comments/types';
 	import FilePreview from './FilePreview.svelte';
@@ -80,21 +80,21 @@
 
 <LinkPreview.Portal>
 	<LinkPreview.Content
-		class="z-[9999] hidden w-[20rem] max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-2xl bg-white shadow-[0_16px_40px_-28px_rgba(0,0,0,0.55)] ring-1 ring-black/5 md:block dark:bg-gray-850 dark:text-white dark:ring-white/10"
+		class="z-[9999] hidden w-[20rem] max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-2xl bg-base-0 shadow-[0_16px_40px_-28px_rgba(0,0,0,0.55)] ring-1 ring-base-1000/5 md:block dark:bg-base-850 dark:text-base-0 dark:ring-base-0/10"
 		side="top"
 		align="center"
 		{sideOffset}
 		aria-label={$i18n.t('File preview')}
 	>
 		<div
-			class="flex items-center gap-1.5 border-b border-gray-50/60 px-2 py-1.5 dark:border-gray-800/25"
+			class="flex items-center gap-1.5 border-b border-base-50/60 px-2 py-1.5 dark:border-base-800/25"
 		>
 			<FileTypeIcon name={entry.name} size={12} />
 			<div class="min-w-0 flex-1 truncate text-xs font-normal leading-4" title={path}>
 				{entry.name}
 			</div>
 			{#if entry.size !== undefined}
-				<span class="shrink-0 text-[0.625rem] text-gray-500 dark:text-gray-400"
+				<span class="shrink-0 text-[0.625rem] text-base-500 dark:text-base-400"
 					>{formatFileSize(entry.size)}</span
 				>
 			{/if}
@@ -120,7 +120,7 @@
 					allowScripts={false}
 				/>
 			{:else}
-				<div class="px-3 py-4 text-xs text-gray-500 dark:text-gray-400">
+				<div class="px-3 py-4 text-xs text-base-500 dark:text-base-400">
 					{$i18n.t('Preview not available')}
 				</div>
 			{/if}

@@ -3,6 +3,7 @@ import csv
 import logging
 import os
 import sys
+import time
 import zipfile
 
 import ftfy
@@ -92,6 +93,7 @@ known_source_ext = [
     'yml',
     'toml',
     'svg',
+    'mdx',
 ]
 
 
@@ -261,7 +263,7 @@ class DoclingLoader:
                 headers['X-Api-Key'] = f'{self.api_key}'
 
             r = requests.post(
-                f'{self.url}/v1/convert/file',
+                f'{self.url}/v1/convert/file/async',
                 files={
                     'files': (
                         os.path.basename(self.file_path),
@@ -281,6 +283,21 @@ class DoclingLoader:
                 headers=headers,
                 verify=AIOHTTP_CLIENT_SESSION_SSL,
             )
+
+        while r.ok and r.json()['task_status'] in ['pending', 'started']:
+            time.sleep(2)
+            r = requests.get(
+                f'{self.url}/v1/status/poll/{r.json()["task_id"]}', headers=headers, verify=AIOHTTP_CLIENT_SESSION_SSL
+            )
+
+        if r.ok:
+            task = r.json()
+            if task['task_status'] == 'failure':
+                raise Exception(f'Error calling Docling: conversion failed - {task.get("error_message")}')
+            r = requests.get(
+                f'{self.url}/v1/result/{task["task_id"]}', headers=headers, verify=AIOHTTP_CLIENT_SESSION_SSL
+            )
+
         if r.ok:
             result = r.json()
             # Docling reports failed and skipped conversions inside HTTP 200 responses.
@@ -539,7 +556,12 @@ class Loader:
             if max_file_size_bytes > 0:
                 try:
                     with zipfile.ZipFile(file_path) as archive:
-                        uncompressed_size = sum(entry.file_size for entry in archive.infolist())
+                        # Pivot caches duplicate sheet data and are never read by the built-in loaders.
+                        uncompressed_size = sum(
+                            entry.file_size
+                            for entry in archive.infolist()
+                            if not (file_ext in ['xlsx', 'xlsm'] and entry.filename.startswith('xl/pivotCache/'))
+                        )
                 except (zipfile.BadZipFile, OSError):
                     pass
                 else:
@@ -783,7 +805,7 @@ class Loader:
             elif file_content_type in [
                 'application/vnd.ms-excel',
                 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            ] or file_ext in ['xls', 'xlsx']:
+            ] or file_ext in ['xls', 'xlsx', 'xlsm']:
                 try:
                     # Subtable detection is very slow on large sparse sheets.
                     loader = UnstructuredLoader(file_path, 'xlsx', find_subtable=False)

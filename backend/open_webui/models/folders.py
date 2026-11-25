@@ -357,6 +357,8 @@ class FolderTable:
                         **(folder.data or {}),
                         **form_data['data'],
                     }
+                    if 'machine_id' in form_data['data']:
+                        folder.data.pop('terminal_id', None)  # former name; would otherwise linger in the merge
 
                 if 'meta' in form_data:
                     folder.meta = {

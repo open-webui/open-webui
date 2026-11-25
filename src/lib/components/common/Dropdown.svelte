@@ -338,8 +338,9 @@
 		restoreFocusAfterClose();
 	}
 
-	function handleWindowClick(event: MouseEvent) {
-		if (!show || !closeOnOutsideClick || event.detail === 0) return;
+	function handleOutsideInteraction(event: MouseEvent) {
+		const isClick = event.type === 'click';
+		if (!show || !closeOnOutsideClick || (isClick && event.detail === 0)) return;
 		if (!(event.target instanceof Node)) return;
 		if (triggerEl?.contains(event.target)) return;
 		if (contentEl?.contains(event.target)) return;
@@ -349,8 +350,10 @@
 				? event.target.closest('[role="menu"], [role="listbox"], [aria-modal="true"]')
 				: null;
 		if (portaled && !portaled.contains(triggerEl)) return;
-		event.preventDefault();
-		event.stopPropagation();
+		if (isClick) {
+			event.preventDefault();
+			event.stopPropagation();
+		}
 		closeDropdown(false);
 	}
 
@@ -405,7 +408,8 @@
 </script>
 
 <svelte:window
-	on:click|capture={handleWindowClick}
+	on:click|capture={handleOutsideInteraction}
+	on:dragstart|capture={handleOutsideInteraction}
 	on:keydown={handleKeydown}
 	on:scroll|capture={positionContent}
 	on:resize={positionContent}

@@ -314,18 +314,19 @@
 			resolveDefaultModelIds(
 				$baseModels,
 				$settings?.models,
-				$config?.default_models?.split(',')
+				$config?.default_models?.split(','),
+				$config?.fallback_default_models?.split(',')
 			)[0] ?? '';
 		loaded = true;
 	});
 </script>
 
 <Modal ariaLabel={$i18n.t('Controls')} size="sm" bind:show={showControls}>
-	<div class="text-gray-700 dark:text-gray-100">
+	<div class="text-base-700 dark:text-base-100">
 		<div class="flex justify-between px-4 pt-3 pb-1">
 			<div class="text-sm font-medium self-center">{$i18n.t('Controls')}</div>
 			<button
-				class="self-center rounded-lg py-1 text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 px-0"
+				class="self-center rounded-lg py-1 text-base-500 transition hover:text-base-700 dark:text-base-400 dark:hover:text-base-200 px-0"
 				aria-label={$i18n.t('Close')}
 				on:click={() => {
 					showControls = false;
@@ -347,7 +348,7 @@
 				<Collapsible
 					className="w-full flex-1"
 					bind:open={showSystem}
-					buttonClassName="w-full rounded-lg text-sm border border-gray-100/30 dark:border-gray-850/30 w-full py-1 px-1.5"
+					buttonClassName="w-full rounded-lg text-sm border border-base-100/30 dark:border-base-850/30 w-full py-1 px-1.5"
 					grow={true}
 				>
 					<div class="flex gap-2 justify-between items-center">
@@ -356,7 +357,7 @@
 						</div>
 
 						{#if !showSystem && system.trim()}
-							<div class=" flex-1 text-gray-500 line-clamp-1">
+							<div class=" flex-1 text-base-500 line-clamp-1">
 								{system}
 							</div>
 						{/if}
@@ -364,7 +365,7 @@
 						<div class="shrink-0">
 							<button
 								type="button"
-								class="p-1.5 bg-transparent hover:bg-white/5 transition rounded-lg"
+								class="p-1.5 bg-transparent hover:bg-base-0/5 transition rounded-lg"
 								aria-label={$i18n.t('System Instructions')}
 								aria-expanded={showSystem}
 							>
@@ -396,7 +397,7 @@
 
 				<Dropdown>
 					<button
-						class="p-1.5 text-sm font-normal bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 transition rounded-lg"
+						class="p-1.5 text-sm font-normal bg-transparent hover:bg-base-100 dark:hover:bg-base-800 text-base-500 dark:text-base-400 transition rounded-lg"
 						aria-label={$i18n.t('More options')}
 					>
 						<EllipsisHorizontal className="size-3.5" />
@@ -407,13 +408,13 @@
 							<DropdownSub contentClass="select-none z-50">
 								<button
 									slot="trigger"
-									class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] cursor-pointer select-none hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+									class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] cursor-pointer select-none hover:bg-base-50/40 dark:hover:bg-base-800/40"
 								>
 									<Download className="size-3.5" strokeWidth="1.5" />
 									<div class="flex items-center">{$i18n.t('Download')}</div>
 								</button>
 								<button
-									class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] cursor-pointer select-none hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+									class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] cursor-pointer select-none hover:bg-base-50/40 dark:hover:bg-base-800/40"
 									disabled={messages.length === 0}
 									on:click={() => {
 										exportToJson();
@@ -424,7 +425,7 @@
 									</div>
 								</button>
 								<button
-									class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] cursor-pointer select-none hover:bg-gray-50/40 dark:hover:bg-gray-800/40"
+									class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] cursor-pointer select-none hover:bg-base-50/40 dark:hover:bg-base-800/40"
 									disabled={messages.length === 0}
 									on:click={() => {
 										downloadTxt();
@@ -452,7 +453,7 @@
 
 			<div class="pb-3">
 				<div
-					class="border border-gray-100/30 dark:border-gray-850/30 w-full px-3 py-2.5 rounded-xl"
+					class="border border-base-100/30 dark:border-base-850/30 w-full px-3 py-2.5 rounded-xl"
 				>
 					<div class="py-0.5">
 						<!-- $i18n.t('a user') -->
@@ -484,7 +485,7 @@
 						<div class="shrink-0">
 							<button
 								type="button"
-								class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-100 px-2.5 text-xs font-normal text-gray-800 transition hover:bg-gray-100/70 disabled:opacity-60 dark:bg-gray-850 dark:text-white dark:hover:bg-gray-850/60 {($settings?.highContrastMode ??
+								class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-100 px-2.5 text-xs font-normal text-base-800 transition hover:bg-base-100/70 disabled:opacity-60 dark:bg-base-850 dark:text-base-0 dark:hover:bg-base-850/60 {($settings?.highContrastMode ??
 								false)
 									? ''
 									: 'outline-hidden'}"
@@ -508,12 +509,12 @@
 						<div class="flex items-center justify-between gap-2 w-full sm:w-auto">
 							<div class="flex-1">
 								<select
-									class=" bg-transparent border border-gray-100/30 dark:border-gray-850/30 rounded-lg py-1 px-2 -mx-0.5 text-sm outline-hidden w-full"
+									class=" bg-transparent border border-base-100/30 dark:border-base-850/30 rounded-lg py-1 px-2 -mx-0.5 text-sm outline-hidden w-full"
 									aria-label={$i18n.t('Model')}
 									bind:value={selectedModelId}
 								>
 									{#each $baseModels as model}
-										<option value={model.id} class="bg-gray-50 dark:bg-gray-700"
+										<option value={model.id} class="bg-base-50 dark:bg-base-700"
 											>{model.name}</option
 										>
 									{/each}
@@ -521,9 +522,9 @@
 							</div>
 
 							<button
-								class="p-1.5 text-sm font-normal bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800 transition rounded-lg {showControls
-									? 'text-black dark:text-white'
-									: 'text-gray-500 dark:text-gray-400'}"
+								class="p-1.5 text-sm font-normal bg-transparent hover:bg-base-100 dark:hover:bg-base-800 transition rounded-lg {showControls
+									? 'text-base-1000 dark:text-base-0'
+									: 'text-base-500 dark:text-base-400'}"
 								aria-label={$i18n.t('Controls')}
 								id="playground-controls-toggle"
 								on:click={() => {
@@ -537,7 +538,7 @@
 								{#if !loading}
 									<button
 										disabled={message === ''}
-										class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-100 px-2.5 text-xs font-normal text-gray-800 transition hover:bg-gray-100/70 disabled:opacity-60 dark:bg-gray-850 dark:text-white dark:hover:bg-gray-850/60 disabled:cursor-not-allowed"
+										class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-100 px-2.5 text-xs font-normal text-base-800 transition hover:bg-base-100/70 disabled:opacity-60 dark:bg-base-850 dark:text-base-0 dark:hover:bg-base-850/60 disabled:cursor-not-allowed"
 										on:click={() => {
 											addHandler();
 											role = role === 'user' ? 'assistant' : 'user';
@@ -547,7 +548,7 @@
 									</button>
 
 									<button
-										class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
+										class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-base-0 transition hover:bg-base-1000 disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-base-0"
 										on:click={() => {
 											submitHandler();
 										}}
@@ -556,7 +557,7 @@
 									</button>
 								{:else}
 									<button
-										class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 disabled:opacity-60 dark:text-gray-400 dark:hover:bg-gray-850 dark:hover:text-white"
+										class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal text-base-600 transition hover:bg-base-100 hover:text-base-900 disabled:opacity-60 dark:text-base-400 dark:hover:bg-base-850 dark:hover:text-base-0"
 										on:click={() => {
 											stopResponse();
 										}}

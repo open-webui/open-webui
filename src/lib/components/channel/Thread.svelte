@@ -198,6 +198,16 @@
 			toast.error(`${error}`);
 			return null;
 		});
+
+		if (
+			res?.parent_id === threadId &&
+			messages &&
+			!messages.some((message) => message.id === res.id)
+		) {
+			messages = [{ ...res, user: $user, reply_to_message: reply_to_message ?? null }, ...messages];
+		}
+
+		return res;
 	};
 
 	const onChange = async () => {
@@ -225,7 +235,7 @@
 </script>
 
 {#if channel}
-	<div bind:this={threadRoot} class="flex flex-col w-full h-full bg-white dark:bg-gray-900">
+	<div bind:this={threadRoot} class="flex flex-col w-full h-full bg-base-0 dark:bg-base-900">
 		<div class="sticky top-0 flex min-h-10 items-center justify-between px-4 py-1.5">
 			<div class=" font-medium text-sm">{$i18n.t('Thread')}</div>
 
@@ -233,7 +243,7 @@
 				<button
 					type="button"
 					aria-label={$i18n.t('Close')}
-					class="flex h-7 items-center justify-center rounded-lg text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 px-0"
+					class="flex h-7 items-center justify-center rounded-lg text-base-500 hover:text-base-700 dark:text-base-400 dark:hover:text-base-300 px-0"
 					on:click={() => {
 						onClose();
 					}}
@@ -248,7 +258,7 @@
 			bind:this={messagesContainerElement}
 		>
 			<div>
-				{#if searchAnchor}<div class="px-3 py-2 text-xs text-gray-500 flex justify-between">
+				{#if searchAnchor}<div class="px-3 py-2 text-xs text-base-500 flex justify-between">
 						<span>{$i18n.t('Showing search match')}</span><button
 							class="underline"
 							on:click={() => initHandler()}>{$i18n.t('Latest replies')}</button
@@ -311,7 +321,7 @@
 				placeholder={!channel?.write_access
 					? $i18n.t('You do not have permission to send messages in this thread.')
 					: $i18n.t('Reply to thread...')}
-				typingUsersClassName="from-white dark:from-gray-900"
+				typingUsersClassName="from-base-0 dark:from-base-900"
 				{typingUsers}
 				userSuggestions={true}
 				channelSuggestions={true}

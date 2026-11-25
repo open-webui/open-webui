@@ -24,13 +24,13 @@
 	{items}
 	placeholder={placeholder ?? $i18n.t('Select view')}
 	{align}
-	triggerClass="relative h-8 w-full flex items-center gap-0.5 px-1.5 py-1.5 bg-transparent rounded-xl text-[0.8125rem] font-normal text-gray-700 transition hover:text-gray-900 dark:text-gray-200 dark:hover:text-gray-100"
-	labelClass="inline-flex h-input w-full outline-hidden bg-transparent truncate placeholder-gray-400 focus:outline-hidden"
+	triggerClass="relative h-8 w-full flex items-center gap-0.5 px-1.5 py-1.5 bg-transparent rounded-xl text-[0.8125rem] font-normal text-base-700 transition hover:text-base-900 dark:text-base-200 dark:hover:text-base-100"
+	labelClass="inline-flex h-input w-full outline-hidden bg-transparent truncate placeholder-base-400 focus:outline-hidden"
 	onChange={() => onChange(value)}
 >
 	<svelte:fragment slot="trigger" let:selectedLabel>
 		<span
-			class="inline-flex h-input w-full outline-hidden bg-transparent truncate placeholder-gray-400 focus:outline-hidden"
+			class="inline-flex h-input w-full outline-hidden bg-transparent truncate placeholder-base-400 focus:outline-hidden"
 		>
 			{selectedLabel}
 		</span>
@@ -48,7 +48,7 @@
 <!-- <button
 	class="min-w-fit outline-none p-1.5 {selectedTag === ''
 		? ''
-		: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
+		: 'text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-base-0'} transition capitalize"
 	on:click={() => {
 		selectedTag = '';
 	}}
@@ -59,7 +59,7 @@
 <button
 	class="min-w-fit outline-none p-1.5 {selectedTag === ''
 		? ''
-		: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
+		: 'text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-base-0'} transition capitalize"
 	on:click={() => {
 		selectedTag = '';
 	}}
@@ -70,7 +70,7 @@
 <button
 	class="min-w-fit outline-none p-1.5 {selectedTag === ''
 		? ''
-		: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition capitalize"
+		: 'text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-base-0'} transition capitalize"
 	on:click={() => {
 		selectedTag = '';
 	}}

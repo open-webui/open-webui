@@ -12,6 +12,7 @@ from open_webui.env import (
     AUDIT_LOGS_FILE_PATH,
     AUDIT_UVICORN_LOGGER_NAMES,
     ENABLE_AUDIT_LOGS_FILE,
+    ENABLE_AUDIT_LOGS_FILE_STARTUP_CHECK,
     ENABLE_AUDIT_STDOUT,
     ENABLE_OTEL,
     ENABLE_OTEL_LOGS,
@@ -209,6 +210,8 @@ def start_logger():
             )
         except Exception as e:
             logger.error(f'Failed to initialize audit log file handler: {str(e)}')
+            if ENABLE_AUDIT_LOGS_FILE_STARTUP_CHECK:
+                raise
 
     logging.basicConfig(handlers=[InterceptHandler()], level=GLOBAL_LOG_LEVEL, force=True)
 

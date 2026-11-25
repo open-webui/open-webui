@@ -2,6 +2,7 @@
 	import { getContext } from 'svelte';
 	import { embed, showTabs, showEmbeds } from '$lib/stores';
 	import { isValidHttpUrl } from '$lib/utils';
+	import { getCitations } from '$lib/utils/citations';
 
 	import CitationModal from './Citations/CitationModal.svelte';
 
@@ -25,61 +26,94 @@
 	let selectedCitation: any = null;
 
 	export const showSourceModal = (sourceId) => {
-		let index;
-		let suffix = null;
+		// "2#page" and 2 both name citation number 2
+		const number = typeof sourceId === 'string' ? parseInt(sourceId.split('#')[0]) : sourceId;
+		const citation = citations.find((citation) => citation.number === number);
+		if (citation) openCitation(citation, sourceId);
+	};
 
-		if (typeof sourceId === 'string') {
-			const output = sourceId.split('#');
-			index = parseInt(output[0]) - 1;
+	const openCitation = (citation, sourceId) => {
+		console.log('Showing citation modal for:', citation);
 
-			if (output.length > 1) {
-				suffix = output[1];
-			}
-		} else {
-			index = sourceId - 1;
+		// A cited file opens beside the chat, at the cited page when one is known. Web pages,
+		// and files that cannot be previewed, show their retrieved text in the popup.
+		const metadata = citation.metadata?.[0];
+		const fileName = String(metadata?.name ?? citation.source?.name ?? '');
+		if (
+			!readOnly &&
+			metadata?.file_id &&
+			!metadata.external &&
+			!['note', 'chat'].includes(citation.source?.type) &&
+			!isValidHttpUrl(fileName) &&
+			!/\.(doc|ppt|odt|ods|odp|rtf|epub|msg)$/i.test(fileName)
+		) {
+			showTabs.set(true);
+			showEmbeds.set(true);
+			embed.set({
+				file: {
+					id: metadata.file_id,
+					page: Number.isInteger(metadata.page) ? metadata.page + 1 : null,
+					// The cited passages of this file, each with its page and relevance
+					passages: (citation.document ?? [])
+						.map((text, i) => ({
+							text,
+							metadata: citation.metadata?.[i],
+							distance: showRelevance ? citation.distances?.[i] : undefined
+						}))
+						.filter((passage) => passage.metadata?.file_id === metadata.file_id)
+						.map(({ text, metadata, distance }) => ({
+							text,
+							page: Number.isInteger(metadata?.page) ? metadata.page + 1 : null,
+							distance
+						})),
+					showPercentage
+				},
+				title: fileName,
+				chatId: chatId
+			});
+			return;
 		}
 
-		if (citations[index]) {
-			console.log('Showing citation modal for:', citations[index]);
-
-			if (citations[index]?.source?.embed_url) {
-				const embedUrl = citations[index].source.embed_url;
-				// The embed panel renders anything it cannot read as a URL as raw HTML
-				if (
-					typeof embedUrl === 'string' &&
-					(isValidHttpUrl(embedUrl) || embedUrl.startsWith('//'))
-				) {
-					if (readOnly) {
-						// Open in new tab if readOnly
-						window.open(embedUrl, '_blank');
-						return;
-					} else {
-						showTabs.set(true);
-						showEmbeds.set(true);
-						embed.set({
-							url: embedUrl,
-							title: citations[index]?.source?.name || 'Embedded Content',
-							source: citations[index],
-							chatId: chatId,
-							messageId: id,
-							sourceId: sourceId
-						});
-					}
+		if (citation.source?.embed_url) {
+			const embedUrl = citation.source.embed_url;
+			// The embed panel renders anything it cannot read as a URL as raw HTML
+			if (typeof embedUrl === 'string' && (isValidHttpUrl(embedUrl) || embedUrl.startsWith('//'))) {
+				if (readOnly) {
+					// Open in new tab if readOnly
+					window.open(embedUrl, '_blank');
+					return;
 				} else {
-					selectedCitation = citations[index];
-					showCitationModal = true;
+					showTabs.set(true);
+					showEmbeds.set(true);
+					embed.set({
+						url: embedUrl,
+						title: citation.source?.name || 'Embedded Content',
+						source: citation,
+						chatId: chatId,
+						messageId: id,
+						sourceId: sourceId
+					});
 				}
 			} else {
-				selectedCitation = citations[index];
+				selectedCitation = citation;
 				showCitationModal = true;
 			}
+		} else {
+			selectedCitation = citation;
+			showCitationModal = true;
 		}
 	};
 
+	// Passages read rather than searched for have no distance
+	const getDistances = (sources: any[]): number[] =>
+		sources
+			.flatMap((citation) => citation.distances ?? [])
+			.filter((distance) => typeof distance === 'number');
+
 	function calculateShowRelevance(sources: any[]) {
-		const distances = sources.flatMap((citation) => citation.distances ?? []);
-		const inRange = distances.filter((d) => d !== undefined && d >= -1 && d <= 1).length;
-		const outOfRange = distances.filter((d) => d !== undefined && (d < -1 || d > 1)).length;
+		const distances = getDistances(sources);
+		const inRange = distances.filter((d) => d >= -1 && d <= 1).length;
+		const outOfRange = distances.length - inRange;
 
 		if (distances.length === 0) {
 			return false;
@@ -101,51 +135,11 @@
 	}
 
 	function shouldShowPercentage(sources: any[]) {
-		const distances = sources.flatMap((citation) => citation.distances ?? []);
-		return distances.every((d) => d !== undefined && d >= -1 && d <= 1);
+		return getDistances(sources).every((d) => d >= -1 && d <= 1);
 	}
 
 	$: {
-		citations = sources.reduce((acc, source) => {
-			if (Object.keys(source).length === 0) {
-				return acc;
-			}
-
-			source?.document?.forEach((document, index) => {
-				const metadata = source?.metadata?.[index];
-				const distance = source?.distances?.[index];
-
-				// Within the same citation there could be multiple documents
-				const id = metadata?.source ?? source?.source?.id ?? 'N/A';
-				let _source = source?.source;
-
-				if (metadata?.name) {
-					_source = { ..._source, name: metadata.name };
-				}
-
-				if (id.startsWith('http://') || id.startsWith('https://')) {
-					_source = { ..._source, name: metadata?.external ? _source.name : id, url: id };
-				}
-
-				const existingSource = acc.find((item) => item.id === id);
-
-				if (existingSource) {
-					existingSource.document.push(document);
-					existingSource.metadata.push(metadata);
-					if (distance !== undefined) existingSource.distances.push(distance);
-				} else {
-					acc.push({
-						id: id,
-						source: _source,
-						document: [document],
-						metadata: metadata ? [metadata] : [],
-						distances: distance !== undefined ? [distance] : []
-					});
-				}
-			});
-
-			return acc;
-		}, []);
+		citations = getCitations(sources);
 		console.log('citations', citations);
 
 		showRelevance = calculateShowRelevance(citations);
@@ -172,7 +166,7 @@
 	{@const urlCitations = citations.filter((c) => c?.source?.name?.startsWith('http'))}
 	<div class=" py-1 -mx-0.5 w-full flex gap-1 items-center flex-wrap">
 		<button
-			class="text-xs font-normal text-gray-600 dark:text-gray-300 px-3.5 h-8 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition flex items-center gap-1 border border-gray-50 dark:border-gray-850/30"
+			class="text-xs font-normal text-base-600 dark:text-base-300 px-3.5 h-8 rounded-full hover:bg-base-100 dark:hover:bg-base-800 transition flex items-center gap-1 border border-base-50 dark:border-base-850/30"
 			aria-label={citations.length === 1
 				? $i18n.t('Toggle 1 source')
 				: $i18n.t('Toggle {{COUNT}} sources', { COUNT: citations.length })}
@@ -187,7 +181,7 @@
 						<img
 							src="https://www.google.com/s2/favicons?sz=32&domain={citation.source.name}"
 							alt="favicon"
-							class="size-4 rounded-full shrink-0 border border-white dark:border-gray-850 bg-white dark:bg-gray-900"
+							class="size-4 rounded-full shrink-0 border border-base-0 dark:border-base-850 bg-base-0 dark:bg-base-900"
 							on:error={(e) => {
 								// LICENSE covers this Open WebUI fallback logo.
 								// Do not alter, remove, obscure, or replace it except as LICENSE permits:
@@ -198,7 +192,7 @@
 					{/each}
 					{#if citations.length > 3}
 						<div
-							class="size-4 rounded-full shrink-0 border border-white dark:border-gray-850 bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-[0.5rem] font-normal text-gray-500 dark:text-gray-400 whitespace-nowrap tracking-tighter"
+							class="size-4 rounded-full shrink-0 border border-base-0 dark:border-base-850 bg-base-100 dark:bg-base-800 flex items-center justify-center text-[0.5rem] font-normal text-base-500 dark:text-base-400 whitespace-nowrap tracking-tighter"
 							aria-hidden="true"
 						>
 							+{citations.length - Math.min(urlCitations.length, 3)}
@@ -228,17 +222,14 @@
 					aria-label={$i18n.t('View source: {{name}}', {
 						name: `${idx + 1} ${decodeString(citation.source.name)}`
 					})}
-					class="no-toggle outline-hidden flex dark:text-gray-300 bg-transparent text-gray-600 rounded-xl gap-1.5 items-center"
-					on:click={() => {
-						showCitationModal = true;
-						selectedCitation = citation;
-					}}
+					class="no-toggle outline-hidden flex dark:text-base-300 bg-transparent text-base-600 rounded-xl gap-1.5 items-center"
+					on:click={() => openCitation(citation, citation.number)}
 				>
-					<div class=" font-normal bg-gray-50 dark:bg-gray-850 rounded-md px-1">
+					<div class=" font-normal bg-base-50 dark:bg-base-850 rounded-md px-1">
 						{idx + 1}
 					</div>
 					<div
-						class="flex-1 truncate hover:text-black dark:text-white/60 dark:hover:text-white transition text-left"
+						class="flex-1 truncate hover:text-base-1000 dark:text-base-0/60 dark:hover:text-base-0 transition text-left"
 					>
 						{decodeString(citation.source.name)}
 					</div>

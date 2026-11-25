@@ -226,6 +226,13 @@ class FilesTable:
             result = await db.execute(select(File).filter(File.id.in_(ids)).order_by(File.updated_at.desc()))
             return [FileModel.model_validate(file) for file in result.scalars().all()]
 
+    async def get_owner_ids_by_file_ids(self, file_ids: list[str], db: AsyncSession | None = None) -> dict[str, str]:
+        if not file_ids:
+            return {}
+        async with get_async_db_context(db) as db:
+            result = await db.execute(select(File.id, File.user_id).filter(File.id.in_(file_ids)))
+            return dict(result.all())
+
     async def get_file_metadatas_by_ids(
         self, ids: list[str], db: AsyncSession | None = None
     ) -> list[FileMetadataResponse]:

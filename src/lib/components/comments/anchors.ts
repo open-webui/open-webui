@@ -13,6 +13,15 @@ export type CommentSurface = CommentResource &
 		onComment?: (target: CommentTarget & { comment_id?: string }) => void;
 	};
 export const contentHash = (text: string) => sha256(text);
+// Display-only: flattens line breaks and keeps both ends of a long selection visible,
+// so the quote stays a few lines tall without its own scroll. anchor.quote stays intact.
+export function middleTruncate(text: string, max = 160) {
+	const flat = text.replace(/\s+/g, ' ').trim();
+	const chars = [...flat];
+	if (chars.length <= max) return flat;
+	const half = Math.floor((max - 1) / 2);
+	return `${chars.slice(0, half).join('').trimEnd()} … ${chars.slice(-half).join('').trimStart()}`;
+}
 export function noteCommentText(content: { json?: unknown; md?: string }) {
 	const text = (node: any): string =>
 		!node || typeof node !== 'object'

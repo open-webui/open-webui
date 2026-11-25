@@ -1,6 +1,6 @@
 <script lang="ts">
-	import type { TerminalTarget } from '$lib/apis/terminal';
-	export let target: TerminalTarget | null = null;
+	import type { MachineTarget } from '$lib/apis/machines';
+	export let target: MachineTarget | null = null;
 
 	import { getContext, onMount, onDestroy } from 'svelte';
 	import { marked } from 'marked';
@@ -10,7 +10,7 @@
 		createNotebookSession,
 		executeNotebookCell,
 		stopNotebookSession
-	} from '$lib/apis/terminal';
+	} from '$lib/apis/machines';
 	import Spinner from '../../common/Spinner.svelte';
 	import Tooltip from '../../common/Tooltip.svelte';
 	import CellEditor from './CellEditor.svelte';
@@ -261,7 +261,7 @@
 					>
 				{:else}
 					<Tooltip content={$i18n.t('No kernel')} placement="bottom"
-						><span class="size-1.5 rounded-full bg-gray-400 dark:bg-gray-600 inline-block"
+						><span class="size-1.5 rounded-full bg-base-400 dark:bg-base-600 inline-block"
 						></span></Tooltip
 					>
 				{/if}
@@ -270,7 +270,7 @@
 
 		{#if kernelError}
 			<div
-				class="px-2 py-1 text-[0.65rem] text-gray-500 dark:text-gray-400 bg-red-50 dark:bg-red-950/30 whitespace-pre-wrap font-mono"
+				class="px-2 py-1 text-[0.65rem] text-base-500 dark:text-base-400 bg-red-50 dark:bg-red-950/30 whitespace-pre-wrap font-mono"
 			>
 				{kernelError}
 			</div>
@@ -424,25 +424,25 @@
 		position: sticky;
 		top: 0;
 		z-index: 5;
-		background: rgba(255, 255, 255, 0.95);
+		background: color-mix(in oklab, var(--color-base-0) 95%, transparent);
 		backdrop-filter: blur(4px);
 	}
 	:global(.dark) .nb-toolbar {
-		background: rgba(17, 24, 39, 0.95);
+		background: color-mix(in oklab, var(--color-base-900) 95%, transparent);
 	}
 	.nb-btn {
 		font-size: 0.6rem;
 		padding: 0.15rem 0.35rem;
 		border-radius: 0.25rem;
-		color: #6b7280;
+		color: var(--color-base-600);
 		transition: all 0.15s;
 	}
 	.nb-btn:hover:not(:disabled) {
 		background: rgba(128, 128, 128, 0.1);
-		color: #374151;
+		color: var(--color-base-700);
 	}
 	:global(.dark) .nb-btn:hover:not(:disabled) {
-		color: #d1d5db;
+		color: var(--color-base-300);
 	}
 	.nb-btn:disabled {
 		opacity: 0.4;
@@ -487,14 +487,14 @@
 		gap: 0.15rem;
 	}
 	.nb-cell-label {
-		color: #9ca3af;
+		color: var(--color-base-500);
 		font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
 		font-size: 0.6rem;
 		user-select: none;
 		text-align: center;
 	}
 	:global(.dark) .nb-cell-label {
-		color: #4b5563;
+		color: var(--color-base-700);
 	}
 	.nb-run-btn {
 		display: flex;
@@ -503,7 +503,7 @@
 		width: 1.25rem;
 		height: 1.25rem;
 		border-radius: 0.25rem;
-		color: #9ca3af;
+		color: var(--color-base-500);
 		transition: all 0.15s;
 	}
 	.nb-run-btn:hover:not(:disabled) {
@@ -511,7 +511,7 @@
 		background: rgba(5, 150, 105, 0.1);
 	}
 	:global(.dark) .nb-run-btn {
-		color: #6b7280;
+		color: var(--color-base-600);
 	}
 	:global(.dark) .nb-run-btn:hover:not(:disabled) {
 		color: #34d399;
@@ -550,12 +550,12 @@
 		font-size: 0.75rem;
 		line-height: 1.5;
 		font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
-		background: #f8f8f8;
-		color: #1f2937;
+		background: var(--color-base-50);
+		color: var(--color-base-850);
 	}
 	:global(.dark) .nb-code-source-raw {
-		background: #161b22;
-		color: #e6edf3;
+		background: var(--color-base-900);
+		color: var(--color-base-100);
 	}
 	.nb-code-textarea,
 	.nb-edit-textarea {
@@ -565,7 +565,7 @@
 		line-height: 1.5;
 		font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
 		background: #fffef5;
-		color: #1f2937;
+		color: var(--color-base-850);
 		border: none;
 		outline: none;
 		resize: none;
@@ -574,8 +574,8 @@
 	}
 	:global(.dark) .nb-code-textarea,
 	:global(.dark) .nb-edit-textarea {
-		background: #1a1d23;
-		color: #e6edf3;
+		background: var(--color-base-900);
+		color: var(--color-base-100);
 	}
 	.nb-edit-textarea {
 		font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -597,12 +597,12 @@
 		font-size: 0.7rem;
 		line-height: 1.5;
 		font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
-		color: #374151;
+		color: var(--color-base-700);
 		white-space: pre-wrap;
 		word-break: break-all;
 	}
 	:global(.dark) .nb-output-text {
-		color: #d1d5db;
+		color: var(--color-base-300);
 	}
 	.nb-output-img {
 		max-width: 100%;
@@ -649,7 +649,7 @@
 		font-size: 0.75rem;
 		line-height: 1.5;
 		font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
-		color: #6b7280;
+		color: var(--color-base-600);
 		white-space: pre-wrap;
 	}
 	:global(.dark) .nb-code-source :global(.shiki),

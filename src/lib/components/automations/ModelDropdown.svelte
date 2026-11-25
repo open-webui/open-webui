@@ -44,8 +44,8 @@
 		{disabled}
 		type="button"
 		class={plain
-			? 'flex w-full min-w-0 items-center text-left text-xs font-normal leading-6 text-gray-700 dark:text-gray-300'
-			: 'flex items-center gap-1.5 px-2.5 py-1.5 rounded-2xl text-xs transition text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100'}
+			? 'flex w-full min-w-0 items-center text-left text-xs font-normal leading-6 text-base-700 dark:text-base-300'
+			: 'flex items-center gap-1.5 px-2.5 py-1.5 rounded-2xl text-xs transition text-base-600 hover:text-base-900 dark:text-base-400 dark:hover:text-base-100'}
 	>
 		{#if !plain}<svg
 				xmlns="http://www.w3.org/2000/svg"
@@ -61,7 +61,10 @@
 					d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 0 0-2.455 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z"
 				/>
 			</svg>{/if}
-		<span class={plain ? 'truncate' : 'whitespace-nowrap max-w-32 truncate'}>{modelLabel}</span>
+		<span
+			class:sr-only={!plain && !model_id}
+			class={plain ? 'truncate' : 'whitespace-nowrap max-w-32 truncate'}>{modelLabel}</span
+		>
 		{#if !plain}<svg
 				xmlns="http://www.w3.org/2000/svg"
 				fill="none"
@@ -76,7 +79,7 @@
 
 	<div
 		slot="content"
-		class="rounded-xl shadow-lg border border-gray-200 dark:border-gray-800 flex flex-col bg-white dark:bg-gray-850 w-72 p-0.5"
+		class="rounded-xl shadow-lg border border-base-200 dark:border-base-800 flex flex-col bg-base-0 dark:bg-base-850 w-72 p-0.5"
 	>
 		<div class="flex items-center gap-1.5 px-2 py-1">
 			<Search className="size-3.5" strokeWidth="2.5" />
@@ -90,7 +93,7 @@
 		</div>
 
 		<div class="overflow-y-auto scrollbar-thin max-h-60">
-			<div class="px-2 text-[0.6875rem] text-gray-500 py-0.5">
+			<div class="px-2 text-[0.6875rem] text-base-500 py-0.5">
 				{$i18n.t('Models')}
 			</div>
 
@@ -98,8 +101,8 @@
 				<button
 					class="h-[1.6875rem] px-2 rounded-xl w-full text-left text-[0.8125rem] {model_id ===
 					model.id
-						? 'text-gray-900 dark:text-gray-100'
-						: 'text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-gray-100'}"
+						? 'text-base-900 dark:text-base-100'
+						: 'text-base-700 hover:text-base-900 dark:text-base-300 dark:hover:text-base-100'}"
 					type="button"
 					on:click={() => {
 						model_id = model.id;
@@ -108,9 +111,9 @@
 						onChange();
 					}}
 				>
-					<div class="flex text-black dark:text-gray-100 line-clamp-1">
+					<div class="flex text-base-1000 dark:text-base-100 line-clamp-1">
 						<img
-							src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${encodeURIComponent(model.id)}`}
+							src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${encodeURIComponent(model.id)}&v=${model.info?.updated_at}`}
 							alt={model?.name ?? model.id}
 							class="rounded-full size-5 items-center mr-2"
 							loading="lazy"
@@ -127,7 +130,7 @@
 					</div>
 				</button>
 			{:else}
-				<div class="block px-2 py-1.5 text-[0.8125rem] text-gray-700 dark:text-gray-100">
+				<div class="block px-2 py-1.5 text-[0.8125rem] text-base-700 dark:text-base-100">
 					{$i18n.t('No results found')}
 				</div>
 			{/each}

@@ -99,7 +99,7 @@ async def comment_responses(db: AsyncSession, comments: list[Comment], user, own
         for parent_id, count, latest in (
             await db.execute(
                 select(Comment.parent_id, func.count(), func.max(Comment.created_at))
-                .where(Comment.parent_id.in_(ids))
+                .where(Comment.parent_id.in_(ids), Comment.deleted_at.is_(None))
                 .group_by(Comment.parent_id)
             )
         ).all()

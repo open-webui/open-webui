@@ -16,6 +16,7 @@ Environment:
 """
 
 import asyncio
+import copy
 import logging
 import os
 import random
@@ -26,6 +27,7 @@ from uuid import uuid4
 
 from fastapi import HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials
+from open_webui.utils.machines import automation_machine_of, machine_id_of
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.events import EVENTS, build_event, publish_event
 from open_webui.internal.db import get_async_db
@@ -46,9 +48,16 @@ from open_webui.utils.recurrence import (
     rrule_interval_seconds,
     validate_rrule,
 )
+from open_webui.utils.prompt_variables import fill_variables
 from open_webui.utils.task import prompt_template
 from open_webui.utils.agents.discovery import get_models as get_agent_models
-from open_webui.utils.terminals import initialize_terminal_directory, resolve_terminal_connection
+from open_webui.utils.machines import (
+    can_use_machine,
+    get_folder_machine,
+    get_folder_machine_mismatch,
+    initialize_machine_directory,
+    resolve_machine_connection,
+)
 from starlette.datastructures import Headers
 
 log = logging.getLogger(__name__)
@@ -56,6 +65,17 @@ log = logging.getLogger(__name__)
 SCHEDULER_POLL_INTERVAL = int(os.getenv('SCHEDULER_POLL_INTERVAL', os.getenv('AUTOMATION_POLL_INTERVAL', '10')))
 TIMER_POLL_INTERVAL = int(os.getenv('TIMER_POLL_INTERVAL', '1'))
 CALENDAR_ALERT_LOOKAHEAD_MINUTES = int(os.getenv('CALENDAR_ALERT_LOOKAHEAD_MINUTES', '10'))
+
+
+# Schedule
+
+
+async def schedule_next_run(data: dict, tz: str = None) -> Optional[int]:
+    return await next_run_ns(data['rrule'], tz=tz) if data.get('rrule') else None
+
+
+async def schedule_next_runs(data: dict, tz: str = None) -> list[int]:
+    return await next_n_runs_ns(data['rrule'], tz=tz) if data.get('rrule') else []
 
 
 # Worker Loop
@@ -170,7 +190,7 @@ async def _resolve_model_defaults(app, model_id: str) -> dict:
     defaults = {
         'tool_ids': list(meta.get('toolIds') or []),
         'filter_ids': list(meta.get('defaultFilterIds') or []),
-        'terminal_id': meta.get('terminalId'),
+        'machine_id': machine_id_of(meta, 'machineId'),
     }
     defaults = {key: value for key, value in defaults.items() if value}
     default_feature_ids = meta.get('defaultFeatureIds', [])
@@ -199,35 +219,35 @@ async def _resolve_model_defaults(app, model_id: str) -> dict:
     return defaults
 
 
-async def validate_automation_terminal(request, user, data: dict, automation_id: str | None = None):
-    terminal = data.get('terminal') or {}
+async def validate_automation_machine(request, user, data: dict, automation_id: str | None = None):
+    machine = automation_machine_of(data)
     model_id = data['model_id']
     is_agent = model_id.startswith('agent:')
-    if not terminal.get('server_id'):
+    if not machine.get('server_id'):
         if is_agent:
-            raise HTTPException(400, 'Select a terminal for the agent.')
+            raise HTTPException(400, 'Select a machine for the agent.')
         return
-    if terminal['server_id'].startswith('template:'):
-        from open_webui.utils.terminals import template_connection, require_model_access
+    if machine['server_id'].startswith('template:'):
+        from open_webui.utils.machines import template_connection, require_model_access
 
-        _, template = await template_connection(user, terminal['server_id'])
+        _, template = await template_connection(user, machine['server_id'])
         scope = (template.get('data') or {}).get('scope')
         if (data.get('target') or {}).get('type') == 'channel' and (is_agent or scope == 'chat'):
-            raise HTTPException(400, 'This terminal requires a chat destination.')
+            raise HTTPException(400, 'This machine requires a chat destination.')
         if scope == 'model':
-            await require_model_access(user, model_id, terminal['server_id'], request)
+            await require_model_access(user, model_id, machine['server_id'], request)
         return
-    metadata = {'terminal_id': terminal['server_id'], 'model_id': model_id}
+    metadata = {'machine_id': machine['server_id'], 'model_id': model_id}
     if automation_id:
         metadata['automation_id'] = automation_id
-    if not await resolve_terminal_connection(request, user, metadata):
-        raise HTTPException(400, 'The configured terminal is unavailable for this automation.')
+    if not await resolve_machine_connection(request, user, metadata):
+        raise HTTPException(400, 'The configured machine is unavailable for this automation.')
     if is_agent:
         if (data.get('target') or {}).get('type') == 'channel':
             raise HTTPException(400, 'Agent automations require a chat destination.')
-        available = await get_agent_models(request, user, metadata, cwd=terminal.get('cwd'))
+        available = await get_agent_models(request, user, metadata, cwd=machine.get('cwd'))
         if not any(model['id'] == model_id for model in available):
-            raise HTTPException(400, 'Agent model is unavailable in the configured terminal.')
+            raise HTTPException(400, 'Agent model is unavailable on the configured machine.')
 
 
 async def _execute_channel_automation(
@@ -253,13 +273,23 @@ async def _execute_channel_automation(
     model = getattr(app.state, 'MODELS', {}).get(model_id, {})
     request = _build_request(app, token=token)
 
+    from open_webui.models.messages import Messages
     from open_webui.routers.channels import new_message_handler
+
+    # An ongoing thread gets this run as a reply; the first run, or a run after the thread was deleted, starts it.
+    ongoing = target.get('new_thread', True) is False
+    thread_id = None
+    if ongoing and target.get('thread_id'):
+        root = await Messages.get_message_by_id(target['thread_id'], include_thread_replies=False)
+        if root and root.channel_id == channel_id and not root.parent_id:
+            thread_id = root.id
 
     async with get_async_db() as db:
         user_message, channel = await new_message_handler(
             request,
             channel_id,
             MessageForm(
+                parent_id=thread_id,
                 content=prompt,
                 data={},
                 meta={'automation_id': automation.id},
@@ -267,11 +297,25 @@ async def _execute_channel_automation(
             user,
             db,
         )
-        response_parent_id = (
-            user_message.parent_id
-            if user_message.parent_id
-            else (user_message.id if await Config.get('channels.model_response_mode', 'thread') == 'thread' else None)
-        )
+        if ongoing and not thread_id:
+            await Automations.set_target_ref(automation.id, 'thread_id', user_message.id)
+        reply_in_thread = ongoing or target.get('reply_in_thread', True) is not False
+        response_parent_id = user_message.parent_id or (user_message.id if reply_in_thread else None)
+        # Earlier runs and anyone's replies in the thread, oldest first, so this run continues from them.
+        thread_history = []
+        if thread_id:
+            earlier = (await Messages.get_messages_by_parent_id(channel.id, thread_id, db=db))[::-1]
+            names = {u.id: u.name for u in await Users.get_users_by_user_ids(list({m.user_id for m in earlier}), db=db)}
+            for message in earlier:
+                if message.id == user_message.id or not message.content:
+                    continue
+                message_model_id = (message.meta or {}).get('model_id')
+                name = (
+                    getattr(app.state, 'MODELS', {}).get(message_model_id, {}).get('name', message_model_id)
+                    if message_model_id
+                    else names.get(message.user_id, 'Unknown')
+                )
+                thread_history.append(f'{name}: {message.content}')
         assistant_message, channel = await new_message_handler(
             request,
             channel.id,
@@ -295,7 +339,8 @@ async def _execute_channel_automation(
         'messages': [
             {
                 'role': 'system',
-                'content': f'You are {model.get("name", model_id)}, participating in a channel conversation. Be concise and conversational.',
+                'content': f'You are {model.get("name", model_id)}, participating in a channel conversation. Be concise and conversational.'
+                + ("\n\nHere's the thread so far:\n\n" + '\n\n'.join(thread_history) if thread_history else ''),
             },
             {'role': 'user', 'content': f'{user.name if user else "User"}: {prompt}'},
         ],
@@ -306,15 +351,15 @@ async def _execute_channel_automation(
         'automation_id': automation.id,
         'background_tasks': {},
     }
-    terminal = automation.data.get('terminal') or {}
-    if terminal.get('server_id'):
-        form_data['terminal_id'] = terminal['server_id']
-        await initialize_terminal_directory(
+    machine = automation_machine_of(automation.data)
+    if machine.get('server_id'):
+        form_data['machine_id'] = machine['server_id']
+        await initialize_machine_directory(
             request,
             user,
             {'chat_id': form_data['chat_id'], 'automation_id': automation.id, 'model_id': model_id},
-            terminal['server_id'],
-            terminal.get('cwd'),
+            machine['server_id'],
+            machine.get('cwd'),
         )
     await app.state.CHAT_COMPLETION_HANDLER(request, form_data, user=user)
 
@@ -342,7 +387,21 @@ async def _execute_channel_automation(
     )
 
 
-async def execute_automation(app, automation: AutomationModel) -> None:
+_run_semaphore: asyncio.Semaphore | None = None
+
+
+async def execute_automation(app, automation: AutomationModel, variables: Optional[dict] = None) -> None:
+    global _run_semaphore
+    max_concurrent = await Config.get('automations.max_concurrent')
+    if not max_concurrent:
+        return await _execute_automation(app, automation, variables)
+    if _run_semaphore is None:
+        _run_semaphore = asyncio.Semaphore(int(max_concurrent))
+    async with _run_semaphore:
+        await _execute_automation(app, automation, variables)
+
+
+async def _execute_automation(app, automation: AutomationModel, variables: Optional[dict] = None) -> None:
     """Execute an automation through the full chat completion pipeline.
 
     Creates a real chat or channel message, then calls chat_completion exactly like the frontend:
@@ -368,7 +427,7 @@ async def execute_automation(app, automation: AutomationModel) -> None:
             await _record_run(request, automation.id, 'error', error=error, actor=user)
             return
 
-        prompt = await prompt_template(automation.data['prompt'], user)
+        prompt = fill_variables(await prompt_template(automation.data['prompt'], user), variables, strict=False)
         model_id = automation.data['model_id']
         try:
             expires_delta = parse_duration(str(await Config.get('automations.auth_token_expires_in', '1h')))
@@ -388,7 +447,7 @@ async def execute_automation(app, automation: AutomationModel) -> None:
             await get_all_models(_build_request(app, token=token), user=user)
 
         request = _build_request(app, token=token)
-        await validate_automation_terminal(request, user, automation.data, automation.id)
+        await validate_automation_machine(request, user, automation.data, automation.id)
 
         target = automation.data.get('target') or {}
         if target.get('type') == 'channel':
@@ -404,48 +463,41 @@ async def execute_automation(app, automation: AutomationModel) -> None:
         # Generate proper UUIDs for messages (same as frontend)
         user_msg_id = str(uuid4())
         assistant_msg_id = str(uuid4())
+        parent_id = None
+        defaults = await _resolve_model_defaults(app, model_id)
+        machine = automation_machine_of(automation.data)
+        if folder_id and await get_folder_machine_mismatch(folder_id, machine.get('server_id')):
+            folder_machine = await get_folder_machine(folder_id)
+            if machine.get('server_id') or await can_use_machine(user, folder_machine['machine_id']):
+                machine = {'server_id': folder_machine['machine_id'], 'cwd': folder_machine['working_directory']}
+        machine_id = machine.get('server_id') or defaults.get('machine_id')
 
-        chat_id = str(uuid4())
-        chat = await Chats.insert_new_chat(
-            chat_id,
-            automation.user_id,
-            ChatForm(
-                folder_id=folder_id,
-                chat={
-                    'title': automation.name,
-                    'models': [model_id],
-                    'history': {
-                        'currentId': assistant_msg_id,
-                        'messages': {
-                            user_msg_id: {
-                                'id': user_msg_id,
-                                'parentId': None,
-                                'role': 'user',
-                                'content': prompt,
-                                'childrenIds': [assistant_msg_id],
-                                'timestamp': int(time.time()),
-                                'models': [model_id],
-                            },
-                            assistant_msg_id: {
-                                'id': assistant_msg_id,
-                                'parentId': user_msg_id,
-                                'role': 'assistant',
-                                'content': '',
-                                'done': False,
-                                'model': model_id,
-                                'childrenIds': [],
-                                'timestamp': int(time.time()),
-                            },
-                        },
-                    },
-                    'messages': [
-                        {'role': 'user', 'content': prompt},
-                    ],
-                    'meta': {'automation_id': automation.id},
-                },
-            ),
-            internal_meta={'automation_id': automation.id},
-        )
+        # An ongoing chat gets this run at its end; the first run, or a run after the chat was deleted, starts it.
+        ongoing = target.get('new_chat', True) is False
+        if ongoing and target.get('chat_id'):
+            from open_webui.utils.subagents import queue_user_message
+
+            current = await Chats.get_chat_by_id_and_user_id(target['chat_id'], automation.user_id)
+            current_id = ((current.chat or {}).get('history') or {}).get('currentId') if current else None
+            # While a reply runs there, the prompt waits in the chat's queue like a message sent meanwhile.
+            if current_id and await queue_user_message(
+                request, current.id, user, {'id': user_msg_id, 'content': prompt}, current_id
+            ):
+                return
+            parent_id = await _append_run_to_chat(
+                app, target['chat_id'], automation, prompt, model_id, machine_id, user_msg_id, assistant_msg_id
+            )
+            if parent_id is not False:
+                chat = await Chats.get_chat_by_id(target['chat_id'])
+        appended = chat is not None
+
+        if chat is None:
+            parent_id = None
+            chat = await _insert_run_chat(
+                automation, folder_id, prompt, model_id, machine_id, user_msg_id, assistant_msg_id
+            )
+            if chat and ongoing:
+                await Automations.set_target_ref(automation.id, 'chat_id', chat.id)
 
         if not chat:
             error = 'Failed to create chat'
@@ -455,28 +507,26 @@ async def execute_automation(app, automation: AutomationModel) -> None:
         # Notify frontend to refresh chat list
         from open_webui.socket.main import sio
 
-        await sio.emit(
-            'events',
-            {
-                'chat_id': chat.id,
-                'message_id': user_msg_id,
-                'data': {'type': 'chat:list'},
-            },
-            room=f'user:{automation.user_id}',
-        )
+        for event_type in ('chat:list', 'chat:reload') if appended else ('chat:list',):
+            await sio.emit(
+                'events',
+                {'chat_id': chat.id, 'message_id': user_msg_id, 'data': {'type': event_type}},
+                room=f'user:{automation.user_id}',
+            )
 
         # Build the same payload the frontend sends to /api/chat/completions
         form_data = {
-            **await _resolve_model_defaults(app, model_id),
+            **defaults,
             'model': model_id,
             'messages': [{'role': 'user', 'content': prompt}],
             'stream': True,
             'chat_id': chat.id,
             'id': assistant_msg_id,
-            'parent_id': None,  # Root message (chat already created above)
+            # The pipeline replays an ongoing chat's earlier turns from the saved history.
+            'parent_id': parent_id,
             'user_message': {
                 'id': user_msg_id,
-                'parentId': None,
+                'parentId': parent_id,
                 'role': 'user',
                 'content': prompt,
             },
@@ -498,15 +548,14 @@ async def execute_automation(app, automation: AutomationModel) -> None:
         # Call the full chat completion pipeline (same as POST /api/chat/completions).
         # The handler reference is stored on app.state to avoid circular imports.
         request = _build_request(app, token=token)
-        terminal = automation.data.get('terminal') or {}
-        if terminal.get('server_id'):
-            form_data['terminal_id'] = terminal['server_id']
-            await initialize_terminal_directory(
+        if machine.get('server_id'):
+            form_data['machine_id'] = machine['server_id']
+            await initialize_machine_directory(
                 request,
                 user,
                 {'chat_id': chat.id, 'automation_id': automation.id, 'model_id': model_id},
-                terminal['server_id'],
-                terminal.get('cwd'),
+                machine['server_id'],
+                machine.get('cwd'),
             )
         await app.state.CHAT_COMPLETION_HANDLER(request, form_data, user=user)
 
@@ -548,6 +597,126 @@ async def execute_automation(app, automation: AutomationModel) -> None:
 
 
 # Internals
+
+
+async def _insert_run_chat(
+    automation,
+    folder_id,
+    prompt: str,
+    model_id: str,
+    machine_id: str | None,
+    user_msg_id: str,
+    assistant_msg_id: str,
+):
+    """A new chat holding this run's prompt and its pending reply."""
+    return await Chats.insert_new_chat(
+        str(uuid4()),
+        automation.user_id,
+        ChatForm(
+            folder_id=folder_id,
+            chat={
+                'title': automation.name,
+                'models': [model_id],
+                'machine_id': machine_id,
+                'history': {
+                    'currentId': assistant_msg_id,
+                    'messages': {
+                        user_msg_id: {
+                            'id': user_msg_id,
+                            'parentId': None,
+                            'role': 'user',
+                            'content': prompt,
+                            'childrenIds': [assistant_msg_id],
+                            'timestamp': int(time.time()),
+                            'models': [model_id],
+                        },
+                        assistant_msg_id: {
+                            'id': assistant_msg_id,
+                            'parentId': user_msg_id,
+                            'role': 'assistant',
+                            'content': '',
+                            'done': False,
+                            'model': model_id,
+                            'childrenIds': [],
+                            'timestamp': int(time.time()),
+                        },
+                    },
+                },
+                'messages': [
+                    {'role': 'user', 'content': prompt},
+                ],
+                'meta': {'automation_id': automation.id},
+            },
+        ),
+        internal_meta={'automation_id': automation.id},
+    )
+
+
+async def _append_run_to_chat(
+    app,
+    chat_id: str,
+    automation,
+    prompt: str,
+    model_id: str,
+    machine_id: str | None,
+    user_msg_id: str,
+    assistant_msg_id: str,
+):
+    """Add this run's prompt and its pending reply at the end of the ongoing chat.
+
+    Returns the message the prompt follows, or False when the chat is gone or no longer the owner's.
+    """
+    from open_webui.models.chat_messages import ChatMessages
+    from open_webui.utils.subagents import _parent_locks
+
+    async with _parent_locks.setdefault(chat_id, asyncio.Lock()):
+        async with Chats._chat_transaction(chat_id) as (session, chat):
+            if not chat or chat.user_id != automation.user_id:
+                return False
+            chat_data = copy.deepcopy(chat.chat or {})
+            # The chat must name the machine the run uses; a directory belongs to the machine it was set on.
+            if machine_id and machine_id_of(chat_data) != machine_id:
+                chat_data.pop('terminal_id', None)  # former name
+                chat_data.pop('working_directory', None)
+                chat_data['machine_id'] = machine_id
+            messages = await ChatMessages.get_messages_map_by_chat_id(chat_id, db=session) or {}
+            current_id = chat.current_message_id
+            parent_id = Chats._last_descendant_id(messages, current_id) if current_id in messages else None
+            now = int(time.time())
+            user_message = {
+                'id': user_msg_id,
+                'parentId': parent_id,
+                'childrenIds': [assistant_msg_id],
+                'role': 'user',
+                'content': prompt,
+                'models': [model_id],
+                'meta': {'automation_id': automation.id},
+                'timestamp': now,
+            }
+            assistant_message = {
+                'id': assistant_msg_id,
+                'parentId': user_msg_id,
+                'childrenIds': [],
+                'role': 'assistant',
+                'content': '',
+                'done': False,
+                'model': model_id,
+                'timestamp': now,
+            }
+            chat.chat = chat_data
+            chat.current_message_id = assistant_msg_id
+            chat.updated_at = now
+            await ChatMessages.upsert_message(user_msg_id, chat_id, automation.user_id, user_message, db=session)
+            await ChatMessages.upsert_message(
+                assistant_msg_id, chat_id, automation.user_id, assistant_message, db=session
+            )
+            if parent_id:
+                parent = messages[parent_id]
+                parent.setdefault('childrenIds', []).append(user_msg_id)
+                await ChatMessages.upsert_message(
+                    parent_id, chat_id, parent.get('user_id') or chat.user_id, parent, db=session
+                )
+        return parent_id
 
 
 async def _check_calendar_alerts(app) -> None:

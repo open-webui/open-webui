@@ -7,6 +7,7 @@
 	import Chat from '../Chat.svelte';
 	let chatView: Chat | undefined;
 	export const startRename = () => chatView?.startRename();
+	export const getOverview = () => chatView?.getOverview();
 	export let tabTitleEditor: import('svelte').Snippet | undefined = undefined;
 	export let tabActions: import('svelte').Snippet | undefined = undefined;
 
@@ -81,7 +82,7 @@
 					['doc', 'text', 'note', 'chat', 'folder', 'collection'].includes(item.type) ||
 					(item.type === 'file' && !isRasterImageContentType(item?.content_type))
 			);
-	const embeddedDraft = {
+	const embeddedDraft = initialView?.embeddedDraft ?? {
 		selectedModels: [modelId ?? ''],
 		params: context.length
 			? {
@@ -127,7 +128,7 @@
 		onEmbeddedChatTitle={(id, chatTitle) => onChatUpdate({ id, title: chatTitle })}
 	/>
 {:else}
-	<p role="status" class="px-4 py-2 text-xs text-gray-500">
+	<p role="status" class="px-4 py-2 text-xs text-base-500">
 		{$i18n.t('You do not have permission to use side chat.')}
 	</p>
 {/if}

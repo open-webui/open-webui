@@ -121,7 +121,7 @@
 		if (role === 'user') {
 			return 'text-[#4f7a5a] dark:text-[#8db395]';
 		}
-		return 'text-gray-500 dark:text-gray-400';
+		return 'text-base-500 dark:text-base-400';
 	};
 
 	const getUserList = async () => {
@@ -311,7 +311,7 @@
 
 			<Dropdown bind:show={showImportMenu} align="end" sideOffset={6}>
 				<button
-					class="ml-1 flex shrink-0 items-center gap-0.5 rounded-lg px-1 py-0.5 text-xs font-normal text-gray-500 transition hover:text-gray-700 disabled:cursor-not-allowed disabled:opacity-60 dark:text-gray-400 dark:hover:text-gray-200"
+					class="ml-1 flex shrink-0 items-center gap-0.5 rounded-lg px-1 py-0.5 text-xs font-normal text-base-500 transition hover:text-base-700 disabled:cursor-not-allowed disabled:opacity-60 dark:text-base-400 dark:hover:text-base-200"
 					type="button"
 					disabled={importing || !groupId}
 					aria-label={$i18n.t('Import CSV')}
@@ -348,7 +348,7 @@
 							<span class="self-center truncate">{$i18n.t('Download CSV Template')}</span>
 						</button>
 
-						<div class="px-2 py-0.5 text-[0.625rem] leading-3 text-gray-400 dark:text-gray-500">
+						<div class="px-2 py-0.5 text-[0.625rem] leading-3 text-base-400 dark:text-base-500">
 							{$i18n.t('CSV: Name,Email')}
 						</div>
 					</DropdownMenu>
@@ -367,10 +367,10 @@
 		{#if users.length > 0}
 			<div class="scrollbar-hidden relative whitespace-nowrap overflow-x-auto max-w-full">
 				<table
-					class="w-full text-sm text-left text-gray-500 dark:text-gray-400 table-auto max-w-full"
+					class="w-full text-sm text-left text-base-500 dark:text-base-400 table-auto max-w-full"
 				>
-					<thead class="text-xs text-gray-800 uppercase bg-transparent dark:text-gray-200">
-						<tr class=" border-b-[1.5px] border-gray-50/50 dark:border-gray-800/10">
+					<thead class="text-xs text-base-800 uppercase bg-transparent dark:text-base-200">
+						<tr class=" border-b-[1.5px] border-base-50/50 dark:border-base-800/10">
 							<th
 								scope="col"
 								class="text-left w-8"
@@ -477,7 +477,7 @@
 					</thead>
 					<tbody class="">
 						{#each users as user, userIdx (user?.id ?? userIdx)}
-							<tr class="dark:border-gray-850 text-xs">
+							<tr class="dark:border-base-850 text-xs">
 								<td class=" px-3 py-1 w-8">
 									<div class="flex w-full justify-center">
 										<Checkbox
@@ -489,7 +489,7 @@
 										/>
 									</div>
 								</td>
-								<td class="px-3 py-1 font-normal text-gray-900 dark:text-white max-w-48">
+								<td class="px-3 py-1 font-normal text-base-900 dark:text-base-0 max-w-48">
 									<Tooltip content={user.email} placement="top-start">
 										<div class="flex items-center gap-2">
 											<img
@@ -526,7 +526,7 @@
 				</table>
 			</div>
 		{:else}
-			<div class="text-gray-500 text-xs text-center py-2 px-10">
+			<div class="text-base-500 text-xs text-center py-2 px-10">
 				{$i18n.t('No users were found.')}
 			</div>
 		{/if}

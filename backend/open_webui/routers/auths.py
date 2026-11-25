@@ -130,7 +130,9 @@ ADMIN_CONFIG_KEYS = {
     'FOLDER_MAX_FILE_COUNT': 'folders.max_file_count',
     'AUTOMATION_MAX_COUNT': 'automations.max_count',
     'AUTOMATION_MIN_INTERVAL': 'automations.min_interval',
+    'AUTOMATION_MAX_CONCURRENT': 'automations.max_concurrent',
     'ENABLE_AUTOMATIONS': 'automations.enable',
+    'ENABLE_AUTOMATION_WEBHOOKS': 'automations.webhooks.enable',
     'ENABLE_CHANNELS': 'channels.enable',
     'ENABLE_COMMENTS': 'comments.enable',
     'ENABLE_NOTIFICATIONS': 'notifications.enable',
@@ -144,6 +146,7 @@ ADMIN_CONFIG_KEYS = {
     'SKILL_CONTENT_MAX_CHARS': 'skills.content_max_chars',
     'SKILL_PREVIEW_MAX_CHARS': 'skills.preview_max_chars',
     'VIEW_CHAT_MAX_CHARS': 'chats.view_max_chars',
+    'TOOL_OUTPUT_MAX_CHARS': 'tools.output_max_chars',
     'ENABLE_NOTES': 'notes.enable',
     'ENABLE_USER_WEBHOOKS': 'ui.enable_user_webhooks',
     'ENABLE_USER_STATUS': 'users.enable_status',
@@ -293,6 +296,8 @@ async def update_timezone(
     db: AsyncSession = Depends(get_async_session),
 ):
     if session_user:
+        if form_data.timezone == session_user.timezone:
+            return {'status': True}
         await Users.update_user_by_id(
             session_user.id,
             {'timezone': form_data.timezone},
@@ -1182,7 +1187,9 @@ class AdminConfig(MfaConfigForm):
     FOLDER_MAX_FILE_COUNT: int | str | None = None
     AUTOMATION_MAX_COUNT: int | str | None = None
     AUTOMATION_MIN_INTERVAL: int | str | None = None
+    AUTOMATION_MAX_CONCURRENT: int | None = Field(default=None, gt=0)
     ENABLE_AUTOMATIONS: bool
+    ENABLE_AUTOMATION_WEBHOOKS: bool = True
     ENABLE_CHANNELS: bool
     ENABLE_COMMENTS: bool = False
     ENABLE_NOTIFICATIONS: bool = True
@@ -1196,6 +1203,7 @@ class AdminConfig(MfaConfigForm):
     SKILL_CONTENT_MAX_CHARS: int | None = Field(default=None, gt=0, strict=True)
     SKILL_PREVIEW_MAX_CHARS: int | None = Field(default=None, gt=0, strict=True)
     VIEW_CHAT_MAX_CHARS: int | None = Field(default=None, gt=0, strict=True)
+    TOOL_OUTPUT_MAX_CHARS: int | None = Field(default=None, gt=0, strict=True)
     ENABLE_NOTES: bool
     ENABLE_USER_WEBHOOKS: bool
     ENABLE_USER_STATUS: bool
@@ -1256,12 +1264,16 @@ async def update_admin_config(request: Request, form_data: AdminConfig, user=Dep
         updates.pop('skills.preview_max_chars', None)
     if 'VIEW_CHAT_MAX_CHARS' not in form_data.model_fields_set:
         updates.pop('chats.view_max_chars', None)
+    if 'TOOL_OUTPUT_MAX_CHARS' not in form_data.model_fields_set:
+        updates.pop('tools.output_max_chars', None)
     updates['ui.default_interface_settings'] = form_data.DEFAULT_INTERFACE_SETTINGS or {}
     updates['folders.max_file_count'] = int(form_data.FOLDER_MAX_FILE_COUNT) if form_data.FOLDER_MAX_FILE_COUNT else ''
     updates['automations.max_count'] = int(form_data.AUTOMATION_MAX_COUNT) if form_data.AUTOMATION_MAX_COUNT else ''
     updates['automations.min_interval'] = (
         int(form_data.AUTOMATION_MIN_INTERVAL) if form_data.AUTOMATION_MIN_INTERVAL else ''
     )
+    if 'AUTOMATION_MAX_CONCURRENT' not in form_data.model_fields_set:
+        updates.pop('automations.max_concurrent', None)
 
     if form_data.DEFAULT_USER_ROLE not in ['pending', 'user', 'admin']:
         updates.pop('ui.default_user_role', None)

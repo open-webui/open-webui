@@ -9,16 +9,24 @@ from uuid import uuid4
 
 from fastapi import Request
 from fastapi.security import HTTPAuthorizationCredentials
+from open_webui.utils.machines import machine_id_of
 from open_webui.models.chat_messages import ChatMessages
 from open_webui.models.chats import ChatForm, Chats
 from open_webui.models.config import Config
 from open_webui.models.auths import Auths
 from open_webui.models.users import UserModel, Users
-from open_webui.tasks import create_task, has_active_tasks
+from open_webui.tasks import create_task, has_active_tasks, list_task_ids_by_item_id
 from open_webui.utils.auth import VERIFIED_USER_ROLES, create_token
+from open_webui.utils.chat_id import is_saved_chat_id
 from open_webui.utils.json_codec import JSONCodec
-from open_webui.utils.misc import add_or_update_system_message, get_message_list, is_raster_image_content_type
+from open_webui.utils.misc import (
+    add_or_update_system_message,
+    get_content_from_message,
+    get_message_list,
+    is_raster_image_content_type,
+)
 from open_webui.utils.models import get_filtered_models
+from open_webui.utils.session_records import has_pending_tool_approval
 from open_webui.utils.tool_calling import strip_tool_approval_prompt
 from open_webui.utils.tool_search import strip_deferred_tools_manifest
 from starlette.datastructures import Headers
@@ -94,25 +102,24 @@ async def _build_request(source: Request, user_id: str, *, internal: bool) -> Re
 async def queue_user_message(
     request: Request, chat_id: str, user: UserModel, user_message: dict, parent_id: str
 ) -> bool:
-    """Hold a message sent while its reply is running. The reply ends at its next step and this is answered next."""
-    if not user_message.get('id') or not await has_active_tasks(request.app.state.redis, chat_id):
-        return False
-    # Only a reply still being written holds messages. Checked before locking: the turn that answers
-    # held messages is started under this lock, and its own reply is already finished.
-    reply = await Chats.get_message_by_id_and_message_id(chat_id, parent_id)
-    if not reply or reply.get('role') != 'assistant' or reply.get('done') is not False:
+    """Queue a message at the end of the chat, which may have moved on since the browser loaded it. It is answered
+    after the running reply there, with the messages already queued."""
+    if not user_message.get('id'):
         return False
     async with _parent_locks.setdefault(chat_id, asyncio.Lock()):
-        # Checked under the lock the reply's own cleanup takes, so the message can't be left unanswered.
-        if not await has_active_tasks(request.app.state.redis, chat_id):
-            return False
-        async with Chats._chat_transaction(chat_id) as (_, chat):
+        async with Chats._chat_transaction(chat_id) as (session, chat):
             if not chat or chat.user_id != user.id:
                 return False
-            history = copy.deepcopy((chat.chat or {}).get('history') or {})
-            messages = history.get('messages') or {}
+            messages = await ChatMessages.get_messages_map_by_chat_id(chat_id, db=session) or {}
+            last_id = Chats._last_descendant_id(messages, parent_id)
+            if (messages.get(last_id) or {}).get('role') == 'assistant':
+                parent_id = user_message['parentId'] = last_id
             reply = messages.get(parent_id)
-            if not reply:
+            # Checked under the lock the reply's own cleanup takes, so the message can't be left unanswered.
+            if not reply or not (
+                await ChatMessages.has_queued_message(chat_id, parent_id)
+                or (reply.get('done') is False and await has_active_tasks(request.app.state.redis, chat_id))
+            ):
                 return False
             message = {
                 'id': user_message['id'],
@@ -127,13 +134,105 @@ async def queue_user_message(
                 'meta': {'status': 'pending'},
                 'timestamp': int(time.time()),
             }
-            messages[message['id']] = message
             reply.setdefault('childrenIds', []).append(message['id'])
-            history['messages'] = messages
-            chat.chat = {**(chat.chat or {}), 'history': history}
             chat.updated_at = int(time.time())
-        await ChatMessages.upsert_message(message['id'], chat_id, user.id, message)
+            await ChatMessages.upsert_message(message['id'], chat_id, user.id, message, db=session)
+            await ChatMessages.upsert_message(
+                parent_id, chat_id, reply.get('user_id') or chat.user_id, reply, db=session
+            )
     return True
+
+
+def is_read_while_working(meta: dict) -> bool:
+    return meta.get('internal') is not True or meta.get('type') == 'message'
+
+
+async def get_queued_messages(chat_id: str, user_id: str, reply_id: str) -> list[dict]:
+    """The messages added under a running reply for it to read, oldest first."""
+    if not await ChatMessages.has_queued_message(chat_id, reply_id):
+        return []
+    chat = await Chats.get_chat_by_id(chat_id)
+    if not chat or chat.user_id != user_id:
+        return []
+    messages = ((chat.chat or {}).get('history') or {}).get('messages') or {}
+    queued = [
+        message
+        for message in messages.values()
+        if message.get('role') == 'user'
+        and message.get('parentId') == reply_id
+        and (message.get('meta') or {}).get('status') == 'pending'
+        and is_read_while_working(message['meta'])
+    ]
+    # What the user wrote stays apart from what another chat sent.
+    return [message for message in queued if message['meta'].get('type') == queued[0]['meta'].get('type')]
+
+
+async def has_upcoming_reply(request: Request, user_id: str, chat_id: str, message_id: str) -> bool:
+    """Whether this reply is followed by another without the user writing: a sub-agent has yet to report, or a
+    message is waiting."""
+    # A sub-agent's task lasts until its report is added, so checking the tasks first can't miss one in between.
+    # Replies after its report run as other tasks.
+    for child in await Chats.get_children_by_parent_id(chat_id, user_id):
+        meta = child.meta or {}
+        if meta.get('type') == 'subagent' and meta.get('delegation_id') in await list_task_ids_by_item_id(
+            request.app.state.redis, child.id
+        ):
+            return True
+    return bool(await ChatMessages.get_pending_message_metas(chat_id, message_id))
+
+
+async def insert_queued_turn(
+    chat_id: str, user: UserModel, reply_id: str, queued: list[dict], assistant_meta: dict
+) -> dict | None:
+    """Replace queued messages the running agent has been given with one message, and start the reply after it."""
+    queued_ids = {message['id'] for message in queued}
+    async with _parent_locks.setdefault(chat_id, asyncio.Lock()):
+        async with Chats._chat_transaction(chat_id) as (session, chat):
+            messages = await ChatMessages.get_messages_map_by_chat_id(chat_id, db=session) or {}
+            reply = messages.get(reply_id)
+            if not reply:
+                return None
+            for message_id in queued_ids:
+                messages.pop(message_id, None)
+            now = int(time.time())
+            user_message = {
+                'id': str(uuid4()),
+                'parentId': reply_id,
+                'role': 'user',
+                'content': '\n\n'.join(message.get('content', '') for message in queued),
+                'model': reply.get('model'),
+                'user_id': user.id,
+                'user': {'id': user.id, 'name': user.name},
+                'meta': {key: value for key, value in (queued[0].get('meta') or {}).items() if key != 'status'},
+                'timestamp': now,
+            }
+            assistant_message = {
+                **{key: reply[key] for key in ('model', 'modelName', 'modelIdx', 'user_id') if key in reply},
+                'id': str(uuid4()),
+                'parentId': user_message['id'],
+                'childrenIds': [],
+                'role': 'assistant',
+                'content': '',
+                'done': False,
+                'meta': assistant_meta,
+                'timestamp': now,
+            }
+            user_message['childrenIds'] = [assistant_message['id']]
+            reply['childrenIds'] = [
+                *(child_id for child_id in reply.get('childrenIds', []) if child_id not in queued_ids),
+                user_message['id'],
+            ]
+            chat.current_message_id = assistant_message['id']
+            chat.updated_at = now
+            await ChatMessages.delete_message_ids_by_chat_id(chat_id, queued_ids, db=session)
+            await ChatMessages.upsert_message(reply_id, chat_id, user.id, reply, db=session)
+            for message in (user_message, assistant_message):
+                await ChatMessages.upsert_message(message['id'], chat_id, user.id, message, db=session)
+    return {
+        'user_message': user_message,
+        'assistant_message': assistant_message,
+        'children_ids': reply['childrenIds'],
+    }
 
 
 def get_pending_run(metadata: dict, model_id: str | None = None) -> dict:
@@ -145,7 +244,7 @@ def get_pending_run(metadata: dict, model_id: str | None = None) -> dict:
         'skill_ids': metadata.get('skill_ids') or [],
         'chat_context': metadata.get('chat_context'),
         'filter_ids': metadata.get('filter_ids') or [],
-        'terminal_id': metadata.get('terminal_id'),
+        'machine_id': metadata.get('machine_id'),
         'features': metadata.get('features') or {},
         'variables': metadata.get('variables') or {},
     }
@@ -178,12 +277,11 @@ async def process_pending_internal_messages(
         if not user or user.role not in VERIFIED_USER_ROLES:
             return
 
-        async with Chats._chat_transaction(parent_chat_id) as (_, chat):
+        async with Chats._chat_transaction(parent_chat_id) as (session, chat):
             if not chat or chat.user_id != user_id:
                 return
 
-            history = copy.deepcopy((chat.chat or {}).get('history') or {})
-            messages = history.get('messages') or {}
+            messages = await ChatMessages.get_messages_map_by_chat_id(parent_chat_id, db=session) or {}
             pending = [
                 message
                 for message in messages.values()
@@ -193,7 +291,7 @@ async def process_pending_internal_messages(
                 and (
                     (
                         meta.get('internal') is True
-                        and meta.get('type') == 'subagent'
+                        and meta.get('type') in ('subagent', 'message')
                         and meta.get('status') in (None, 'pending')
                     )
                     or (meta.get('internal') is True and meta.get('type') == 'timer')
@@ -205,20 +303,14 @@ async def process_pending_internal_messages(
                 pending = [
                     message
                     for message in pending
-                    if message.get('parentId') == reply_id and (message.get('meta') or {}).get('internal') is not True
+                    if message.get('parentId') == reply_id and is_read_while_working(message.get('meta') or {})
                 ]
             if not pending:
                 return
 
             first = pending[0]
             first_meta = first.get('meta') or {}
-            kind = (
-                'timer'
-                if first_meta.get('internal') is True and first_meta.get('type') == 'timer'
-                else 'queued'
-                if first_meta.get('internal') is not True
-                else 'subagent'
-            )
+            kind = first_meta['type'] if first_meta.get('internal') is True else 'queued'
             parent_id = first.get('parentId')
             if kind == 'timer' and first_meta.get('timer_id'):
                 timer = await Chats.get_chat_by_id(first_meta['timer_id'])
@@ -243,7 +335,7 @@ async def process_pending_internal_messages(
                     and (message.get('model') or model_id) == model_id
                     and (
                         meta.get('internal') is True
-                        and meta.get('type') == 'subagent'
+                        and meta.get('type') == kind
                         and meta.get('status') in (None, 'pending')
                     )
                 ]
@@ -271,7 +363,7 @@ async def process_pending_internal_messages(
                     for message in batch
                     if (message.get('meta') or {}).get('subagent_chat_id')
                 ]
-                combined_meta = {'internal': True, 'type': 'subagent'}
+                combined_meta = {'internal': True, 'type': kind}
                 if len(delegation_ids) == 1:
                     combined_meta['delegation_id'] = delegation_ids[0]
                 elif delegation_ids:
@@ -288,12 +380,18 @@ async def process_pending_internal_messages(
                 removed_ids = {message['id'] for message in batch}
                 for message_id in removed_ids:
                     messages.pop(message_id, None)
-                if parent_id and parent_id in messages:
-                    messages[parent_id]['childrenIds'] = [
-                        child_id
-                        for child_id in messages[parent_id].get('childrenIds', [])
-                        if child_id not in removed_ids
-                    ]
+            if parent_id and parent_id in messages:
+                messages[parent_id]['childrenIds'] = [
+                    child_id
+                    for child_id in messages[parent_id].get('childrenIds', [])
+                    if child_id != user_message_id and child_id not in removed_ids
+                ]
+            # The chat may have gone on since the message was added.
+            current = messages.get(chat.current_message_id) or {}
+            if current.get('role') == 'assistant' and any(
+                message.get('id') == parent_id for message in get_message_list(messages, current['id'])
+            ):
+                parent_id = current['id']
 
             assistant_message_id = str(uuid4())
             message_list = get_message_list(messages, parent_id)
@@ -312,6 +410,14 @@ async def process_pending_internal_messages(
                 held_files = [file for message in batch for file in message.get('files') or []]
                 if held_files:
                     user_message['files'] = held_files
+                # The files the browser sends with a follow-up.
+                branch_file_ids = {file.get('id') for message in message_list for file in message.get('files') or []}
+                chat_files = [
+                    file
+                    for file in (chat.chat or {}).get('files') or []
+                    if file.get('id') in branch_file_ids and file not in held_files
+                ]
+                run = {**run, 'files': chat_files}
             assistant_message = {
                 'id': assistant_message_id,
                 'parentId': user_message_id,
@@ -331,16 +437,16 @@ async def process_pending_internal_messages(
                 messages[parent_id]['childrenIds'] = parent_children
             messages[user_message_id] = {**messages.get(user_message_id, {}), **user_message}
             messages[assistant_message_id] = assistant_message
-            history['messages'] = messages
-            history['currentId'] = assistant_message_id
-            chat.chat = {**(chat.chat or {}), 'history': history}
             chat.current_message_id = assistant_message_id
             chat.updated_at = int(time.time())
 
-        if removed_ids:
-            await ChatMessages.delete_message_ids_by_chat_id(parent_chat_id, removed_ids)
-        await ChatMessages.upsert_message(user_message_id, parent_chat_id, user_id, user_message)
-        await ChatMessages.upsert_message(assistant_message_id, parent_chat_id, user_id, assistant_message)
+            if removed_ids:
+                await ChatMessages.delete_message_ids_by_chat_id(parent_chat_id, removed_ids, db=session)
+            for message_id in dict.fromkeys((first.get('parentId'), parent_id, user_message_id, assistant_message_id)):
+                if message_id in messages:
+                    await ChatMessages.upsert_message(
+                        message_id, parent_chat_id, user_id, messages[message_id], db=session
+                    )
 
         from open_webui.socket.main import sio
 
@@ -395,19 +501,71 @@ async def process_pending_internal_messages(
             'variables': run.get('variables') or {},
             'chat_variables': chat_context.get('chat_variables'),
         }
-        if run.get('terminal_id'):
-            form_data['terminal_id'] = run['terminal_id']
+        if machine_id_of(run):
+            form_data['machine_id'] = machine_id_of(run)
 
         request = await _build_request(source_request, user.id, internal=False)
         request.state.chat_context = chat_context
         await source_request.app.state.CHAT_COMPLETION_HANDLER(request, form_data, user=user)
 
 
+async def insert_internal_message(
+    request: Request, user: UserModel, chat_id: str, parent_id: str | None, content: str, meta: dict, run: dict
+) -> None:
+    """Add a message the user did not write after the chat's latest reply, and answer it once the chat is idle."""
+    message = {
+        'id': str(uuid4()),
+        'parentId': parent_id,
+        'childrenIds': [],
+        'role': 'user',
+        'content': content,
+        'model': run['model_id'],
+        'meta': {'internal': True, **meta},
+        'timestamp': int(time.time()),
+    }
+    async with _parent_locks.setdefault(chat_id, asyncio.Lock()):
+        async with Chats._chat_transaction(chat_id) as (session, chat):
+            if not chat or chat.user_id != user.id:
+                return
+            messages = await ChatMessages.get_messages_map_by_chat_id(chat_id, db=session) or {}
+            parent = messages.get(parent_id)
+            is_active = await has_active_tasks(request.app.state.redis, chat_id)
+            replies = [
+                reply
+                for reply_id, reply in messages.items()
+                if reply.get('role') == 'assistant'
+                and (is_active or reply.get('done') is not False)
+                and (parent is None or any(entry is parent for entry in get_message_list(messages, reply_id)))
+            ]
+            if replies:
+                message['parentId'] = max(replies, key=lambda reply: reply.get('timestamp', 0))['id']
+            if is_active:
+                message['meta']['status'] = 'pending'
+            if message['parentId'] in messages:
+                messages[message['parentId']].setdefault('childrenIds', []).append(message['id'])
+                await ChatMessages.upsert_message(
+                    message['parentId'], chat_id, user.id, messages[message['parentId']], db=session
+                )
+            chat.updated_at = int(time.time())
+            await ChatMessages.upsert_message(message['id'], chat_id, user.id, message, db=session)
+
+    if is_active:
+        from open_webui.socket.main import sio
+
+        await sio.emit(
+            'events',
+            {'chat_id': chat_id, 'message_id': message['id'], 'data': {'type': 'chat:reload'}},
+            room=f'user:{user.id}',
+        )
+    if not await has_active_tasks(request.app.state.redis, chat_id):
+        await process_pending_internal_messages(request, chat_id, user.id, run)
+
+
 async def delegate(
     task: str,
     context: str,
-    background: bool,
     *,
+    title: str = '',
     file_ids: list[str] | None = None,
     model_id: str | None = None,
     request: Request,
@@ -421,11 +579,11 @@ async def delegate(
     task = task.strip()
     if not task:
         return 'Error: task must not be empty.'
+    title = ' '.join((title or '').split() or task.split())[:60]
     if not parent_chat_id or not user_data.get('id'):
         return 'Error: chat and user context are required.'
 
     config = await Config.get_many(
-        'subagents.background_enabled',
         'subagents.max_concurrent',
         'subagents.max_async',
         'subagents.max_iterations',
@@ -449,8 +607,8 @@ async def delegate(
     elif max_async is not None:
         max_async = max(1, max_async)
 
-    if background and not config.get('subagents.background_enabled'):
-        return 'Error: background sub-agents are disabled in settings.'
+    # A channel can't be continued later, and an automation's run ends with its reply.
+    background = is_saved_chat_id(parent_chat_id) and not metadata.get('automation_id')
 
     features = copy.deepcopy(metadata.get('features') or {})
     if (
@@ -467,7 +625,7 @@ async def delegate(
         'skill_ids': copy.deepcopy(metadata.get('skill_ids') or []),
         'chat_context': copy.deepcopy(metadata.get('chat_context') or {}),
         'filter_ids': copy.deepcopy(metadata.get('filter_ids') or []),
-        'terminal_id': metadata.get('terminal_id'),
+        'machine_id': metadata.get('machine_id'),
         'features': features,
         'files': copy.deepcopy(metadata.get('files') or []),
         'variables': copy.deepcopy(metadata.get('variables') or {}),
@@ -540,6 +698,14 @@ async def delegate(
         assistant_message_id = str(uuid4())
         prompt = f'{task}\n\n## Context\n{context}' if context else task
         prompt_files = delegated_files
+        chat_context = copy.deepcopy(run.get('chat_context') or {})
+        system_messages = add_or_update_system_message(
+            f'{str(config.get("subagents.system_prompt") or "").strip() or DEFAULT_SUBAGENT_SYSTEM_PROMPT}\n\n'
+            f'The lead agent is chat {parent_chat_id}. The lead gets your final reply, so put all findings there. '
+            'Message it only if you are blocked.',
+            [*chat_context.get('messages', [])],
+            append=True,
+        )
         user_message = {
             'id': user_message_id,
             'parentId': None,
@@ -556,8 +722,14 @@ async def delegate(
             ChatForm(
                 chat={
                     'id': chat_id,
-                    'title': f'Sub-agent: {task[:60]}',
+                    'title': title,
                     'models': [model_id],
+                    'machine_id': machine_id_of(run),
+                    # Read when the user's answer or message continues this chat.
+                    'params': {
+                        **(chat_context.get('params') or {}),
+                        'system': '\n\n'.join(get_content_from_message(message) or '' for message in system_messages),
+                    },
                     'history': {
                         'currentId': assistant_message_id,
                         'messages': {
@@ -605,22 +777,20 @@ async def delegate(
         return f'Error: failed to create {prefix}sub-agent: {exc}'
 
     async def run_reserved() -> dict:
+        from open_webui.socket.main import sio
+
+        reply_id = assistant_message_id
         try:
+            await sio.emit(
+                'events', {'chat_id': parent_chat_id, 'data': {'type': 'chat:children'}}, room=f'user:{user.id}'
+            )
             child_request = await _build_request(request, user.id, internal=True)
             child_request.state.max_tool_call_iterations = max_iterations
-            chat_context = copy.deepcopy(run.get('chat_context') or {})
             child_request.state.chat_context = chat_context
-            subagent_system_prompt = (
-                str(config.get('subagents.system_prompt') or '').strip() or DEFAULT_SUBAGENT_SYSTEM_PROMPT
-            )
             form_data = {
                 'model': model_id,
                 'params': chat_context.get('params') or {},
-                'messages': add_or_update_system_message(
-                    subagent_system_prompt,
-                    [*chat_context.get('messages', []), {'role': 'user', 'content': prompt}],
-                    append=True,
-                ),
+                'messages': [*system_messages, {'role': 'user', 'content': prompt}],
                 'stream': True,
                 'chat_id': chat_id,
                 'id': assistant_message_id,
@@ -637,10 +807,20 @@ async def delegate(
                 'chat_variables': chat_context.get('chat_variables'),
                 'folder_id': run.get('folder_id'),
             }
-            if run.get('terminal_id'):
-                form_data['terminal_id'] = run['terminal_id']
+            if machine_id_of(run):
+                form_data['machine_id'] = machine_id_of(run)
             await request.app.state.CHAT_COMPLETION_HANDLER(child_request, form_data, user=user)
-            message = await Chats.get_message_by_id_and_message_id(chat_id, assistant_message_id)
+            # Messages sent to it meanwhile are answered in a later reply, and the user's decision on a tool approval
+            # continues a paused one.
+            while True:
+                child = await Chats.get_chat_by_id(chat_id)
+                reply_id = child.current_message_id if child else reply_id
+                message = await Chats.get_message_by_id_and_message_id(chat_id, reply_id)
+                if not message or message.get('done') is not False:
+                    break
+                if metadata.get('automation_id') and has_pending_tool_approval(message.get('output')):
+                    break
+                await asyncio.sleep(1)
             if not message:
                 return {
                     'status': 'error',
@@ -668,6 +848,17 @@ async def delegate(
             error = message.get('error')
             if isinstance(error, dict):
                 error = error.get('content') or 'Sub-agent failed.'
+            # Still paused: an automation has no one to approve it.
+            pending = next(
+                (item for item in message.get('output') or [] if item.get('status') == 'pending'),
+                None,
+            )
+            if not error and pending and message.get('done') is False:
+                return {
+                    'status': 'waiting',
+                    'summary': summary,
+                    'error': f'Sub-agent has not finished. It is waiting for the user to approve {pending.get("name")}',
+                }
             return {
                 'status': 'error' if error else 'completed',
                 'summary': summary or ('Sub-agent produced no output.' if not error else ''),
@@ -676,14 +867,14 @@ async def delegate(
         except asyncio.CancelledError:
             await Chats.upsert_message_to_chat_by_id_and_message_id(
                 chat_id,
-                assistant_message_id,
+                reply_id,
                 {'done': True, 'error': {'content': 'Sub-agent cancelled.'}},
             )
             raise
         except Exception as exc:
             await Chats.upsert_message_to_chat_by_id_and_message_id(
                 chat_id,
-                assistant_message_id,
+                reply_id,
                 {'done': True, 'error': {'content': str(exc)}},
             )
             raise
@@ -693,6 +884,16 @@ async def delegate(
                     _background_active.discard(delegation_id)
             elif foreground_semaphore:
                 foreground_semaphore.release()
+            # The reply ends while this task still counts as active, so it doesn't tell the chat itself.
+            await sio.emit(
+                'events',
+                {
+                    'chat_id': chat_id,
+                    'message_id': assistant_message_id,
+                    'data': {'type': 'chat:active', 'data': {'active': False}},
+                },
+                room=f'user:{user.id}',
+            )
 
     async def run_background() -> dict:
         started_at = time.time()
@@ -710,10 +911,11 @@ async def delegate(
             f'[ASYNC SUBAGENT COMPLETE - {delegation_id}]',
             (
                 'A background subagent you dispatched earlier has finished. '
-                'The original task source is included so you can decide whether '
-                'to use the result or continue without it.'
+                'If other sub-agents are still running, reply with one line. '
+                'Otherwise answer in full using every report.'
             ),
             '',
+            f'Title: {title}',
             f'Original task: {task}',
         ]
         if context:
@@ -737,85 +939,15 @@ async def delegate(
             if result.get('summary'):
                 lines.extend(['Partial output:', result['summary']])
 
-        pending_message_id = str(uuid4())
-        pending_meta = {
-            'internal': True,
-            'type': 'subagent',
-            'delegation_id': delegation_id,
-            'subagent_chat_id': chat_id,
-        }
-        pending_message = {
-            'id': pending_message_id,
-            'parentId': None,
-            'childrenIds': [],
-            'role': 'user',
-            'content': '\n'.join(lines),
-            'model': run['model_id'],
-            'meta': pending_meta,
-            'timestamp': int(time.time()),
-        }
-
-        lock = _parent_locks.setdefault(parent_chat_id, asyncio.Lock())
-        async with lock:
-            async with Chats._chat_transaction(parent_chat_id) as (_, parent):
-                if not parent or parent.user_id != user.id:
-                    if cancelled:
-                        raise asyncio.CancelledError
-                    return result
-
-                updated_chat = copy.deepcopy(parent.chat or {})
-                updated_history = updated_chat.setdefault('history', {})
-                updated_messages = updated_history.setdefault('messages', {})
-                parent_message = updated_messages.get(parent_message_id)
-                is_active = await has_active_tasks(request.app.state.redis, parent_chat_id)
-                assistants = [
-                    message
-                    for message_id, message in updated_messages.items()
-                    if message.get('role') == 'assistant'
-                    and (is_active or message.get('done') is not False)
-                    and (
-                        parent_message is None
-                        or any(entry is parent_message for entry in get_message_list(updated_messages, message_id))
-                    )
-                ]
-                result_parent_id = (
-                    max(assistants, key=lambda message: message.get('timestamp', 0)).get('id')
-                    if assistants
-                    else parent_message_id
-                )
-                pending_message['parentId'] = result_parent_id
-                if is_active:
-                    pending_message['meta']['status'] = 'pending'
-                updated_messages[pending_message_id] = pending_message
-                if result_parent_id and result_parent_id in updated_messages:
-                    children = updated_messages[result_parent_id].setdefault('childrenIds', [])
-                    if pending_message_id not in children:
-                        children.append(pending_message_id)
-                updated_history['messages'] = updated_messages
-                parent.chat = {**(parent.chat or {}), **updated_chat, 'history': updated_history}
-                parent.updated_at = int(time.time())
-
-            await ChatMessages.upsert_message(
-                message_id=pending_message_id,
-                chat_id=parent_chat_id,
-                user_id=user.id,
-                data=pending_message,
-            )
-
-        if pending_message['meta'].get('status') == 'pending':
-            from open_webui.socket.main import sio
-
-            await sio.emit(
-                'events',
-                {
-                    'chat_id': parent_chat_id,
-                    'message_id': pending_message_id,
-                    'data': {'type': 'chat:reload'},
-                },
-                room=f'user:{user.id}',
-            )
-        if not await has_active_tasks(request.app.state.redis, parent_chat_id):
-            await process_pending_internal_messages(request, parent_chat_id, user.id, run)
+        await insert_internal_message(
+            request,
+            user,
+            parent_chat_id,
+            parent_message_id,
+            '\n'.join(lines),
+            {'type': 'subagent', 'delegation_id': delegation_id, 'subagent_chat_id': chat_id},
+            run,
+        )
         if cancelled:
             raise asyncio.CancelledError
         return result
@@ -825,6 +957,7 @@ async def delegate(
             request.app.state.redis,
             run_background() if background else run_reserved(),
             id=chat_id,
+            task_id=delegation_id,
         )
     except Exception as exc:
         if background:
@@ -842,6 +975,9 @@ async def delegate(
                 'subagent_chat_id': chat_id,
                 'mode': 'background',
                 'task': task,
+                'note': 'Its report starts your next reply. Do only work you did not delegate, then end this reply '
+                'with one line on what is running. Answer in full once every report is in. '
+                'Do not check on it, ask for it or set a timer.',
             },
             ensure_ascii=False,
         )
@@ -856,8 +992,8 @@ async def delegate(
         return f'Error: {exc}'
 
     if result.get('status') != 'completed':
-        error_text = f'Error: {result.get("error") or "sub-agent failed."}'
+        error_text = f'Error: {result.get("error") or "sub-agent failed."}\nSubagent chat: {chat_id}'
         if result.get('summary'):
             return f'{error_text}\nPartial output:\n{result["summary"]}'
         return error_text
-    return result.get('summary') or 'Sub-agent produced no output.'
+    return f'Subagent chat: {chat_id}\n\n{result.get("summary") or "Sub-agent produced no output."}'

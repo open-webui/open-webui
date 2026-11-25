@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { withListFocus } from '$lib/utils/listFocus';
 	import { toast } from 'svelte-sonner';
 	import fileSaver from 'file-saver';
 	const { saveAs } = fileSaver;
@@ -8,6 +9,7 @@
 	dayjs.extend(relativeTime);
 
 	import { onMount, getContext } from 'svelte';
+	let listElement: HTMLElement;
 	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
 	import {
@@ -120,7 +122,7 @@
 				selectedModelId = '';
 			}
 			page = 1;
-			getFeedbacks();
+			await getFeedbacks();
 		}
 	};
 
@@ -220,7 +222,7 @@
 		<Spinner className="size-5" />
 	</div>
 {:else}
-	<div>
+	<div bind:this={listElement}>
 		{#if modelIds.length > 0 || total > 0}
 			<div class="flex h-8 flex-1 items-center w-full gap-2">
 				<div
@@ -243,7 +245,7 @@
 									...modelIds.map((mid) => ({ value: mid, label: mid }))
 								]}
 								placeholder={$i18n.t('All')}
-								triggerClass="relative w-full flex items-center gap-0.5 px-2.5 py-1.5 bg-transparent rounded-xl text-[0.8125rem] font-normal text-gray-700 transition hover:text-gray-900 dark:text-gray-200 dark:hover:text-gray-100"
+								triggerClass="relative w-full flex items-center gap-0.5 px-2.5 py-1.5 bg-transparent rounded-xl text-[0.8125rem] font-normal text-base-700 transition hover:text-base-900 dark:text-base-200 dark:hover:text-base-100"
 								onChange={() => {
 									page = 1;
 									getFeedbacks();
@@ -251,7 +253,7 @@
 							>
 								<svelte:fragment slot="trigger" let:selectedLabel>
 									<span
-										class="inline-flex h-input px-0.5 w-full outline-hidden bg-transparent truncate placeholder-gray-400 focus:outline-hidden"
+										class="inline-flex h-input px-0.5 w-full outline-hidden bg-transparent truncate placeholder-base-400 focus:outline-hidden"
 									>
 										{selectedLabel}
 									</span>
@@ -272,7 +274,7 @@
 				{#if total > 0}
 					<Dropdown align="end">
 						<button
-							class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-100 px-2.5 text-xs font-normal text-gray-800 transition hover:bg-gray-100/70 disabled:opacity-60 dark:bg-gray-850 dark:text-white dark:hover:bg-gray-850/60"
+							class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-100 px-2.5 text-xs font-normal text-base-800 transition hover:bg-base-100/70 disabled:opacity-60 dark:bg-base-850 dark:text-base-0 dark:hover:bg-base-850/60"
 						>
 							{$i18n.t('Export')}
 							<ChevronDown className="size-3" strokeWidth="2.5" />
@@ -281,7 +283,7 @@
 						<div slot="content">
 							<DropdownMenu className="min-w-[10.625rem]">
 								<button
-									class="select-none flex w-full gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl"
+									class="select-none flex w-full gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer hover:bg-base-50/40 dark:hover:bg-base-800/40 rounded-xl"
 									type="button"
 									on:click={() => exportHandler('json')}
 								>
@@ -289,7 +291,7 @@
 								</button>
 
 								<button
-									class="select-none flex w-full gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer hover:bg-gray-50/40 dark:hover:bg-gray-800/40 rounded-xl"
+									class="select-none flex w-full gap-2 items-center h-[1.6875rem] px-2 text-[0.8125rem] font-normal cursor-pointer hover:bg-base-50/40 dark:hover:bg-base-800/40 rounded-xl"
 									type="button"
 									on:click={() => exportHandler('csv')}
 								>
@@ -305,19 +307,21 @@
 		<div class="scrollbar-hidden relative whitespace-nowrap overflow-x-auto max-w-full">
 			{#if (items ?? []).length === 0}
 				<div class="flex w-full flex-col items-center justify-center py-16 pb-24">
-					<div class="max-w-sm text-center text-gray-900 dark:text-gray-100">
-						<div class="mb-1.5 text-sm">{$i18n.t('No feedback found')}</div>
-						<div class="text-center text-xs leading-5 text-gray-500">
+					<div class="max-w-sm text-center text-base-900 dark:text-base-100">
+						<div tabindex="-1" data-focus-fallback class="mb-1.5 text-sm">
+							{$i18n.t('No feedback found')}
+						</div>
+						<div class="text-center text-xs leading-5 text-base-500">
 							{$i18n.t('Try adjusting your search or filter to find what you are looking for.')}
 						</div>
 					</div>
 				</div>
 			{:else}
 				<table
-					class="w-full text-sm text-left text-gray-500 dark:text-gray-400 table-auto max-w-full px-2"
+					class="w-full text-sm text-left text-base-500 dark:text-base-400 table-auto max-w-full px-2"
 				>
-					<thead class="text-xs text-gray-800 uppercase bg-transparent dark:text-gray-200">
-						<tr class=" border-b-[1.5px] border-gray-50 dark:border-gray-850/30">
+					<thead class="text-xs text-base-800 uppercase bg-transparent dark:text-base-200">
+						<tr class=" border-b-[1.5px] border-base-50 dark:border-base-850/30">
 							<th
 								scope="col"
 								class="font-normal select-none w-3"
@@ -453,7 +457,7 @@
 					<tbody class="">
 						{#each items as feedback (feedback.id)}
 							<tr
-								class="dark:border-gray-850 text-xs cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-850/50 transition rounded-xl"
+								class="dark:border-base-850 text-xs cursor-pointer hover:bg-base-50 dark:hover:bg-base-850/50 transition rounded-xl"
 								on:click={() => openFeedbackModal(feedback)}
 							>
 								<td class=" py-0.5 text-right font-normal">
@@ -477,7 +481,7 @@
 												<Tooltip content={feedback.data?.model_id} placement="top-start">
 													<button
 														type="button"
-														class="cursor-pointer text-left font-normal text-gray-600 dark:text-gray-400 flex-1 line-clamp-1"
+														class="cursor-pointer text-left font-normal text-base-600 dark:text-base-400 flex-1 line-clamp-1"
 														on:click={() => openFeedbackModal(feedback)}
 													>
 														{feedback.data?.model_id}
@@ -486,7 +490,7 @@
 
 												<Tooltip content={feedback.data.sibling_model_ids.join(', ')}>
 													<div
-														class=" text-[0.65rem] text-gray-600 dark:text-gray-400 line-clamp-1"
+														class=" text-[0.65rem] text-base-600 dark:text-base-400 line-clamp-1"
 													>
 														{#if feedback.data.sibling_model_ids.length > 2}
 															<!-- {$i18n.t('and {{COUNT}} more')} -->
@@ -503,7 +507,7 @@
 												<Tooltip content={feedback.data?.model_id} placement="top-start">
 													<button
 														type="button"
-														class="cursor-pointer text-left text-sm font-normal text-gray-600 dark:text-gray-400 flex-1 py-1.5 line-clamp-1"
+														class="cursor-pointer text-left text-sm font-normal text-base-600 dark:text-base-400 flex-1 py-1.5 line-clamp-1"
 														on:click={() => openFeedbackModal(feedback)}
 													>
 														{feedback.data?.model_id}
@@ -515,7 +519,7 @@
 								</td>
 
 								{#if feedback?.data?.rating}
-									<td class="px-3 py-1 text-right font-normal text-gray-900 dark:text-white w-max">
+									<td class="px-3 py-1 text-right font-normal text-base-900 dark:text-base-0 w-max">
 										<div class=" flex justify-end">
 											{#if feedback?.data?.rating.toString() === '1'}
 												<Badge type="info" content={$i18n.t('Won')} />
@@ -537,11 +541,12 @@
 								<td class=" px-3 py-1 text-right font-normal" on:click={(e) => e.stopPropagation()}>
 									<FeedbackMenu
 										on:delete={(e) => {
-											deleteFeedbackHandler(feedback.id);
+											withListFocus(listElement, feedback.id, deleteFeedbackHandler);
 										}}
 									>
 										<button
-											class="self-center w-fit text-sm p-1.5 dark:text-gray-300 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-xl"
+											class="self-center w-fit text-sm p-1.5 dark:text-base-300 dark:hover:text-base-0 hover:bg-base-1000/5 dark:hover:bg-base-0/5 rounded-xl"
+											data-focus-row={feedback.id}
 											aria-label={$i18n.t('More')}
 										>
 											<EllipsisHorizontal />

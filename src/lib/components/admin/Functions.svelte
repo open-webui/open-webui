@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { withListFocus } from '$lib/utils/listFocus';
 	import { resolveLocalizedResource } from '$lib/utils/localizedContent';
 	import dayjs from 'dayjs';
 	import relativeTime from 'dayjs/plugin/relativeTime';
@@ -49,6 +50,7 @@
 	import ChevronDown from '../icons/ChevronDown.svelte';
 	import ChevronUp from '../icons/ChevronUp.svelte';
 
+	let listElement: HTMLElement;
 	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
 	let shiftKey = false;
@@ -340,7 +342,7 @@
 							{$i18n.t('Functions')}
 						</div>
 
-						<div class="text-sm font-normal text-gray-500 dark:text-gray-500 opacity-60">
+						<div class="text-sm font-normal text-base-500 dark:text-base-500 opacity-60">
 							{filteredItems.length}
 						</div>
 					</div>
@@ -379,7 +381,7 @@
 			</div>
 		</div>
 
-		<div class="space-y-1">
+		<div bind:this={listElement} class="space-y-1">
 			<div class="flex h-8 flex-1 items-center w-full gap-2">
 				<div class="flex min-w-0 flex-1">
 					<div class=" self-center ml-1 mr-3">
@@ -387,6 +389,7 @@
 					</div>
 					<input
 						class=" w-full text-sm pr-4 py-1 rounded-r-xl outline-hidden bg-transparent"
+						data-focus-fallback
 						bind:value={query}
 						on:input={handleSearchInput}
 						placeholder={$i18n.t('Search Functions')}
@@ -396,7 +399,7 @@
 					{#if query}
 						<div class="self-center pl-1.5 translate-y-[0.5px] rounded-l-xl bg-transparent">
 							<button
-								class="py-0.5 rounded-full transition hover:text-gray-900 dark:hover:text-gray-100 text-gray-500 dark:text-gray-400 px-0"
+								class="py-0.5 rounded-full transition hover:text-base-900 dark:hover:text-base-100 text-base-500 dark:text-base-400 px-0"
 								aria-label={$i18n.t('Clear search')}
 								on:click={() => {
 									query = '';
@@ -449,7 +452,7 @@
 			{#if (filteredItems ?? []).length !== 0}
 				<div class="my-1">
 					<div
-						class="flex w-full items-center gap-2 px-1.5 pb-0.5 text-xs text-gray-400 dark:text-gray-600"
+						class="flex w-full items-center gap-2 px-1.5 pb-0.5 text-xs text-base-400 dark:text-base-600"
 					>
 						<button
 							class="flex min-w-0 flex-1 items-center gap-1 py-0.5 text-left"
@@ -499,7 +502,7 @@
 										<div class="flex min-w-0 items-center gap-2 overflow-hidden">
 											<div class="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
 												<div
-													class="shrink-0 rounded-sm bg-gray-500/20 px-1 text-[0.625rem] uppercase leading-4 text-gray-700 dark:text-gray-200"
+													class="shrink-0 rounded-sm bg-base-500/20 px-1 text-[0.625rem] uppercase leading-4 text-base-700 dark:text-base-200"
 												>
 													{func.type}
 												</div>
@@ -507,14 +510,14 @@
 												<Tooltip content={func.id} className="min-w-0" placement="top-start">
 													<a
 														href={`/admin/functions/edit?id=${encodeURIComponent(func.id)}`}
-														class="focus-ring block truncate rounded text-[0.8125rem] leading-5 text-gray-800 group-hover:underline focus-visible:underline dark:text-gray-200"
+														class="focus-ring block truncate rounded text-[0.8125rem] leading-5 text-base-800 group-hover:underline focus-visible:underline dark:text-base-200"
 														>{resolveLocalizedResource(func, $i18n.language)}</a
 													>
 												</Tooltip>
 
 												{#if func?.meta?.manifest?.version}
 													<div
-														class="min-w-0 max-w-[40%] shrink-0 truncate text-[0.6875rem] leading-5 text-gray-500"
+														class="min-w-0 max-w-[40%] shrink-0 truncate text-[0.6875rem] leading-5 text-base-500"
 													>
 														v{func?.meta?.manifest?.version ?? ''}
 													</div>
@@ -526,7 +529,7 @@
 														.format('LLLL')}
 												>
 													<div
-														class="shrink-0 truncate text-[0.6875rem] leading-5 text-gray-400 dark:text-gray-600"
+														class="shrink-0 truncate text-[0.6875rem] leading-5 text-base-400 dark:text-base-600"
 													>
 														{dayjs(func.updated_at * 1000)
 															.locale($i18n.language)
@@ -543,7 +546,7 @@
 												placement="top-start"
 											>
 												<div
-													class="mt-0.5 truncate text-[0.6875rem] leading-4 text-gray-400 dark:text-gray-600"
+													class="mt-0.5 truncate text-[0.6875rem] leading-4 text-base-400 dark:text-base-600"
 												>
 													{resolveLocalizedResource(func, $i18n.language, 'description')}
 												</div>
@@ -553,7 +556,7 @@
 								</div>
 
 								<div
-									class="hidden max-w-44 shrink-0 self-center truncate text-right text-[0.6875rem] leading-5 text-gray-500 dark:text-gray-500 md:block"
+									class="hidden max-w-44 shrink-0 self-center truncate text-right text-[0.6875rem] leading-5 text-base-500 dark:text-base-500 md:block"
 								>
 									<ProfilePreview user={func?.user ?? null} side="left">
 										<span class="flex max-w-44 items-center gap-1.75">
@@ -576,7 +579,7 @@
 									{#if shiftKey}
 										<Tooltip content={$i18n.t('Delete')}>
 											<button
-												class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500"
+												class="flex size-6 items-center justify-center rounded-lg text-base-400 transition dark:text-base-500"
 												type="button"
 												aria-label={$i18n.t('Delete')}
 												on:click={(e) => {
@@ -592,7 +595,7 @@
 										{#if func?.meta?.manifest?.funding_url ?? false}
 											<Tooltip content={$i18n.t('Support')}>
 												<button
-													class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500"
+													class="flex size-6 items-center justify-center rounded-lg text-base-400 transition dark:text-base-500"
 													type="button"
 													aria-label={$i18n.t('Support')}
 													on:click={(e) => {
@@ -609,7 +612,7 @@
 
 										<Tooltip content={$i18n.t('Valves')}>
 											<button
-												class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500"
+												class="flex size-6 items-center justify-center rounded-lg text-base-400 transition dark:text-base-500"
 												type="button"
 												aria-label={$i18n.t('Valves')}
 												on:click={(e) => {
@@ -670,8 +673,9 @@
 											}}
 										>
 											<button
-												class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500"
+												class="flex size-6 items-center justify-center rounded-lg text-base-400 transition dark:text-base-500"
 												type="button"
+												data-focus-row={func.id}
 												aria-label={$i18n.t('Function Menu')}
 												on:click={(e) => {
 													e.preventDefault();
@@ -710,9 +714,9 @@
 				</div>
 			{:else}
 				<div class="flex w-full flex-col items-center justify-center py-16 pb-24">
-					<div class="max-w-sm text-center text-gray-900 dark:text-gray-100">
+					<div class="max-w-sm text-center text-base-900 dark:text-base-100">
 						<div class="mb-1.5 text-sm">{$i18n.t('No functions found')}</div>
-						<div class="text-center text-xs leading-5 text-gray-500">
+						<div class="text-center text-xs leading-5 text-base-500">
 							{$i18n.t('Try adjusting your search or filter to find what you are looking for.')}
 						</div>
 					</div>
@@ -720,7 +724,7 @@
 			{/if}
 		</div>
 
-		<!-- <div class=" text-gray-500 text-xs mt-1 mb-2">
+		<!-- <div class=" text-base-500 text-xs mt-1 mb-2">
 	ⓘ {$i18n.t(
 		'Admins have access to all tools at all times; users need tools assigned per model in the workspace.'
 	)}
@@ -738,11 +742,9 @@
 	<DeleteConfirmDialog
 		bind:show={showDeleteConfirm}
 		title={$i18n.t('Delete function?')}
-		on:confirm={() => {
-			deleteHandler(selectedFunction);
-		}}
+		on:confirm={() => withListFocus(listElement, selectedFunction, deleteHandler)}
 	>
-		<div class=" text-sm text-gray-500 truncate">
+		<div class=" text-sm text-base-500 truncate">
 			{$i18n.t('This will delete')}
 			<span class="  font-normal">{resolveLocalizedResource(selectedFunction, $i18n.language)}</span
 			>.
@@ -792,7 +794,7 @@
 			reader.readAsText(importFiles[0]);
 		}}
 	>
-		<div class="text-sm text-gray-500">
+		<div class="text-sm text-base-500">
 			<div class=" bg-yellow-500/20 text-yellow-700 dark:text-yellow-200 rounded-lg px-4 py-3">
 				<div>{$i18n.t('Please carefully review the following warnings:')}</div>
 

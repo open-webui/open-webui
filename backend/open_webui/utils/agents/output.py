@@ -32,6 +32,8 @@ class Output:
         self.last_save = 0
         self.redis: Redis | None = get_redis_client(async_mode=True)
         self.lock = asyncio.Lock()
+        # Set by agents that take messages while they work.
+        self.steer = None
 
     async def flush(self, done=False, force=False, persist=False):
         if not force and not done and time.monotonic() - self.last_flush < 0.05:
@@ -90,6 +92,50 @@ class Output:
                     meta['response_ended_at'] = time.time()
                 message['meta'] = meta
             self.last_save = time.monotonic()
+
+    def running_from(self):
+        """Where the steps still running begin, with the approvals asked for them."""
+        start = next(
+            (
+                index
+                for index, item in enumerate(self.items)
+                if item['type'] == 'function_call' and item.get('status') in {'pending', 'in_progress'}
+            ),
+            len(self.items),
+        )
+        while start and self.items[start - 1].get('call_id', '').startswith('approval_'):
+            start -= 1
+        return start
+
+    def can_steer(self):
+        """Whether the agent is not writing or waiting for an answer, and has done something to leave in this reply."""
+        return (
+            self.steer is not None
+            and bool(self.items)
+            and self.items[-1]['type'] in {'function_call', 'function_call_output'}
+            and not any(item.get('status') == 'pending' for item in self.items)
+            and any(item['type'] != 'reasoning' for item in self.items[: self.running_from()])
+        )
+
+    async def continue_in(self, user_message_id, message_id):
+        """End this reply and go on in the next one, with the steps still running."""
+        ended = copy.copy(self)
+        ended.metadata = dict(self.metadata)
+        # The agent's turn goes on, so it can't be resumed from here.
+        ended.state = {key: value for key, value in self.state.items() if key != 'turn'}
+        start = self.running_from()
+        ended.items, self.items = self.items[:start], self.items[start:]
+        for item in ended.items:
+            if item.get('status') == 'in_progress':
+                item['status'] = 'completed'
+        for output in (ended, self):
+            output.content = '\n\n'.join(
+                item['content'][0]['text'] for item in output.items if item['type'] == 'message'
+            )
+        self.metadata.update(message_id=message_id, user_message_id=user_message_id)
+        await ended.save(done=True)
+        await clear_response_stream(self.redis, self.metadata.get('task_id'))
+        await self.flush(force=True, persist=True)
 
     async def text(self, text, reasoning=False):
         kind = 'reasoning' if reasoning else 'message'

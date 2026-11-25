@@ -108,7 +108,7 @@
 				data: {
 					user: chatUser ?? $user,
 					message: history.messages[id],
-					model: $models.find((model) => model.id === history.messages[id].model),
+					model: ($models ?? []).find((model) => model.id === history.messages[id].model),
 					direction
 				},
 				position: { x, y }
@@ -122,7 +122,7 @@
 					source: parentId,
 					target: pos.id,
 					selectable: false,
-					class: ' dark:fill-gray-300 fill-gray-300',
+					class: ' dark:fill-base-300 fill-base-300',
 					type: 'smoothstep',
 					animated: history.currentId === id || recurseCheckChild(id, history.currentId)
 				});

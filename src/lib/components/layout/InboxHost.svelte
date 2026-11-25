@@ -2,7 +2,7 @@
 	import { onMount, onDestroy } from 'svelte';
 	import { goto, replaceState } from '$app/navigation';
 	import { page } from '$app/stores';
-	import { mobile, showTabs, showSidebar, socket, user } from '$lib/stores';
+	import { mobile, showTabs, showSidebar, socket, onSocketRestored, user } from '$lib/stores';
 	import { commentLink } from '$lib/utils';
 	import { refreshInboxCount, setInboxCount } from '$lib/stores/inbox';
 	import { inboxRequest, type InboxItem } from '$lib/apis/notifications/inbox';
@@ -28,10 +28,8 @@
 	};
 	$: if ($socket !== connection) {
 		connection?.off('events', eventHandler);
-		connection?.off('connect', changed);
 		connection = $socket;
 		connection?.on('events', eventHandler);
-		connection?.on('connect', changed);
 	}
 	export const close = () => {
 		if (!$page.state.inbox) return;
@@ -86,12 +84,12 @@
 		if ($page.state.inbox && $page.state.inboxUserId !== $user?.id)
 			replaceState('', { ...$page.state, inbox: false, inboxUserId: undefined });
 		void refresh();
+		return onSocketRestored(changed);
 	});
 	onDestroy(() => {
 		alive = false;
 		clearTimeout(timer);
 		connection?.off('events', eventHandler);
-		connection?.off('connect', changed);
 		setInboxCount(0);
 	});
 </script>

@@ -59,7 +59,7 @@ async def validate_source(event_type, resource_type, resource_id, object_type, o
             and resource_type == 'chat'
             and obj.chat_id == resource_id
             and obj.role == 'assistant'
-            and obj.done
+            and obj.done is not False
             and not obj.error
         )
     elif event_type == 'automation.run_failed':
@@ -115,6 +115,13 @@ async def resource_queries(user, db):
         )
 
     models = source_models()
+    # UNION (not UNION ALL) terminates even if legacy folder data contains a cycle.
+    folders = (
+        select(Folder.id)
+        .where(or_(Folder.user_id == user.id, grant('folder', Folder.id)))
+        .cte('inbox_folders', recursive=True)
+    )
+    folders = folders.union(select(Folder.id).join(folders, Folder.parent_id == folders.c.id))
     queries = {}
     for kind in ('model', 'knowledge', 'prompt', 'skill', 'tool', 'note'):
         if not config.get('comments.enable') or (kind == 'note' and not await enabled('notes')):
@@ -125,15 +132,10 @@ async def resource_queries(user, db):
             if admin and (kind == 'note' or BYPASS_ADMIN_ACCESS_CONTROL)
             else or_(model.user_id == user.id, grant(kind, model.id))
         )
+        if kind == 'note':
+            allowed = or_(allowed, model.folder_id.in_(select(folders.c.id)))
         queries[kind] = select(model.id).where(allowed)
     chat = models['chat']
-    # UNION (not UNION ALL) terminates even if legacy folder data contains a cycle.
-    folders = (
-        select(Folder.id)
-        .where(or_(Folder.user_id == user.id, grant('folder', Folder.id)))
-        .cte('inbox_folders', recursive=True)
-    )
-    folders = folders.union(select(Folder.id).join(folders, Folder.parent_id == folders.c.id))
     shared = select(SharedChat.chat_id).where(
         SharedChat.chat['share_mode'].as_string() == 'continue', grant('shared_chat', SharedChat.chat_id)
     )
@@ -441,7 +443,7 @@ async def consume_event(event, db):
             not message
             or message.chat_id != subject_id
             or message.role != 'assistant'
-            or not message.done
+            or message.done is False
             or message.error
         ):
             return set()

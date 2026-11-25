@@ -85,7 +85,7 @@
 				</div>
 			{:else if defaultPermissions?.workspace?.models}
 				<div class="pb-0.5">
-					<div class="text-xs text-gray-500">
+					<div class="text-xs text-base-500">
 						{$i18n.t('This is a default user permission and will remain enabled.')}
 					</div>
 				</div>
@@ -104,7 +104,7 @@
 			</div>
 			{#if defaultPermissions?.workspace?.knowledge && !permissions.workspace.knowledge}
 				<div>
-					<div class="text-xs text-gray-500">
+					<div class="text-xs text-base-500">
 						{$i18n.t('This is a default user permission and will remain enabled.')}
 					</div>
 				</div>
@@ -142,7 +142,7 @@
 				</div>
 			{:else if defaultPermissions?.workspace?.prompts}
 				<div class="pb-0.5">
-					<div class="text-xs text-gray-500">
+					<div class="text-xs text-base-500">
 						{$i18n.t('This is a default user permission and will remain enabled.')}
 					</div>
 				</div>
@@ -187,7 +187,7 @@
 					</div>
 				{:else if defaultPermissions?.workspace?.tools}
 					<div class="pb-0.5">
-						<div class="text-xs text-gray-500">
+						<div class="text-xs text-base-500">
 							{$i18n.t('This is a default user permission and will remain enabled.')}
 						</div>
 					</div>
@@ -232,7 +232,7 @@
 				</div>
 			{:else if defaultPermissions?.workspace?.skills}
 				<div class="pb-0.5">
-					<div class="text-xs text-gray-500">
+					<div class="text-xs text-base-500">
 						{$i18n.t('This is a default user permission and will remain enabled.')}
 					</div>
 				</div>
@@ -240,7 +240,7 @@
 		</div>
 	</div>
 
-	<hr class=" border-gray-100/30 dark:border-gray-850/30" />
+	<hr class=" border-base-100/30 dark:border-base-850/30" />
 
 	<div>
 		<div class=" mb-2 text-sm font-normal">{$i18n.t('Sharing Permissions')}</div>
@@ -254,7 +254,7 @@
 			</div>
 			{#if defaultPermissions?.sharing?.models && !permissions.sharing.models}
 				<div>
-					<div class="text-xs text-gray-500">
+					<div class="text-xs text-base-500">
 						{$i18n.t('This is a default user permission and will remain enabled.')}
 					</div>
 				</div>
@@ -274,7 +274,7 @@
 				</div>
 				{#if defaultPermissions?.sharing?.public_models && !permissions.sharing.public_models}
 					<div>
-						<div class="text-xs text-gray-500">
+						<div class="text-xs text-base-500">
 							{$i18n.t('This is a default user permission and will remain enabled.')}
 						</div>
 					</div>
@@ -294,7 +294,7 @@
 			</div>
 			{#if defaultPermissions?.sharing?.knowledge && !permissions.sharing.knowledge}
 				<div>
-					<div class="text-xs text-gray-500">
+					<div class="text-xs text-base-500">
 						{$i18n.t('This is a default user permission and will remain enabled.')}
 					</div>
 				</div>
@@ -314,7 +314,7 @@
 				</div>
 				{#if defaultPermissions?.sharing?.public_knowledge && !permissions.sharing.public_knowledge}
 					<div>
-						<div class="text-xs text-gray-500">
+						<div class="text-xs text-base-500">
 							{$i18n.t('This is a default user permission and will remain enabled.')}
 						</div>
 					</div>
@@ -331,7 +331,7 @@
 			</div>
 			{#if defaultPermissions?.sharing?.prompts && !permissions.sharing.prompts}
 				<div>
-					<div class="text-xs text-gray-500">
+					<div class="text-xs text-base-500">
 						{$i18n.t('This is a default user permission and will remain enabled.')}
 					</div>
 				</div>
@@ -351,7 +351,7 @@
 				</div>
 				{#if defaultPermissions?.sharing?.public_prompts && !permissions.sharing.public_prompts}
 					<div>
-						<div class="text-xs text-gray-500">
+						<div class="text-xs text-base-500">
 							{$i18n.t('This is a default user permission and will remain enabled.')}
 						</div>
 					</div>
@@ -368,7 +368,7 @@
 			</div>
 			{#if defaultPermissions?.sharing?.tools && !permissions.sharing.tools}
 				<div>
-					<div class="text-xs text-gray-500">
+					<div class="text-xs text-base-500">
 						{$i18n.t('This is a default user permission and will remain enabled.')}
 					</div>
 				</div>
@@ -388,7 +388,7 @@
 				</div>
 				{#if defaultPermissions?.sharing?.public_tools && !permissions.sharing.public_tools}
 					<div>
-						<div class="text-xs text-gray-500">
+						<div class="text-xs text-base-500">
 							{$i18n.t('This is a default user permission and will remain enabled.')}
 						</div>
 					</div>
@@ -405,7 +405,7 @@
 			</div>
 			{#if defaultPermissions?.sharing?.skills && !permissions.sharing.skills}
 				<div>
-					<div class="text-xs text-gray-500">
+					<div class="text-xs text-base-500">
 						{$i18n.t('This is a default user permission and will remain enabled.')}
 					</div>
 				</div>
@@ -425,7 +425,7 @@
 				</div>
 				{#if defaultPermissions?.sharing?.public_skills && !permissions.sharing.public_skills}
 					<div>
-						<div class="text-xs text-gray-500">
+						<div class="text-xs text-base-500">
 							{$i18n.t('This is a default user permission and will remain enabled.')}
 						</div>
 					</div>
@@ -443,7 +443,7 @@
 				</div>
 				{#if defaultPermissions?.sharing?.notes && !permissions.sharing.notes}
 					<div>
-						<div class="text-xs text-gray-500">
+						<div class="text-xs text-base-500">
 							{$i18n.t('This is a default user permission and will remain enabled.')}
 						</div>
 					</div>
@@ -463,7 +463,7 @@
 					</div>
 					{#if defaultPermissions?.sharing?.public_notes && !permissions.sharing.public_notes}
 						<div>
-							<div class="text-xs text-gray-500">
+							<div class="text-xs text-base-500">
 								{$i18n.t('This is a default user permission and will remain enabled.')}
 							</div>
 						</div>
@@ -482,7 +482,28 @@
 				</div>
 				{#if defaultPermissions?.sharing?.folders && !permissions.sharing.folders}
 					<div>
-						<div class="text-xs text-gray-500">
+						<div class="text-xs text-base-500">
+							{$i18n.t('This is a default user permission and will remain enabled.')}
+						</div>
+					</div>
+				{/if}
+			</div>
+		{/if}
+
+		{#if $config?.features?.enable_automations}
+			<div class="flex flex-col w-full">
+				<div class="flex w-full justify-between my-1">
+					<div class=" self-center text-xs font-normal">
+						{$i18n.t('Automations Sharing')}
+					</div>
+					<Switch
+						bind:state={permissions.sharing.automations}
+						ariaLabel={$i18n.t('Automations Sharing')}
+					/>
+				</div>
+				{#if defaultPermissions?.sharing?.automations && !permissions.sharing.automations}
+					<div>
+						<div class="text-xs text-base-500">
 							{$i18n.t('This is a default user permission and will remain enabled.')}
 						</div>
 					</div>
@@ -503,7 +524,7 @@
 				</div>
 				{#if defaultPermissions?.sharing?.public_chats && !permissions.sharing.public_chats}
 					<div>
-						<div class="text-xs text-gray-500">
+						<div class="text-xs text-base-500">
 							{$i18n.t('This is a default user permission and will remain enabled.')}
 						</div>
 					</div>
@@ -522,7 +543,7 @@
 				</div>
 				{#if defaultPermissions?.sharing?.open_chats && !permissions.sharing.open_chats}
 					<div>
-						<div class="text-xs text-gray-500">
+						<div class="text-xs text-base-500">
 							{$i18n.t('This is a default user permission and will remain enabled.')}
 						</div>
 					</div>
@@ -543,7 +564,7 @@
 				</div>
 				{#if defaultPermissions?.sharing?.public_calendars && !permissions.sharing.public_calendars}
 					<div>
-						<div class="text-xs text-gray-500">
+						<div class="text-xs text-base-500">
 							{$i18n.t('This is a default user permission and will remain enabled.')}
 						</div>
 					</div>
@@ -552,7 +573,7 @@
 		{/if}
 	</div>
 
-	<hr class=" border-gray-100/30 dark:border-gray-850/30" />
+	<hr class=" border-base-100/30 dark:border-base-850/30" />
 
 	<div>
 		<div class=" mb-2 text-sm font-normal">{$i18n.t('Access Grants')}</div>
@@ -569,7 +590,7 @@
 			</div>
 			{#if defaultPermissions?.access_grants?.allow_users && !permissions.access_grants.allow_users}
 				<div>
-					<div class="text-xs text-gray-500">
+					<div class="text-xs text-base-500">
 						{$i18n.t('This is a default user permission and will remain enabled.')}
 					</div>
 				</div>
@@ -588,7 +609,7 @@
 			</div>
 			{#if defaultPermissions?.access_grants?.allow_groups && !permissions.access_grants.allow_groups}
 				<div>
-					<div class="text-xs text-gray-500">
+					<div class="text-xs text-base-500">
 						{$i18n.t('This is a default user permission and will remain enabled.')}
 					</div>
 				</div>
@@ -596,7 +617,7 @@
 		</div>
 	</div>
 
-	<hr class=" border-gray-100/30 dark:border-gray-850/30" />
+	<hr class=" border-base-100/30 dark:border-base-850/30" />
 
 	<div>
 		<div class=" mb-2 text-sm font-normal">{$i18n.t('Chat Permissions')}</div>
@@ -613,7 +634,7 @@
 			</div>
 			{#if defaultPermissions?.chat?.file_upload && !permissions.chat.file_upload}
 				<div>
-					<div class="text-xs text-gray-500">
+					<div class="text-xs text-base-500">
 						{$i18n.t('This is a default user permission and will remain enabled.')}
 					</div>
 				</div>
@@ -629,7 +650,7 @@
 			</div>
 			{#if defaultPermissions?.chat?.web_upload && !permissions.chat.web_upload}
 				<div>
-					<div class="text-xs text-gray-500">
+					<div class="text-xs text-base-500">
 						{$i18n.t('This is a default user permission and will remain enabled.')}
 					</div>
 				</div>
@@ -645,7 +666,7 @@
 			</div>
 			{#if defaultPermissions?.chat?.controls && !permissions.chat.controls}
 				<div>
-					<div class="text-xs text-gray-500">
+					<div class="text-xs text-base-500">
 						{$i18n.t('This is a default user permission and will remain enabled.')}
 					</div>
 				</div>
@@ -662,7 +683,7 @@
 				</div>
 				{#if defaultPermissions?.chat?.valves && !permissions.chat.valves}
 					<div>
-						<div class="text-xs text-gray-500">
+						<div class="text-xs text-base-500">
 							{$i18n.t('This is a default user permission and will remain enabled.')}
 						</div>
 					</div>
@@ -681,7 +702,7 @@
 				</div>
 				{#if defaultPermissions?.chat?.system_prompt && !permissions.chat.system_prompt}
 					<div>
-						<div class="text-xs text-gray-500">
+						<div class="text-xs text-base-500">
 							{$i18n.t('This is a default user permission and will remain enabled.')}
 						</div>
 					</div>
@@ -697,7 +718,7 @@
 				</div>
 				{#if defaultPermissions?.chat?.params && !permissions.chat.params}
 					<div>
-						<div class="text-xs text-gray-500">
+						<div class="text-xs text-base-500">
 							{$i18n.t('This is a default user permission and will remain enabled.')}
 						</div>
 					</div>
@@ -714,7 +735,7 @@
 			</div>
 			{#if defaultPermissions?.chat?.edit && !permissions.chat.edit}
 				<div>
-					<div class="text-xs text-gray-500">
+					<div class="text-xs text-base-500">
 						{$i18n.t('This is a default user permission and will remain enabled.')}
 					</div>
 				</div>
@@ -730,7 +751,7 @@
 			</div>
 			{#if defaultPermissions?.chat?.delete && !permissions.chat.delete}
 				<div>
-					<div class="text-xs text-gray-500">
+					<div class="text-xs text-base-500">
 						{$i18n.t('This is a default user permission and will remain enabled.')}
 					</div>
 				</div>
@@ -749,7 +770,7 @@
 			</div>
 			{#if defaultPermissions?.chat?.delete_message && !permissions.chat.delete_message}
 				<div>
-					<div class="text-xs text-gray-500">
+					<div class="text-xs text-base-500">
 						{$i18n.t('This is a default user permission and will remain enabled.')}
 					</div>
 				</div>
@@ -768,7 +789,7 @@
 			</div>
 			{#if defaultPermissions?.chat?.continue_response && !permissions.chat.continue_response}
 				<div>
-					<div class="text-xs text-gray-500">
+					<div class="text-xs text-base-500">
 						{$i18n.t('This is a default user permission and will remain enabled.')}
 					</div>
 				</div>
@@ -787,7 +808,7 @@
 			</div>
 			{#if defaultPermissions?.chat?.regenerate_response && !permissions.chat.regenerate_response}
 				<div>
-					<div class="text-xs text-gray-500">
+					<div class="text-xs text-base-500">
 						{$i18n.t('This is a default user permission and will remain enabled.')}
 					</div>
 				</div>
@@ -807,7 +828,7 @@
 				</div>
 				{#if defaultPermissions?.chat?.rate_response && !permissions.chat.rate_response}
 					<div>
-						<div class="text-xs text-gray-500">
+						<div class="text-xs text-base-500">
 							{$i18n.t('This is a default user permission and will remain enabled.')}
 						</div>
 					</div>
@@ -824,7 +845,7 @@
 			</div>
 			{#if defaultPermissions?.chat?.share && !permissions.chat.share}
 				<div>
-					<div class="text-xs text-gray-500">
+					<div class="text-xs text-base-500">
 						{$i18n.t('This is a default user permission and will remain enabled.')}
 					</div>
 				</div>
@@ -840,7 +861,7 @@
 			</div>
 			{#if defaultPermissions?.chat?.export && !permissions.chat.export}
 				<div>
-					<div class="text-xs text-gray-500">
+					<div class="text-xs text-base-500">
 						{$i18n.t('This is a default user permission and will remain enabled.')}
 					</div>
 				</div>
@@ -856,7 +877,7 @@
 			</div>
 			{#if defaultPermissions?.chat?.import && !permissions.chat['import']}
 				<div>
-					<div class="text-xs text-gray-500">
+					<div class="text-xs text-base-500">
 						{$i18n.t('This is a default user permission and will remain enabled.')}
 					</div>
 				</div>
@@ -872,7 +893,7 @@
 			</div>
 			{#if defaultPermissions?.chat?.stt && !permissions.chat.stt}
 				<div>
-					<div class="text-xs text-gray-500">
+					<div class="text-xs text-base-500">
 						{$i18n.t('This is a default user permission and will remain enabled.')}
 					</div>
 				</div>
@@ -888,7 +909,7 @@
 			</div>
 			{#if defaultPermissions?.chat?.tts && !permissions.chat.tts}
 				<div>
-					<div class="text-xs text-gray-500">
+					<div class="text-xs text-base-500">
 						{$i18n.t('This is a default user permission and will remain enabled.')}
 					</div>
 				</div>
@@ -904,7 +925,7 @@
 			</div>
 			{#if defaultPermissions?.chat?.call && !permissions.chat.call}
 				<div>
-					<div class="text-xs text-gray-500">
+					<div class="text-xs text-base-500">
 						{$i18n.t('This is a default user permission and will remain enabled.')}
 					</div>
 				</div>
@@ -923,7 +944,7 @@
 			</div>
 			{#if defaultPermissions?.chat?.multiple_models && !permissions.chat.multiple_models}
 				<div>
-					<div class="text-xs text-gray-500">
+					<div class="text-xs text-base-500">
 						{$i18n.t('This is a default user permission and will remain enabled.')}
 					</div>
 				</div>
@@ -942,7 +963,7 @@
 			</div>
 			{#if defaultPermissions?.chat?.temporary && !permissions.chat.temporary}
 				<div>
-					<div class="text-xs text-gray-500">
+					<div class="text-xs text-base-500">
 						{$i18n.t('This is a default user permission and will remain enabled.')}
 					</div>
 				</div>
@@ -962,7 +983,7 @@
 				</div>
 				{#if defaultPermissions?.chat?.temporary_enforced && !permissions.chat.temporary_enforced}
 					<div>
-						<div class="text-xs text-gray-500">
+						<div class="text-xs text-base-500">
 							{$i18n.t('This is a default user permission and will remain enabled.')}
 						</div>
 					</div>
@@ -978,14 +999,14 @@
 				<Switch bind:state={permissions.chat.side_chat} ariaLabel={$i18n.t('Allow Side Chat')} />
 			</div>
 			{#if defaultPermissions?.chat?.side_chat && !permissions.chat.side_chat}
-				<div class="text-xs text-gray-500">
+				<div class="text-xs text-base-500">
 					{$i18n.t('This is a default user permission and will remain enabled.')}
 				</div>
 			{/if}
 		</div>
 	</div>
 
-	<hr class=" border-gray-100/30 dark:border-gray-850/30" />
+	<hr class=" border-base-100/30 dark:border-base-850/30" />
 
 	<div>
 		<div class=" mb-2 text-sm font-normal">{$i18n.t('Features Permissions')}</div>
@@ -1000,7 +1021,7 @@
 				</div>
 				{#if defaultPermissions?.features?.api_keys && !permissions.features.api_keys}
 					<div>
-						<div class="text-xs text-gray-500">
+						<div class="text-xs text-base-500">
 							{$i18n.t('This is a default user permission and will remain enabled.')}
 						</div>
 					</div>
@@ -1018,7 +1039,7 @@
 				</div>
 				{#if defaultPermissions?.features?.notes && !permissions.features.notes}
 					<div>
-						<div class="text-xs text-gray-500">
+						<div class="text-xs text-base-500">
 							{$i18n.t('This is a default user permission and will remain enabled.')}
 						</div>
 					</div>
@@ -1036,7 +1057,7 @@
 				</div>
 				{#if defaultPermissions?.features?.channels && !permissions.features.channels}
 					<div>
-						<div class="text-xs text-gray-500">
+						<div class="text-xs text-base-500">
 							{$i18n.t('This is a default user permission and will remain enabled.')}
 						</div>
 					</div>
@@ -1057,7 +1078,7 @@
 				</div>
 				{#if defaultPermissions?.features?.encrypted_channels && !permissions.features.encrypted_channels}
 					<div>
-						<div class="text-xs text-gray-500">
+						<div class="text-xs text-base-500">
 							{$i18n.t('This is a default user permission and will remain enabled.')}
 						</div>
 					</div>
@@ -1075,7 +1096,7 @@
 				</div>
 				{#if defaultPermissions?.features?.folders && !permissions.features.folders}
 					<div>
-						<div class="text-xs text-gray-500">
+						<div class="text-xs text-base-500">
 							{$i18n.t('This is a default user permission and will remain enabled.')}
 						</div>
 					</div>
@@ -1093,7 +1114,7 @@
 				</div>
 				{#if defaultPermissions?.features?.web_search && !permissions.features.web_search}
 					<div>
-						<div class="text-xs text-gray-500">
+						<div class="text-xs text-base-500">
 							{$i18n.t('This is a default user permission and will remain enabled.')}
 						</div>
 					</div>
@@ -1114,7 +1135,7 @@
 				</div>
 				{#if defaultPermissions?.features?.image_generation && !permissions.features.image_generation}
 					<div>
-						<div class="text-xs text-gray-500">
+						<div class="text-xs text-base-500">
 							{$i18n.t('This is a default user permission and will remain enabled.')}
 						</div>
 					</div>
@@ -1135,7 +1156,7 @@
 				</div>
 				{#if defaultPermissions?.features?.video_generation && !permissions.features.video_generation}
 					<div>
-						<div class="text-xs text-gray-500">
+						<div class="text-xs text-base-500">
 							{$i18n.t('This is a default user permission and will remain enabled.')}
 						</div>
 					</div>
@@ -1156,7 +1177,7 @@
 				</div>
 				{#if defaultPermissions?.features?.code_interpreter && !permissions.features.code_interpreter}
 					<div>
-						<div class="text-xs text-gray-500">
+						<div class="text-xs text-base-500">
 							{$i18n.t('This is a default user permission and will remain enabled.')}
 						</div>
 					</div>
@@ -1174,7 +1195,7 @@
 				</div>
 				{#if defaultPermissions?.features?.memories && !permissions.features.memories}
 					<div>
-						<div class="text-xs text-gray-500">
+						<div class="text-xs text-base-500">
 							{$i18n.t('This is a default user permission and will remain enabled.')}
 						</div>
 					</div>
@@ -1192,7 +1213,7 @@
 				</div>
 				{#if defaultPermissions?.features?.subagents && !permissions.features.subagents}
 					<div>
-						<div class="text-xs text-gray-500">
+						<div class="text-xs text-base-500">
 							{$i18n.t('This is a default user permission and will remain enabled.')}
 						</div>
 					</div>
@@ -1219,7 +1240,7 @@
 				</Tooltip>
 				{#if defaultPermissions?.features?.automations && !permissions.features.automations}
 					<div>
-						<div class="text-xs text-gray-500">
+						<div class="text-xs text-base-500">
 							{$i18n.t('This is a default user permission and will remain enabled.')}
 						</div>
 					</div>
@@ -1237,7 +1258,7 @@
 				</div>
 				{#if defaultPermissions?.features?.calendar && !permissions.features.calendar}
 					<div>
-						<div class="text-xs text-gray-500">
+						<div class="text-xs text-base-500">
 							{$i18n.t('This is a default user permission and will remain enabled.')}
 						</div>
 					</div>
@@ -1255,7 +1276,7 @@
 				</div>
 				{#if defaultPermissions?.features?.webhooks && !permissions.features.webhooks}
 					<div>
-						<div class="text-xs text-gray-500">
+						<div class="text-xs text-base-500">
 							{$i18n.t('This is a default user permission and will remain enabled.')}
 						</div>
 					</div>
@@ -1264,7 +1285,7 @@
 		{/if}
 	</div>
 
-	<hr class=" border-gray-100/30 dark:border-gray-850/30" />
+	<hr class=" border-base-100/30 dark:border-base-850/30" />
 
 	<div>
 		<div class=" mb-2 text-sm font-normal">{$i18n.t('Settings Permissions')}</div>
@@ -1281,7 +1302,7 @@
 			</div>
 			{#if defaultPermissions?.settings?.interface && !permissions.settings.interface}
 				<div>
-					<div class="text-xs text-gray-500">
+					<div class="text-xs text-base-500">
 						{$i18n.t('This is a default user permission and will remain enabled.')}
 					</div>
 				</div>

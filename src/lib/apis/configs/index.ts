@@ -189,10 +189,10 @@ export const setToolServerConnections = async (token: string, connections: objec
 	return res;
 };
 
-export const getTerminalServerConnections = async (token: string) => {
+export const getMachineConnections = async (token: string) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/terminal_servers`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/machines`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
@@ -216,10 +216,10 @@ export const getTerminalServerConnections = async (token: string) => {
 	return res;
 };
 
-export const setTerminalServerConnections = async (token: string, connections: object) => {
+export const setMachineConnections = async (token: string, connections: object) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/terminal_servers`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/machines`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
@@ -247,13 +247,13 @@ export const setTerminalServerConnections = async (token: string, connections: o
 };
 
 /**
- * Verify a terminal server connection via the backend proxy.
+ * Verify a machine connection via the backend proxy.
  * Used for system/admin connections to avoid CORS issues and API key exposure.
  */
-export const verifyTerminalServerConnection = async (token: string, connection: object) => {
+export const verifyMachineConnection = async (token: string, connection: object) => {
 	let error = null;
 
-	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/terminal_servers/verify`, {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/machines/verify`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
@@ -525,6 +525,31 @@ export const getSubagentsConfig = async (token: string) => {
 
 export const setSubagentsConfig = async (token: string, config: object) => {
 	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/subagents`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		},
+		body: JSON.stringify(config)
+	});
+	if (!res.ok) throw await res.json();
+	return res.json();
+};
+
+export const getRouterModelsConfig = async (token: string) => {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/router_models`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: `Bearer ${token}`
+		}
+	});
+	if (!res.ok) throw await res.json();
+	return res.json();
+};
+
+export const setRouterModelsConfig = async (token: string, config: object) => {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/configs/router_models`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',

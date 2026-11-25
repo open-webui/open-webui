@@ -4,6 +4,7 @@
 	import type { Readable } from 'svelte/store';
 	import type { Action } from 'svelte/action';
 	const i18n = getContext('i18n');
+	const exporting = getContext('exporting');
 	const markdown = getContext<
 		| {
 				document?: boolean;
@@ -158,7 +159,7 @@
 
 	$: detailButtonClassName = `py-0.5 ${
 		compactPreview ? 'text-xs' : 'text-[0.90625rem]'
-	} text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition`;
+	} text-base-500 hover:text-base-700 dark:hover:text-base-300 transition`;
 
 	$: displayTokens = getDisplayTokens(tokens);
 	$: renderHtml = tokens.some((token) => token.type === 'html') ? markdown?.renderHtml : undefined;
@@ -205,7 +206,7 @@
 {/if}
 {#each renderHtml ? [] : displayTokens as token, tokenIdx (tokenIdx)}
 	{#if token.type === 'hr'}
-		<hr class="border-gray-50 dark:border-gray-850/30" />
+		<hr class="border-base-50 dark:border-base-850/30" />
 	{:else if token.type === 'heading'}
 		<svelte:element this={headerComponent(token.depth)} dir="auto">
 			<MarkdownInlineTokens
@@ -221,7 +222,9 @@
 			<CodeBlock
 				id={`${id}-${tokenIdx}`}
 				className={markdown?.document ? 'document-code-block' : ''}
-				collapsed={markdown?.document ? false : ($settings?.collapseCodeBlocks ?? false)}
+				collapsed={markdown?.document || exporting
+					? false
+					: ($settings?.collapseCodeBlocks ?? false)}
 				{token}
 				lang={token?.lang ?? ''}
 				code={token?.text ?? ''}
@@ -248,15 +251,15 @@
 		<div class="relative w-full group mb-2">
 			<div class="scrollbar-hidden relative overflow-x-auto max-w-full">
 				<table
-					class=" w-full text-sm text-start text-gray-500 dark:text-gray-400 max-w-full rounded-xl"
+					class=" w-full text-sm text-start text-base-500 dark:text-base-400 max-w-full rounded-xl"
 					dir="auto"
 				>
-					<thead class="text-xs text-gray-700 uppercase dark:text-gray-400 border-none">
+					<thead class="text-xs text-base-700 uppercase dark:text-base-400 border-none">
 						<tr class="">
 							{#each token.header as header, headerIdx}
 								<th
 									scope="col"
-									class="px-2.5! py-2! cursor-pointer border-b border-gray-100! dark:border-gray-800!"
+									class="px-2.5! py-2! cursor-pointer border-b border-base-100! dark:border-base-800!"
 									style={token.align[headerIdx] ? `text-align: ${token.align[headerIdx]}` : ''}
 								>
 									<div class="gap-1.5 text-start">
@@ -279,11 +282,11 @@
 							<tr class="text-xs">
 								{#each row ?? [] as cell, cellIdx}
 									<td
-										class="px-3! py-2! text-gray-900 dark:text-white w-max {token.rows.length -
+										class="px-3! py-2! text-base-900 dark:text-base-0 w-max {token.rows.length -
 											1 ===
 										rowIdx
 											? ''
-											: 'border-b border-gray-50! dark:border-gray-850!'}"
+											: 'border-b border-base-50! dark:border-base-850!'}"
 										style={token.align[cellIdx] ? `text-align: ${token.align[cellIdx]}` : ''}
 									>
 										<div class="break-normal">

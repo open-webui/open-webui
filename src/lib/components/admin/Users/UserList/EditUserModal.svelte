@@ -132,10 +132,10 @@
 
 <Modal ariaLabel={$i18n.t('Edit User')} size="sm" bind:show>
 	<div>
-		<div class=" flex justify-between dark:text-gray-300 px-4 pt-3 pb-1">
+		<div class=" flex justify-between dark:text-base-300 px-4 pt-3 pb-1">
 			<div class=" text-sm font-medium self-center">{$i18n.t('Edit User')}</div>
 			<button
-				class="self-center rounded-lg py-1 text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 px-0"
+				class="self-center rounded-lg py-1 text-base-500 transition hover:text-base-700 dark:text-base-400 dark:hover:text-base-200 px-0"
 				aria-label={$i18n.t('Close')}
 				on:click={() => {
 					show = false;
@@ -145,7 +145,7 @@
 			</button>
 		</div>
 
-		<div class="flex flex-col md:flex-row w-full md:space-x-4 dark:text-gray-200">
+		<div class="flex flex-col md:flex-row w-full md:space-x-4 dark:text-base-200">
 			<div class=" flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6">
 				<form
 					class="flex flex-col w-full"
@@ -169,7 +169,7 @@
 										{selectedUser.name}
 									</div>
 
-									<div class="text-xs text-gray-500">
+									<div class="text-xs text-base-500">
 										{$i18n.t('Created at')}
 										{dayjs(selectedUser.created_at * 1000)
 											.locale($i18n.language)
@@ -180,12 +180,12 @@
 								<div class=" flex flex-col space-y-1.5">
 									{#if (userGroups ?? []).length > 0}
 										<div class="flex flex-col w-full text-sm">
-											<div class="mb-1 text-xs text-gray-500">{$i18n.t('User Groups')}</div>
+											<div class="mb-1 text-xs text-base-500">{$i18n.t('User Groups')}</div>
 
 											<div class="flex flex-wrap gap-1 my-0.5 -mx-1">
 												{#each userGroups as userGroup}
 													<span
-														class="px-1.5 py-0.5 rounded-xl bg-gray-100 dark:bg-gray-850 text-xs"
+														class="px-1.5 py-0.5 rounded-xl bg-base-100 dark:bg-base-850 text-xs"
 													>
 														<a
 															href={'/admin/users/groups?id=' + userGroup.id}
@@ -201,11 +201,11 @@
 									{/if}
 
 									<div class="flex flex-col w-full">
-										<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Role')}</div>
+										<div class=" mb-1 text-xs text-base-500">{$i18n.t('Role')}</div>
 
 										<div class="flex-1">
 											<select
-												class="w-full text-sm bg-transparent disabled:text-gray-500 dark:disabled:text-gray-500 outline-hidden"
+												class="w-full text-sm bg-transparent disabled:text-base-500 dark:disabled:text-base-500 outline-hidden"
 												bind:value={_user.role}
 												aria-label={$i18n.t('Role')}
 												disabled={_user.id == sessionUser.id}
@@ -219,7 +219,7 @@
 									</div>
 
 									<div class="flex flex-col w-full">
-										<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Name')}</div>
+										<div class=" mb-1 text-xs text-base-500">{$i18n.t('Name')}</div>
 
 										<div class="flex-1">
 											<input
@@ -235,11 +235,11 @@
 									</div>
 
 									<div class="flex flex-col w-full">
-										<div class=" mb-1 text-xs text-gray-500">{$i18n.t('Email')}</div>
+										<div class=" mb-1 text-xs text-base-500">{$i18n.t('Email')}</div>
 
 										<div class="flex-1">
 											<input
-												class="w-full text-sm bg-transparent disabled:text-gray-500 dark:disabled:text-gray-500 outline-hidden"
+												class="w-full text-sm bg-transparent disabled:text-base-500 dark:disabled:text-base-500 outline-hidden"
 												type="text"
 												inputmode="email"
 												bind:value={_user.email}
@@ -253,12 +253,12 @@
 
 									{#if _user?.oauth}
 										<div class="flex flex-col w-full">
-											<div class=" mb-1 text-xs text-gray-500">{$i18n.t('OAuth ID')}</div>
+											<div class=" mb-1 text-xs text-base-500">{$i18n.t('OAuth ID')}</div>
 
 											<div class="flex-1 text-sm break-all mb-1 flex flex-col space-y-1">
 												{#each Object.keys(_user.oauth) as key}
 													<div>
-														<span class="text-gray-500">{key}</span>
+														<span class="text-base-500">{key}</span>
 														<span class="">{_user.oauth[key]?.sub}</span>
 													</div>
 												{/each}
@@ -267,7 +267,7 @@
 									{/if}
 
 									<div class="flex flex-col w-full">
-										<div class=" mb-1 text-xs text-gray-500">{$i18n.t('New Password')}</div>
+										<div class=" mb-1 text-xs text-base-500">{$i18n.t('New Password')}</div>
 
 										<div class="flex-1">
 											<SensitiveInput
@@ -282,18 +282,18 @@
 										</div>
 									</div>
 									<div class="flex items-center justify-between w-full">
-										<div class="text-xs text-gray-500">{$i18n.t('API Key')}</div>
+										<div class="text-xs text-base-500">{$i18n.t('API Key')}</div>
 										<div class="flex items-center gap-3">
 											<button
 												type="button"
-												class="text-xs text-gray-500 transition-colors hover:text-gray-700 disabled:opacity-50 dark:text-gray-400 dark:hover:text-gray-200"
+												class="text-xs text-base-500 transition-colors hover:text-base-700 disabled:opacity-50 dark:text-base-400 dark:hover:text-base-200"
 												on:click={() => {
 													showRotateAPIKeyConfirmation = true;
 												}}>{$i18n.t('Rotate')}</button
 											>
 											<button
 												type="button"
-												class="text-xs text-gray-500 transition-colors hover:text-gray-700 disabled:opacity-50 dark:text-gray-400 dark:hover:text-gray-200"
+												class="text-xs text-base-500 transition-colors hover:text-base-700 disabled:opacity-50 dark:text-base-400 dark:hover:text-base-200"
 												on:click={() => {
 													showDeleteAPIKeyConfirmation = true;
 												}}>{$i18n.t('Delete')}</button
@@ -311,7 +311,7 @@
 												/>
 												<button
 													type="button"
-													class="shrink-0 text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-200"
+													class="shrink-0 text-xs text-base-500 hover:text-base-700 dark:hover:text-base-200"
 													aria-label={$i18n.t('Copy API Key')}
 													on:click={async () => {
 														if (await copyToClipboard(rotatedAPIKey))
@@ -319,7 +319,7 @@
 													}}>{$i18n.t('Copy')}</button
 												>
 											</div>
-											<p class="text-xs text-gray-500">
+											<p class="text-xs text-base-500">
 												{$i18n.t(
 													'Copy this key now. It will not be shown here again after you close this dialog.'
 												)}
@@ -330,16 +330,16 @@
 							</div>
 						</div>
 
-						<div class="flex justify-between pt-3 text-sm font-normal">
+						<div class="flex justify-between pt-3 text-xs">
 							<button
 								type="button"
-								class="text-sm text-gray-500 transition-colors hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+								class="text-xs text-base-500 transition-colors hover:text-base-700 dark:text-base-400 dark:hover:text-base-200"
 								on:click={() => {
 									showRevokeConfirmation = true;
 								}}>{$i18n.t('Sign out all devices')}</button
 							>
 							<button
-								class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
+								class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-base-0 transition hover:bg-base-1000 disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-base-0"
 								type="submit"
 							>
 								{$i18n.t('Save')}

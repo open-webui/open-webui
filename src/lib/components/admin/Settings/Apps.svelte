@@ -7,13 +7,15 @@
 	import AppModal from './Apps/AppModal.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
-	import Spinner from '$lib/components/common/Spinner.svelte';
 	import ExperimentalBadge from '$lib/components/common/ExperimentalBadge.svelte';
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import Cog6 from '$lib/components/icons/Cog6.svelte';
 	import Grid from '$lib/components/icons/Grid.svelte';
 	const i18n = getContext<any>('i18n');
-	let apps: App[] | null = null;
+	// The page shows its own spinner until the first load finishes.
+	export let loaded = false;
+
+	let apps: App[] = [];
 	let selected: App | null = null;
 	let show = false;
 	let busy = '';
@@ -23,9 +25,9 @@
 		} catch (error) {
 			if (!silent) {
 				toast.error(String(error));
-				apps = [];
 			}
 		}
+		loaded = true;
 	}
 	function configure(app: App | null) {
 		selected = app;
@@ -53,96 +55,93 @@
 	});
 </script>
 
+<!-- The Apps section of the Integrations settings. -->
 <AppModal bind:show app={selected} onChange={load} />
-<div class="flex h-full flex-col text-sm">
-	<div class="flex items-center gap-2 mb-4">
-		<h2 class="text-sm font-medium text-gray-900 dark:text-white">{$i18n.t('Apps')}</h2>
-		<ExperimentalBadge />
-	</div>
-	<div class="flex-1 min-h-0 overflow-y-auto scrollbar-hover pr-1.5">
-		<AdminSettingSection first>
-			<div>
-				<div class="mb-2 flex items-center justify-between">
-					<div class="text-xs text-gray-600 dark:text-gray-400">{$i18n.t('Connected apps')}</div>
-					<Tooltip content={$i18n.t('Add app')}
-						><button
-							type="button"
-							aria-label={$i18n.t('Add app')}
-							class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-black/5 hover:text-gray-900 dark:text-gray-600 dark:hover:bg-white/5 dark:hover:text-white"
-							on:click={() => configure(null)}><Plus /></button
-						></Tooltip
+<AdminSettingSection title={$i18n.t('Apps')}>
+	<div>
+		<div class="mb-2 flex items-center justify-between">
+			<div class="flex items-center gap-1.5 text-xs text-base-600 dark:text-base-400">
+				<Tooltip
+					content={$i18n.t('Connect external apps to Open WebUI.')}
+					placement="top-start"
+					className="w-fit"
+				>
+					<div
+						class="underline decoration-dotted decoration-base-400/70 underline-offset-4 dark:decoration-base-500 cursor-help"
 					>
-				</div>
-				{#if apps === null}<div class="flex justify-center py-4">
-						<Spinner className="size-5" />
+						{$i18n.t('Connected apps')}
 					</div>
-				{:else}<div class="flex flex-col gap-1.5">
-						{#each apps as app (app.id)}
-							<div
-								class="group/setting-row flex w-full items-center gap-3 text-xs text-gray-600 dark:text-gray-400"
-							>
-								<div
-									class="flex min-w-0 flex-1 items-center gap-1.5 {app.is_active
-										? ''
-										: 'opacity-50'}"
-								>
-									{#if app.data.manifest.profile_image_url}
-										<ProfileImage
-											src={app.data.manifest.profile_image_url}
-											allowExternal
-											className="size-4 shrink-0 rounded!"
-										/>
-									{:else}<Grid className="size-4 shrink-0" strokeWidth="1.5" />{/if}
-									<label
-										for={`app-${app.id}-control`}
-										class="truncate text-gray-600 dark:text-gray-400 transition-colors duration-150 group-hover/setting-row:text-gray-900 group-focus-within/setting-row:text-gray-900 dark:group-hover/setting-row:text-white dark:group-focus-within/setting-row:text-white group-has-[button[id$=-control]:enabled]/setting-row:cursor-pointer group-has-[button[id$=-control]:disabled]/setting-row:cursor-not-allowed"
-										>{app.name}
-										<span class="text-gray-400 dark:text-gray-600">{app.slug}</span></label
-									>
-								</div>
-								{#if app.is_active}
-									<span class="text-gray-400 dark:text-gray-500"
-										>{app.connection_status === 'connected'
-											? $i18n.t('Connected')
-											: app.connection_status === 'connecting'
-												? $i18n.t('Connecting')
-												: $i18n.t('Disconnected')}</span
-									>
-								{/if}
-								<div class="flex shrink-0 items-center gap-1">
-									<Tooltip content={$i18n.t('Configure')}
-										><button
-											type="button"
-											aria-label={`${$i18n.t('Configure')} ${app.name}`}
-											class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition-colors hover:text-gray-700 dark:text-gray-600 dark:hover:text-gray-300"
-											on:click={() => configure(app)}><Cog6 /></button
-										></Tooltip
-									>
-									<Tooltip
-										content={app.is_active
-											? $i18n.t('Enabled')
-											: app.configured
-												? $i18n.t('Disabled')
-												: $i18n.t('Uninstalled')}
-									>
-										{#key `${app.is_active}-${show}-${busy}`}<Switch
-												id={`app-${app.id}-control`}
-												state={app.is_active}
-												disabled={busy === app.id}
-												ariaLabel={`${$i18n.t('Enable')} ${app.name}`}
-												on:change={() => toggle(app)}
-											/>{/key}
-									</Tooltip>
-								</div>
-							</div>
-						{:else}<p class="text-[0.6875rem] text-gray-400 dark:text-gray-600">
-								{$i18n.t('No apps connected.')}
-							</p>{/each}
-					</div>{/if}
-				<p class="mt-1 text-[0.6875rem] text-gray-400 dark:text-gray-600">
-					{$i18n.t('Connect external apps to Open WebUI.')}
-				</p>
+				</Tooltip>
+				<ExperimentalBadge />
 			</div>
-		</AdminSettingSection>
+			<Tooltip content={$i18n.t('Add app')}
+				><button
+					type="button"
+					aria-label={$i18n.t('Add app')}
+					class="flex size-6 items-center justify-center rounded-lg text-base-400 transition-colors hover:bg-base-1000/5 hover:text-base-900 dark:text-base-600 dark:hover:bg-base-0/5 dark:hover:text-base-0"
+					on:click={() => configure(null)}><Plus /></button
+				></Tooltip
+			>
+		</div>
+		<div class="flex flex-col gap-1.5">
+			{#each apps as app (app.id)}
+				<div
+					class="group/setting-row flex w-full items-center gap-3 text-xs text-base-600 dark:text-base-400"
+				>
+					<div class="flex min-w-0 flex-1 items-center gap-1.5 {app.is_active ? '' : 'opacity-50'}">
+						{#if app.data.manifest.profile_image_url}
+							<ProfileImage
+								src={app.data.manifest.profile_image_url}
+								allowExternal
+								className="size-4 shrink-0 rounded!"
+							/>
+						{:else}<Grid className="size-4 shrink-0" strokeWidth="1.5" />{/if}
+						<button
+							type="button"
+							on:click={() => configure(app)}
+							class="min-w-0 truncate text-left cursor-pointer text-base-600 dark:text-base-400 transition-colors duration-150 group-hover/setting-row:text-base-900 group-focus-within/setting-row:text-base-900 dark:group-hover/setting-row:text-white dark:group-focus-within/setting-row:text-white"
+							>{app.name}
+							<span class="text-base-400 dark:text-base-600">{app.slug}</span></button
+						>
+					</div>
+					{#if app.is_active}
+						<span class="text-base-400 dark:text-base-500"
+							>{app.connection_status === 'connected'
+								? $i18n.t('Connected')
+								: app.connection_status === 'connecting'
+									? $i18n.t('Connecting')
+									: $i18n.t('Disconnected')}</span
+						>
+					{/if}
+					<div class="flex shrink-0 items-center gap-1">
+						<Tooltip content={$i18n.t('Configure')}
+							><button
+								type="button"
+								aria-label={`${$i18n.t('Configure')} ${app.name}`}
+								class="flex size-6 items-center justify-center rounded-lg text-base-400 transition-colors hover:text-base-700 dark:text-base-600 dark:hover:text-base-300"
+								on:click={() => configure(app)}><Cog6 /></button
+							></Tooltip
+						>
+						<Tooltip
+							content={app.is_active
+								? $i18n.t('Enabled')
+								: app.configured
+									? $i18n.t('Disabled')
+									: $i18n.t('Uninstalled')}
+						>
+							{#key `${app.is_active}-${show}-${busy}`}<Switch
+									id={`app-${app.id}-control`}
+									state={app.is_active}
+									disabled={busy === app.id}
+									ariaLabel={`${$i18n.t('Enable')} ${app.name}`}
+									on:change={() => toggle(app)}
+								/>{/key}
+						</Tooltip>
+					</div>
+				</div>
+			{:else}<p class="text-[0.6875rem] text-base-400 dark:text-base-600">
+					{$i18n.t('No apps connected.')}
+				</p>{/each}
+		</div>
 	</div>
-</div>
+</AdminSettingSection>

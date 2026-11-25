@@ -84,8 +84,8 @@
 {#if variant === 'account'}
 	<div class="mb-2 flex items-center gap-4">
 		<button
-			class="group relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-100
-			ring-1 ring-inset ring-gray-200 transition-all duration-200 hover:ring-2 hover:ring-gray-300 dark:bg-white/8 dark:ring-white/10 dark:hover:ring-white/20"
+			class="group relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-base-100
+			ring-1 ring-inset ring-base-200 transition-all duration-200 hover:ring-2 hover:ring-base-300 dark:bg-base-0/8 dark:ring-base-0/10 dark:hover:ring-base-0/20"
 			type="button"
 			on:click={() => {
 				profileImageInputElement.click();
@@ -98,7 +98,7 @@
 			/>
 
 			<div
-				class="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors duration-200 group-hover:bg-black/40"
+				class="absolute inset-0 flex items-center justify-center bg-base-1000/0 transition-colors duration-200 group-hover:bg-base-1000/40"
 			>
 				<svg
 					class="h-4 w-4 text-white opacity-0 drop-shadow-sm transition-opacity duration-200 group-hover:opacity-100 group-focus-within:opacity-100"
@@ -122,26 +122,26 @@
 		</button>
 
 		<div class="flex flex-col gap-1">
-			<span class="text-xs text-gray-600 dark:text-gray-400">{displayName || user?.name}</span>
+			<span class="text-xs text-base-600 dark:text-base-400">{displayName || user?.name}</span>
 			<div class="flex flex-wrap items-center gap-2">
 				<button
-					class="text-[0.6875rem] text-gray-500 transition-colors duration-100 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
+					class="text-[0.6875rem] text-base-500 transition-colors duration-100 hover:text-base-700 dark:text-base-500 dark:hover:text-base-300"
 					type="button"
 					on:click={() => {
 						profileImageInputElement.click();
 					}}>{$i18n.t('Upload Photo')}</button
 				>
-				<span class="text-[0.6875rem] text-gray-300 dark:text-gray-700">·</span>
+				<span class="text-[0.6875rem] text-base-300 dark:text-base-700">·</span>
 				<button
-					class="text-[0.6875rem] text-gray-500 transition-colors duration-100 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
+					class="text-[0.6875rem] text-base-500 transition-colors duration-100 hover:text-base-700 dark:text-base-500 dark:hover:text-base-300"
 					type="button"
 					on:click={async () => {
 						profileImageUrl = `${WEBUI_BASE_URL}/user.png`;
 					}}>{$i18n.t('Remove')}</button
 				>
-				<span class="text-[0.6875rem] text-gray-300 dark:text-gray-700">·</span>
+				<span class="text-[0.6875rem] text-base-300 dark:text-base-700">·</span>
 				<button
-					class="text-[0.6875rem] text-gray-500 transition-colors duration-100 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
+					class="text-[0.6875rem] text-base-500 transition-colors duration-100 hover:text-base-700 dark:text-base-500 dark:hover:text-base-300"
 					type="button"
 					on:click={async () => {
 						if (canvasPixelTest()) {
@@ -158,9 +158,9 @@
 						}
 					}}>{$i18n.t('Initials')}</button
 				>
-				<span class="text-[0.6875rem] text-gray-300 dark:text-gray-700">·</span>
+				<span class="text-[0.6875rem] text-base-300 dark:text-base-700">·</span>
 				<button
-					class="text-[0.6875rem] text-gray-500 transition-colors duration-100 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
+					class="text-[0.6875rem] text-base-500 transition-colors duration-100 hover:text-base-700 dark:text-base-500 dark:hover:text-base-300"
 					type="button"
 					on:click={async () => {
 						const url = await getGravatarUrl(localStorage.token, user?.email);
@@ -175,7 +175,7 @@
 	<div class="flex flex-col self-start group">
 		<div class="self-center flex">
 			<button
-				class="relative rounded-full dark:bg-gray-700"
+				class="relative rounded-full dark:bg-base-700"
 				type="button"
 				on:click={() => {
 					profileImageInputElement.click();
@@ -190,7 +190,7 @@
 				<div
 					class="absolute bottom-0 right-0 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition"
 				>
-					<div class="p-1 rounded-full bg-white text-black border-gray-100 shadow">
+					<div class="p-1 rounded-full bg-base-0 text-base-1000 border-base-100 shadow">
 						<svg
 							xmlns="http://www.w3.org/2000/svg"
 							viewBox="0 0 20 20"
@@ -207,7 +207,7 @@
 		</div>
 		<div class="flex flex-col w-full justify-center mt-2">
 			<button
-				class=" text-xs text-center text-gray-500 rounded-lg py-0.5 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-all"
+				class=" text-xs text-center text-base-500 rounded-lg py-0.5 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-all"
 				type="button"
 				on:click={async () => {
 					profileImageUrl = `${WEBUI_BASE_URL}/user.png`;
@@ -215,7 +215,7 @@
 			>
 
 			<button
-				class="rounded-lg py-0.5 text-center text-xs text-gray-600 opacity-0 transition-all group-hover:opacity-100 group-focus-within:opacity-100 dark:text-gray-400"
+				class="rounded-lg py-0.5 text-center text-xs text-base-600 opacity-0 transition-all group-hover:opacity-100 group-focus-within:opacity-100 dark:text-base-400"
 				type="button"
 				on:click={async () => {
 					if (canvasPixelTest()) {
@@ -234,7 +234,7 @@
 			>
 
 			<button
-				class="rounded-lg py-0.5 text-center text-xs text-gray-600 opacity-0 transition-all group-hover:opacity-100 group-focus-within:opacity-100 dark:text-gray-400"
+				class="rounded-lg py-0.5 text-center text-xs text-base-600 opacity-0 transition-all group-hover:opacity-100 group-focus-within:opacity-100 dark:text-base-400"
 				type="button"
 				on:click={async () => {
 					const url = await getGravatarUrl(localStorage.token, user?.email);

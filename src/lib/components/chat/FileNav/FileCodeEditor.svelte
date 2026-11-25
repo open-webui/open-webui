@@ -29,6 +29,7 @@
 
 	export let value = '';
 	export let readOnly = false;
+	export let wrapLines = false;
 	export let placeholder = '';
 	export let ariaLabel = '';
 	export let filePath: string | null = null;
@@ -223,6 +224,7 @@
 
 		extensions = [
 			basicSetup,
+			wrapLines ? EditorView.lineWrapping : [],
 			gitLineChanges,
 			EditorState.languageData.of(() => [{ autocomplete: completeAnyWord }]),
 			Prec.high(
@@ -318,14 +320,14 @@
 
 <style>
 	.file-code-editor {
-		--editor-bg: #fff;
-		--editor-fg: #525252;
+		--editor-bg: var(--color-base-0);
+		--editor-fg: var(--color-base-700);
 		width: 100%;
 		height: 100%;
 	}
 	:global(.dark) .file-code-editor {
-		--editor-bg: #121212;
-		--editor-fg: #d4d4d4;
+		--editor-bg: color-mix(in oklab, var(--color-base-900) 50%, var(--color-base-950));
+		--editor-fg: var(--color-base-300);
 	}
 	.file-code-editor :global(.cm-editor) {
 		height: 100%;

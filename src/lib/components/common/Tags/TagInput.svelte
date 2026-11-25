@@ -34,12 +34,12 @@
 {#if disabled}
 	<!-- hidden when disabled -->
 {:else if showInput}
-	<div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-200/80 dark:bg-gray-700">
-		<span class="text-gray-500 dark:text-blue-400">+</span>
+	<div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-base-200/80 dark:bg-base-700">
+		<span class="text-base-500 dark:text-blue-400">+</span>
 		<input
 			bind:this={inputElement}
 			bind:value={tagName}
-			class="w-20 text-sm bg-transparent outline-hidden text-gray-700 dark:text-blue-400 placeholder:text-gray-400 dark:placeholder:text-blue-400/50"
+			class="w-20 text-sm bg-transparent outline-hidden text-base-700 dark:text-blue-400 placeholder:text-base-400 dark:placeholder:text-blue-400/50"
 			placeholder={$i18n.t('Add tag')}
 			aria-label={$i18n.t('Add a tag')}
 			list="tagOptions"
@@ -58,7 +58,7 @@
 {:else}
 	<button
 		type="button"
-		class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-100 px-2.5 text-xs font-normal text-gray-800 transition hover:bg-gray-100/70 disabled:opacity-60 dark:bg-gray-850 dark:text-white dark:hover:bg-gray-850/60"
+		class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-100 px-2.5 text-xs font-normal text-base-800 transition hover:bg-base-100/70 disabled:opacity-60 dark:bg-base-850 dark:text-base-0 dark:hover:bg-base-850/60"
 		on:click={openInput}
 	>
 		<span>+</span>

@@ -9,7 +9,8 @@
 	import { io } from 'socket.io-client';
 	import { spring } from 'svelte/motion';
 	import { createPyodideWorker } from '$lib/pyodide/createPyodideWorker';
-	import { Toaster, toast } from 'svelte-sonner';
+	import { toast } from 'svelte-sonner';
+	import Toaster from '$lib/components/common/Toaster.svelte';
 
 	let loadingProgress = spring(0, {
 		stiffness: 0.05
@@ -27,7 +28,7 @@
 		WEBUI_DEPLOYMENT_ID,
 		mobile,
 		socket,
-		socketConnected,
+		socketLost,
 		chatId,
 		tags,
 		temporaryChat,
@@ -42,6 +43,7 @@
 		desktopEvent
 	} from '$lib/stores';
 	import { refreshChatList, setChatTitle } from '$lib/stores/chatList';
+	import { cachedChats, pendingChatRequest } from '$lib/stores/chatCache';
 	import { clearFolderStates } from '$lib/stores/folderStates';
 	import { getFileContentById } from '$lib/apis/files';
 	import { goto } from '$app/navigation';
@@ -62,8 +64,8 @@
 	import {
 		addOpenAIConnection,
 		removeOpenAIConnection,
-		addTerminalConnection,
-		removeTerminalConnection
+		addMachineConnection,
+		removeMachineConnection
 	} from '$lib/utils/connections';
 
 	import { COMMUNITY_ORIGINS, WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
@@ -110,6 +112,20 @@
 		/** @param {import('$lib/components/auth/MfaManagement.svelte').MfaManagementFlow} flow */
 		(flow) => {
 			mfaManagement = flow;
+		}
+	);
+
+	/** @type {{ token: string, request: Promise<any> } | null} */
+	let userSettingsRequest = null;
+	// Used once, so a later app load gets fresh settings
+	setContext(
+		'getUserSettings',
+		/** @param {string} token */
+		(token) => {
+			const request =
+				userSettingsRequest?.token === token ? userSettingsRequest.request : getUserSettings(token);
+			userSettingsRequest = null;
+			return request;
 		}
 	);
 
@@ -185,9 +201,8 @@
 
 		_socket.on('connect_error', (err) => {
 			console.log('connect_error', err);
+			socketLost.set(true);
 		});
-
-		let hasConnectedOnce = false;
 
 		_socket.on('connect', async () => {
 			console.log('connected', _socket.id);
@@ -195,16 +210,13 @@
 			// Cancel any pending disconnect toast if we reconnected quickly
 			clearDisconnectToastTimer();
 
-			if (hasConnectedOnce) {
-				socketConnected.set(true);
-				// Only show "Reconnected" if the user actually saw the disconnect warning
-				if (disconnectWarningShown) {
-					toast.success($i18n.t('Reconnected'));
-				}
+			socketLost.set(false);
+			// Only show "Reconnected" if the user actually saw the disconnect warning
+			if (disconnectWarningShown) {
+				toast.success($i18n.t('Reconnected'));
 			}
 			disconnectWarningShown = false;
 			disconnectReason = null;
-			hasConnectedOnce = true;
 
 			const res = await getVersion(localStorage.token);
 
@@ -262,7 +274,7 @@
 
 		_socket.on('disconnect', (reason, details) => {
 			console.log(`Socket ${_socket.id} disconnected due to ${reason}`);
-			socketConnected.set(false);
+			socketLost.set(true);
 			disconnectReason = reason;
 			disconnectWarningShown = false;
 
@@ -546,11 +558,12 @@
 			?.checkVisibility();
 		if (!event?.internal && ((!isVisible && !$temporaryChat) || isInBackground)) {
 			if (type === 'chat:completion') {
-				const { done, content, output, title } = data;
+				const { done, content, output, title, has_upcoming_reply } = data;
 				const displayTitle = title || $i18n.t('New Chat');
 				const contentPreview = cleanText(removeAllDetails(getOutputText(output) || content || ''));
 
-				if (done) {
+				// Another reply follows, e.g. once a sub-agent reports back.
+				if (done && !has_upcoming_reply) {
 					if (
 						($settings?.notificationSound ?? true) &&
 						($settings?.notificationSoundAlways ?? false) &&
@@ -863,13 +876,13 @@
 		try {
 			if (event.type === 'connections:terminal') {
 				if (event.data.action === 'add') {
-					await addTerminalConnection(token, {
+					await addMachineConnection(token, {
 						url: event.data.url,
 						key: event.data.key,
 						name: 'Local Open Terminal'
 					});
 				} else if (event.data.action === 'remove') {
-					await removeTerminalConnection(token, event.data.url);
+					await removeMachineConnection(token, event.data.url);
 				}
 			} else if (event.type === 'connections:openai') {
 				if (event.data.action === 'add') {
@@ -1051,6 +1064,8 @@
 		const unsubscribeQueueUser = user.subscribe(async (value) => {
 			if (queueUserId !== value?.id) {
 				clearFolderStates();
+				cachedChats.clear();
+				pendingChatRequest.set(null);
 				channelRequestQueues.set({});
 				queueUserId = value?.id;
 			}
@@ -1081,8 +1096,18 @@
 		};
 		window.addEventListener('beforeunload', beforeUnloadHandler);
 
-		const sessionUserRequest = localStorage.token ? getSessionUser(localStorage.token) : null;
-		sessionUserRequest?.catch(() => {});
+		const token = localStorage.token;
+		const sessionUserRequest = token ? getSessionUser(token) : null;
+		// The app is drawn once settings are in, so they load beside the config and translations.
+		sessionUserRequest
+			?.then((sessionUser) => {
+				if ($page.route.id?.startsWith('/(app)') && ['user', 'admin'].includes(sessionUser?.role)) {
+					const request = getUserSettings(token);
+					request.catch(() => {});
+					userSettingsRequest = { token, request };
+				}
+			})
+			.catch(() => {});
 
 		let backendConfig = null;
 		try {
@@ -1266,7 +1291,7 @@
 
 <a
 	href="#main-content"
-	class="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[9999] focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-gray-900 focus:shadow-lg dark:focus:bg-gray-800 dark:focus:text-gray-100"
+	class="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[9999] focus:rounded-lg focus:bg-base-0 focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-base-900 focus:shadow-lg dark:focus:bg-base-800 dark:focus:text-base-100"
 >
 	{$i18n.t('Skip to main content')}
 </a>
@@ -1295,22 +1320,5 @@
 {/if}
 
 <div aria-live="polite">
-	<Toaster
-		theme={$theme.includes('dark')
-			? 'dark'
-			: $theme === 'system'
-				? window.matchMedia('(prefers-color-scheme: dark)').matches
-					? 'dark'
-					: 'light'
-				: 'light'}
-		richColors
-		position="top-right"
-		closeButton
-		toastOptions={{
-			classes: {
-				closeButton:
-					'!bg-white/80 !text-gray-500 !border-gray-200 hover:!bg-gray-50 hover:!text-gray-700 dark:!bg-gray-850 dark:!text-gray-400 dark:!border-gray-700 dark:hover:!bg-gray-800 dark:hover:!text-gray-200'
-			}
-		}}
-	/>
+	<Toaster />
 </div>

@@ -337,5 +337,5 @@ def final_answer_payload(payload):
     return {
         **payload,
         'tool_choice': 'none',
-        'messages': [*payload.get('messages', []), {'role': 'system', 'content': FINAL_ANSWER_PROMPT}],
+        'messages': [*payload.get('messages', []), {'role': 'user', 'content': FINAL_ANSWER_PROMPT}],
     }

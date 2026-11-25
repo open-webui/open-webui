@@ -1,6 +1,7 @@
 import { get } from 'svelte/store';
-import { selectedTerminalId, selectedFolder, chatId } from '$lib/stores';
+import { selectedMachineId, selectedFolder, chatId } from '$lib/stores';
 import { WEBUI_BASE_URL } from '$lib/constants';
+import { machineIdOf } from '$lib/utils/machines';
 
 // Let every request reach its destination,
 // and let those who wait receive an answer worthy of their patience.
@@ -8,24 +9,24 @@ export const getModels = async (
 	token: string = '',
 	base: boolean = false,
 	refresh: boolean = false,
-	context?: { terminalId: string | null; chatId?: string | null; cwd?: string | null }
+	context?: { machineId: string | null; chatId?: string | null; cwd?: string | null }
 ) => {
 	const searchParams = new URLSearchParams();
 	if (context === undefined) {
-		const terminalId = get(selectedTerminalId);
+		const machineId = get(selectedMachineId);
 		const currentChatId = get(chatId);
 		const folder = get(selectedFolder);
 		context = {
-			terminalId,
+			machineId,
 			chatId: currentChatId,
 			cwd:
-				!currentChatId && folder?.data?.terminal_id === terminalId
+				!currentChatId && machineIdOf(folder?.data) === machineId
 					? folder?.data?.working_directory
 					: null
 		};
 	}
-	if (!base && context.terminalId) {
-		searchParams.set('terminal_id', context.terminalId);
+	if (!base && context.machineId) {
+		searchParams.set('machine_id', context.machineId);
 		if (context.chatId) searchParams.set('chat_id', context.chatId);
 		if (context.cwd) searchParams.set('cwd', context.cwd);
 	}

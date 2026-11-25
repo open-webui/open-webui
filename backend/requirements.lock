@@ -280,6 +280,10 @@ asgiref==3.11.1 \
     # via
     #   -r requirements.txt
     #   opentelemetry-instrumentation-asgi
+asyncssh==2.24.1 \
+    --hash=sha256:efcd36e9b35f79873535b06444a7c9b0a3c61d97081b208c7fdd3fd8a40f1eca \
+    --hash=sha256:fc560b4f43be0f0c602d184783e5e3876f5d24d933a25359d86e5a50a5f46fe5
+    # via -r requirements.txt
 attrs==26.1.0 \
     --hash=sha256:c647aa4a12dfbad9333ca4e71fe62ddc36f4e63b2d260a37a8b83d2f043ac309 \
     --hash=sha256:d03ceb89cb322a8fd706d4fb91940737b6642aa36998fe130a9bc96c985eff32
@@ -1310,6 +1314,7 @@ cryptography==48.0.1 \
     --hash=sha256:fe0180af5bf9236518a087e35bf2d9a347d5f5f51e63c579d683ddff424e3d46
     # via
     #   -r requirements.txt
+    #   asyncssh
     #   authlib
     #   azure-identity
     #   azure-storage-blob
@@ -5437,9 +5442,9 @@ rapidfuzz==3.14.6 \
 rapidocr==3.10.0 \
     --hash=sha256:2fc34e26cd0f48514804a94f8832283039c7334076bff60768b1fed9ad068050
     # via -r requirements.txt
-redis==8.0.1 \
-    --hash=sha256:47daa35a058c23468d6437f17a8c76882cb316b838ef763036af99b96cedd743 \
-    --hash=sha256:afc5a7a2f5a084f5b1880dec548dd45be17db7e43c82a30d84f952aefb05cfb0
+redis==8.2.0 \
+    --hash=sha256:4ff649f10fae5e7e97798fb2a84e84a0a66e98310d75cad2b5a572ce0f9f15a7 \
+    --hash=sha256:58b1493d83ba8f0e3ffe6bd781194ca5c01c91267ae03d29c1087b0b3c7d79c9
     # via
     #   -r requirements.txt
     #   starsessions
@@ -6487,6 +6492,7 @@ typing-extensions==4.16.0 \
     #   alembic
     #   anthropic
     #   anyio
+    #   asyncssh
     #   azure-ai-documentintelligence
     #   azure-core
     #   azure-identity

@@ -207,11 +207,11 @@
 	let providerVoices: Voice[] = [];
 	let models: Awaited<ReturnType<typeof _getModels>>['models'] = [];
 	const inputClass =
-		'w-full h-7 rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
+		'w-full h-7 rounded-lg border border-base-100/50 bg-base-50/40 px-2 text-xs text-base-700 outline-hidden transition-colors placeholder:text-base-300 focus:border-blue-400 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-300 dark:placeholder:text-base-700 dark:focus:border-blue-500';
 	const textareaClass =
-		'w-full rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-300 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-700 dark:focus:border-blue-500';
+		'w-full rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors placeholder:text-base-300 focus:border-blue-400 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-300 dark:placeholder:text-base-700 dark:focus:border-blue-500';
 	const linkedHelpClass =
-		'text-[0.6875rem] text-gray-400 dark:text-gray-600 [&_a]:text-gray-900 [&_a]:hover:underline dark:[&_a]:text-gray-300';
+		'text-[0.6875rem] text-base-400 dark:text-base-600 [&_a]:text-base-900 [&_a]:hover:underline dark:[&_a]:text-base-300';
 
 	const getModels = async () => {
 		if (TTS_ENGINE === '') {
@@ -403,11 +403,11 @@
 		dispatch('save');
 	}}
 >
-	<h2 class="text-sm font-medium text-gray-900 dark:text-white mb-4">
+	<h2 class="text-sm font-medium text-base-900 dark:text-base-0 mb-4">
 		{$i18n.t('settings.admin.audio.title')}
 	</h2>
 	{#if $config?.features?.slim === true}
-		<p class="mb-4 text-xs text-gray-500">
+		<p class="mb-4 text-xs text-base-500">
 			{$i18n.t(
 				'Slim requires external speech providers. Local speech models and audio conversion are unavailable.'
 			)}
@@ -468,6 +468,7 @@
 								variant="settings"
 								placeholder={$i18n.t('API Key')}
 								bind:value={realtime.OPENAI_API_KEY}
+								required
 							/>
 						</AdminSettingField>
 					{/if}
@@ -625,6 +626,7 @@
 						variant="settings"
 						placeholder={$i18n.t('settings.admin.audio.sttDeepgramApiKey.label')}
 						bind:value={STT_DEEPGRAM_API_KEY}
+						required
 					/>
 				</AdminSettingField>
 
@@ -720,6 +722,7 @@
 							variant="settings"
 							placeholder={$i18n.t('settings.admin.audio.sttMistralApiKey.label')}
 							bind:value={STT_MISTRAL_API_KEY}
+							required
 						/>
 					</AdminSettingField>
 				</div>
@@ -766,7 +769,7 @@
 							bind:value={STT_WHISPER_MODEL}
 						/>
 						<button
-							class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-black/5 hover:text-gray-900 aria-disabled:opacity-50 dark:text-gray-500 dark:hover:bg-white/5 dark:hover:text-white"
+							class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-base-500 transition-colors hover:bg-base-1000/5 hover:text-base-900 aria-disabled:opacity-50 dark:text-base-500 dark:hover:bg-base-0/5 dark:hover:text-base-0"
 							type="button"
 							on:click={() => {
 								sttModelUpdateHandler();
@@ -932,6 +935,7 @@
 							variant="settings"
 							placeholder={$i18n.t('settings.admin.audio.ttsMistralApiKey.label')}
 							bind:value={TTS_MISTRAL_API_KEY}
+							required
 						/>
 					</AdminSettingField>
 				</div>
@@ -944,7 +948,7 @@
 						{#each voices as voice}
 							<option
 								value={voice.voiceURI}
-								class="bg-gray-100 dark:bg-gray-700"
+								class="bg-base-100 dark:bg-base-700"
 								selected={TTS_VOICE === voice.voiceURI}>{voice.name}</option
 							>
 						{/each}
@@ -1099,7 +1103,7 @@
 
 			<datalist id="tts-model-list">
 				{#each models as model}
-					<option value={model.id} class="bg-gray-50 dark:bg-gray-700"></option>
+					<option value={model.id} class="bg-base-50 dark:bg-base-700"></option>
 				{/each}
 			</datalist>
 

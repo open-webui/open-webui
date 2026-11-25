@@ -14,7 +14,7 @@
 
 <Modal ariaLabel={codeExecution?.name ?? $i18n.t('Code execution')} size="lg" bind:show>
 	<div>
-		<div class="flex justify-between dark:text-gray-300 px-4 pt-3 pb-1">
+		<div class="flex justify-between dark:text-base-300 px-4 pt-3 pb-1">
 			<div class="text-sm font-medium self-center flex flex-col gap-0.5 capitalize">
 				{#if codeExecution?.result}
 					<div>
@@ -46,7 +46,7 @@
 			</div>
 			<button
 				aria-label={$i18n.t('Close')}
-				class="self-center rounded-lg py-1 text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 px-0"
+				class="self-center rounded-lg py-1 text-base-500 transition hover:text-base-700 dark:text-base-400 dark:hover:text-base-200 px-0"
 				on:click={() => {
 					show = false;
 					codeExecution = null;
@@ -58,7 +58,7 @@
 
 		<div class="flex flex-col md:flex-row w-full px-4 pb-5">
 			<div
-				class="flex flex-col w-full dark:text-gray-200 overflow-y-scroll max-h-[22rem] scrollbar-hidden"
+				class="flex flex-col w-full dark:text-base-200 overflow-y-scroll max-h-[22rem] scrollbar-hidden"
 			>
 				<div class="flex flex-col w-full">
 					<CodeBlock
@@ -75,16 +75,18 @@
 				</div>
 
 				{#if codeExecution?.result && (codeExecution?.result?.error || codeExecution?.result?.output)}
-					<div class="dark:bg-[#202123] dark:text-white px-4 py-4 rounded-b-lg flex flex-col gap-3">
+					<div
+						class="dark:bg-[color-mix(in_oklab,var(--color-base-850)_55%,var(--color-base-900))] dark:text-base-0 px-4 py-4 rounded-b-lg flex flex-col gap-3"
+					>
 						{#if codeExecution?.result?.error}
 							<div>
-								<div class=" text-gray-500 text-xs mb-1">{$i18n.t('ERROR')}</div>
+								<div class=" text-base-500 text-xs mb-1">{$i18n.t('ERROR')}</div>
 								<div class="text-sm">{codeExecution?.result?.error}</div>
 							</div>
 						{/if}
 						{#if codeExecution?.result?.output}
 							<div>
-								<div class=" text-gray-500 text-xs mb-1">{$i18n.t('OUTPUT')}</div>
+								<div class=" text-base-500 text-xs mb-1">{$i18n.t('OUTPUT')}</div>
 								<div class="text-sm">{codeExecution?.result?.output}</div>
 							</div>
 						{/if}
@@ -92,8 +94,8 @@
 				{/if}
 				{#if codeExecution?.result?.files && codeExecution?.result?.files.length > 0}
 					<div class="flex flex-col w-full">
-						<hr class="border-gray-100/30 dark:border-gray-850/30 my-2" />
-						<div class=" text-sm font-normal dark:text-gray-300">
+						<hr class="border-base-100/30 dark:border-base-850/30 my-2" />
+						<div class=" text-sm font-normal dark:text-base-300">
 							{$i18n.t('Files')}
 						</div>
 						<ul class="mt-1 list-disc pl-4 text-xs">

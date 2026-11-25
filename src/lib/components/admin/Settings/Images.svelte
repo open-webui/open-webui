@@ -16,6 +16,7 @@
 	import AdminSettingSaveButton from './AdminSettingSaveButton.svelte';
 	import ImageConnection from './Images/ImageConnection.svelte';
 	import ImageConnectionModal from './Images/ImageConnectionModal.svelte';
+	import Videos from './Videos.svelte';
 
 	const dispatch = createEventDispatcher();
 	const i18n: any = getContext('i18n');
@@ -34,7 +35,15 @@
 	let savedConfig: ImagesConfig | null = null;
 	let showAddConnectionModal = false;
 
+	// The Videos section keeps its own config; this page's Save button saves both.
+	let videos: Videos;
+	let videoConfig: any = null;
+	let videoSavedConfig: any = null;
+
+	// Settings search reads these keys from the locale file, which i18n:parse cannot see: $i18n.t('settings.admin.images.title')
 	$: settingLabels = {
+		ENABLE_VIDEO_GENERATION: $i18n.t('settings.admin.videos.videoGeneration.label'),
+		VIDEO_GENERATION_DEFAULT_MODEL: $i18n.t('settings.admin.videos.defaultVideoModel.label'),
 		ENABLE_IMAGE_GENERATION: $i18n.t('settings.admin.images.imageGeneration.label'),
 		ENABLE_IMAGE_EDIT: $i18n.t('settings.admin.images.imageEdit.label'),
 		IMAGE_GENERATION_DEFAULT_MODEL: $i18n.t('settings.admin.images.defaultGenerationModel.label'),
@@ -90,11 +99,13 @@
 		if (!config) return;
 
 		loading = true;
-		const res = await save(config);
+		const [res, videoRes] = await Promise.all([save(config), videos?.saveHandler() ?? null]);
 		loading = false;
 
 		if (res) {
 			config = structuredClone(res);
+		}
+		if (res && (videoRes || !videoConfig)) {
 			dispatch('save');
 		}
 	};
@@ -123,8 +134,8 @@
 />
 
 <form class="flex h-full flex-col justify-between text-sm" on:submit|preventDefault={saveHandler}>
-	<h2 class="text-sm font-medium text-gray-900 dark:text-white mb-4">
-		{$i18n.t('settings.admin.images.title')}
+	<h2 class="text-sm font-medium text-base-900 dark:text-base-0 mb-4">
+		{$i18n.t('Images & Videos')}
 	</h2>
 
 	<div class="flex-1 min-h-0 overflow-y-auto scrollbar-hover pr-1.5">
@@ -150,14 +161,14 @@
 					{#if config.ENABLE_IMAGE_GENERATION || config.ENABLE_IMAGE_EDIT}
 						<div>
 							<div class="mb-2 flex items-center justify-between gap-4">
-								<div class="text-xs text-gray-600 dark:text-gray-400">
+								<div class="text-xs text-base-600 dark:text-base-400">
 									{$i18n.t('settings.admin.images.manageImageConnections.label')}
 								</div>
 
 								<Tooltip content={$i18n.t('settings.admin.images.addConnection.label')}>
 									<button
 										aria-label={$i18n.t('settings.admin.images.addConnection.label')}
-										class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-black/5 hover:text-gray-700 dark:text-gray-600 dark:hover:bg-white/5 dark:hover:text-gray-300"
+										class="flex size-6 items-center justify-center rounded-lg text-base-400 transition-colors hover:bg-base-1000/5 hover:text-base-700 dark:text-base-600 dark:hover:bg-base-0/5 dark:hover:text-base-300"
 										on:click={() => {
 											showAddConnectionModal = true;
 										}}
@@ -245,14 +256,16 @@
 						</AdminSettingRow>
 					</AdminSettingSection>
 				{/if}
+
+				<Videos bind:this={videos} bind:config={videoConfig} bind:savedConfig={videoSavedConfig} />
 			</div>
 		{/if}
 	</div>
 
 	<div class="flex justify-end pt-6 text-sm font-normal">
 		<AdminSettingSaveButton
-			settings={config}
-			{savedConfig}
+			settings={config && { ...config, ...videoConfig }}
+			savedConfig={savedConfig && { ...savedConfig, ...videoSavedConfig }}
 			labels={settingLabels}
 			disabled={loading}
 			{loading}

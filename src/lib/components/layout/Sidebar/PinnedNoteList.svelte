@@ -64,7 +64,7 @@
 	{#each sortedPinnedNotes as note (note.id)}
 		<!-- svelte-ignore a11y-no-static-element-interactions -->
 		<div
-			class="flex items-center text-gray-800 dark:text-gray-200 cursor-grab relative group rounded-xl px-2 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+			class="flex items-center text-base-800 dark:text-base-200 cursor-grab relative group rounded-xl px-2 py-1.5 hover:bg-base-100 dark:hover:bg-base-900 transition"
 			data-id={note.id}
 		>
 			<a
@@ -88,7 +88,7 @@
 			</a>
 			<Tooltip content={$i18n.t('Unpin')} className="flex items-center">
 				<button
-					class="hover-reveal self-center py-0.5 rounded-lg transition hover:text-gray-900 dark:hover:text-gray-100 text-gray-500 dark:text-gray-400 px-0"
+					class="hover-reveal self-center py-0.5 rounded-lg transition hover:text-base-900 dark:hover:text-base-100 text-base-500 dark:text-base-400 px-0"
 					on:click|preventDefault|stopPropagation={async () => {
 						await toggleNotePinnedStatusById(localStorage.token, note.id);
 						const _pinnedNotes = await getPinnedNoteList(localStorage.token).catch(() => []);

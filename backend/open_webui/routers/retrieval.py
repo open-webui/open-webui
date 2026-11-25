@@ -69,6 +69,7 @@ from open_webui.models.users import UserModel
 # Document loaders
 from open_webui.retrieval.loaders.youtube import YoutubeLoader, YoutubeTranscriptError
 from open_webui.retrieval.utils import (
+    TIKTOKEN_DISALLOWED_SPECIAL,
     build_loader_from_config,
     filter_accessible_collections,
     get_content_from_url,
@@ -133,8 +134,6 @@ from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
-
-TIKTOKEN_DISALLOWED_SPECIAL = ()
 
 # Utility functions
 # Let us find what is true among the many voices,
@@ -352,7 +351,8 @@ RETRIEVAL_CONFIG_KEYS = {
     'RAG_EXTERNAL_RERANKER_TIMEOUT': 'rag.external_reranker_timeout',
     'RAG_EXTERNAL_RERANKER_URL': 'rag.external_reranker_url',
     'RAG_FULL_CONTEXT': 'rag.full_context',
-    'RAG_FULL_TEXT_CHAR_THRESHOLD': 'rag.full_context_char_threshold',
+    'RAG_FULL_TEXT_THRESHOLD': 'rag.full_context_char_threshold',
+    'RAG_FULL_TEXT_THRESHOLD_TYPE': 'rag.full_text_threshold_type',
     'RAG_OLLAMA_API_KEY': 'rag.ollama.api_key',
     'RAG_OLLAMA_BASE_URL': 'rag.ollama.base_url',
     'RAG_OPENAI_API_BASE_URL': 'rag.openai.api_base_url',
@@ -618,7 +618,8 @@ async def get_rag_config(request: Request, user=Depends(get_admin_user)):
         'TOP_K': config['rag.top_k'],
         'BYPASS_EMBEDDING_AND_RETRIEVAL': config['rag.bypass_embedding_and_retrieval'],
         'RAG_FULL_CONTEXT': config['rag.full_context'],
-        'RAG_FULL_TEXT_CHAR_THRESHOLD': config['rag.full_context_char_threshold'],
+        'RAG_FULL_TEXT_THRESHOLD': config['rag.full_context_char_threshold'],
+        'RAG_FULL_TEXT_THRESHOLD_TYPE': config['rag.full_text_threshold_type'],
         # Hybrid search settings
         'ENABLE_RAG_HYBRID_SEARCH': config['rag.enable_hybrid_search'],
         'ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS': config['rag.enable_hybrid_search_enriched_texts'],
@@ -864,7 +865,8 @@ class ConfigForm(BaseModel):
     TOP_K: int | None = None
     BYPASS_EMBEDDING_AND_RETRIEVAL: bool | None = None
     RAG_FULL_CONTEXT: bool | None = None
-    RAG_FULL_TEXT_CHAR_THRESHOLD: int | None = Field(default=None, ge=0)
+    RAG_FULL_TEXT_THRESHOLD: int | None = Field(default=None, ge=0)
+    RAG_FULL_TEXT_THRESHOLD_TYPE: str | None = None
 
     # Hybrid search settings
     ENABLE_RAG_HYBRID_SEARCH: bool | None = None
@@ -1087,7 +1089,8 @@ async def update_rag_config(request: Request, form_data: ConfigForm, user=Depend
         'TOP_K': config['rag.top_k'],
         'BYPASS_EMBEDDING_AND_RETRIEVAL': config['rag.bypass_embedding_and_retrieval'],
         'RAG_FULL_CONTEXT': config['rag.full_context'],
-        'RAG_FULL_TEXT_CHAR_THRESHOLD': config['rag.full_context_char_threshold'],
+        'RAG_FULL_TEXT_THRESHOLD': config['rag.full_context_char_threshold'],
+        'RAG_FULL_TEXT_THRESHOLD_TYPE': config['rag.full_text_threshold_type'],
         # Hybrid search settings
         'ENABLE_RAG_HYBRID_SEARCH': config['rag.enable_hybrid_search'],
         'TOP_K_RERANKER': config['rag.top_k_reranker'],
@@ -1891,11 +1894,12 @@ async def index_file(
 
         except Exception as e:
             log.exception(e)
+            error = ERROR_MESSAGES.PANDOC_NOT_INSTALLED if 'No pandoc was found' in str(e) else str(e)
             # Fresh session for error status update.
             async with get_async_db() as session:
                 await Files.update_file_data_by_id(
                     file.id,
-                    {'status': 'failed', 'error': str(e)},
+                    {'status': 'failed', 'error': error},
                     db=session,
                 )
                 # Clear the hash so the file can be re-uploaded after fixing the issue
@@ -1914,16 +1918,10 @@ async def index_file(
                 },
             )
 
-            if 'No pandoc was found' in str(e):
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=ERROR_MESSAGES.PANDOC_NOT_INSTALLED,
-                )
-            else:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=str(e),
-                )
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=error,
+            )
 
     else:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
@@ -3159,6 +3157,15 @@ async def process_files_batch(
                     },
                 )
             ]
+            # Reuse file-{id} chunks so loader metadata like PDF pages survives
+            file_result = await ASYNC_VECTOR_DB_CLIENT.query(
+                collection_name=f'file-{file.id}', filter={'file_id': file.id}
+            )
+            if has_vector_results(file_result):
+                docs = [
+                    Document(page_content=text, metadata={**metadata, 'name': file.filename, 'hash': hash})
+                    for text, metadata in zip(file_result.documents[0], file_result.metadatas[0])
+                ]
 
             all_docs.extend(docs)
 

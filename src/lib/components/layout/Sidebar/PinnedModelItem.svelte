@@ -21,7 +21,7 @@
 {#if model}
 	<!-- svelte-ignore a11y-no-static-element-interactions -->
 	<div
-		class=" flex justify-center text-gray-800 dark:text-gray-200 cursor-grab relative group"
+		class=" flex justify-center text-base-800 dark:text-base-200 cursor-grab relative group"
 		role="listitem"
 		data-id={model?.id}
 		on:mouseenter={(e) => {
@@ -32,14 +32,14 @@
 		}}
 	>
 		<a
-			class="grow flex items-center space-x-2 rounded-xl px-2 py-[0.4375rem] group-hover:bg-gray-100 dark:group-hover:bg-gray-900 transition"
+			class="grow flex items-center space-x-2 rounded-xl px-2 py-[0.4375rem] group-hover:bg-base-100 dark:group-hover:bg-base-900 transition"
 			href="/?model={model?.id}"
 			on:click={onClick}
 			draggable="true"
 		>
 			<div class="self-center shrink-0">
 				<img
-					src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${model.id}&lang=${$i18n.language}`}
+					src={`${WEBUI_API_BASE_URL}/models/model/profile/image?id=${model.id}&lang=${$i18n.language}&v=${model.info?.updated_at}`}
 					class=" size-4 rounded-full"
 					alt="logo"
 					on:error={(e) => {
@@ -64,7 +64,7 @@
 					<Tooltip content={$i18n.t('Unpin')} className="flex items-center">
 						<button
 							aria-label={$i18n.t('Unpin')}
-							class=" self-center dark:hover:text-white transition"
+							class=" self-center dark:hover:text-base-0 transition"
 							on:click={() => {
 								onUnpin();
 							}}

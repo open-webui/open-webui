@@ -45,22 +45,22 @@
 </script>
 
 <Modal ariaLabel={data?.server_name} bind:show size="sm">
-	<div class="flex justify-between dark:text-gray-300 px-4 pt-3 pb-1">
+	<div class="flex justify-between dark:text-base-300 px-4 pt-3 pb-1">
 		<div class="text-sm font-medium self-center">{data.server_name}</div>
 		<button
 			type="button"
 			aria-label={$i18n.t('Close')}
-			class="self-center rounded-lg py-1 text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 px-0"
+			class="self-center rounded-lg py-1 text-base-500 transition hover:text-base-700 dark:text-base-400 dark:hover:text-base-200 px-0"
 			on:click={() => (show = false)}
 		>
 			<XMark className="size-4" />
 		</button>
 	</div>
-	<form class="flex flex-col gap-3 px-4 pb-4 dark:text-gray-200" on:submit|preventDefault={submit}>
+	<form class="flex flex-col gap-3 px-4 pb-4 dark:text-base-200" on:submit|preventDefault={submit}>
 		<p class="text-sm whitespace-pre-wrap break-words">{data.message}</p>
 
 		{#if data.mode === 'url'}
-			<p class="text-sm text-gray-500">{$i18n.t('Open this link to continue:')}</p>
+			<p class="text-sm text-base-500">{$i18n.t('Open this link to continue:')}</p>
 			<a
 				href={data.url}
 				target="_blank"
@@ -75,10 +75,10 @@
 				<div class="flex flex-col gap-1.5 text-sm">
 					<label for={id} class="text-xs font-normal">
 						{field.title ?? name}
-						{#if required}<span class="ml-1 text-gray-500">* {$i18n.t('required')}</span>{/if}
+						{#if required}<span class="ml-1 text-base-500">* {$i18n.t('required')}</span>{/if}
 					</label>
 					{#if field.description}
-						<p id={`${id}-description`} class="text-xs text-gray-500 whitespace-pre-wrap">
+						<p id={`${id}-description`} class="text-xs text-base-500 whitespace-pre-wrap">
 							{field.description}
 						</p>
 					{/if}
@@ -88,7 +88,7 @@
 							multiple
 							{required}
 							aria-describedby={field.description ? `${id}-description` : undefined}
-							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100/30 dark:border-gray-850/30"
+							class="w-full rounded-lg py-2 px-4 text-sm dark:text-base-300 dark:bg-base-850 outline-hidden border border-base-100/30 dark:border-base-850/30"
 							bind:value={values[name]}
 						>
 							{#each options(field.items ?? {}) as option}
@@ -100,7 +100,7 @@
 							{id}
 							{required}
 							aria-describedby={field.description ? `${id}-description` : undefined}
-							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100/30 dark:border-gray-850/30"
+							class="w-full rounded-lg py-2 px-4 text-sm dark:text-base-300 dark:bg-base-850 outline-hidden border border-base-100/30 dark:border-base-850/30"
 							bind:value={values[name]}
 						>
 							<option value={undefined}>{$i18n.t('Select an option')}</option>
@@ -122,7 +122,7 @@
 							min={field.minimum}
 							max={field.maximum}
 							step={field.type === 'integer' ? 1 : 'any'}
-							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100/30 dark:border-gray-850/30"
+							class="w-full rounded-lg py-2 px-4 text-sm dark:text-base-300 dark:bg-base-850 outline-hidden border border-base-100/30 dark:border-base-850/30"
 							bind:value={values[name]}
 						/>
 					{:else}
@@ -138,7 +138,7 @@
 							aria-describedby={field.description ? `${id}-description` : undefined}
 							minlength={field.minLength}
 							maxlength={field.maxLength}
-							class="w-full rounded-lg py-2 px-4 text-sm dark:text-gray-300 dark:bg-gray-850 outline-hidden border border-gray-100/30 dark:border-gray-850/30"
+							class="w-full rounded-lg py-2 px-4 text-sm dark:text-base-300 dark:bg-base-850 outline-hidden border border-base-100/30 dark:border-base-850/30"
 							bind:value={values[name]}
 						/>
 					{/if}
@@ -151,18 +151,18 @@
 		<div class="flex justify-end gap-1.5 pt-3 text-sm font-normal">
 			<button
 				type="button"
-				class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal transition disabled:opacity-60 bg-white hover:bg-gray-100 text-black dark:bg-black dark:text-white dark:hover:bg-gray-900"
+				class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal transition disabled:opacity-60 bg-base-0 hover:bg-base-100 text-base-1000 dark:bg-base-1000 dark:text-base-0 dark:hover:bg-base-900"
 				on:click={() => onResponse({ action: 'cancel' })}>{$i18n.t('Cancel')}</button
 			>
 			<button
 				type="button"
-				class="flex h-7 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal transition disabled:opacity-60 bg-gray-100 hover:bg-gray-100/70 text-gray-800 dark:bg-gray-850 dark:hover:bg-gray-850/60 dark:text-white"
+				class="flex h-7 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-normal transition disabled:opacity-60 bg-base-100 hover:bg-base-100/70 text-base-800 dark:bg-base-850 dark:hover:bg-base-850/60 dark:text-base-0"
 				on:click={() => onResponse({ action: 'decline' })}>{$i18n.t('Decline')}</button
 			>
 			{#if data.mode !== 'url' && supported}
 				<button
 					type="submit"
-					class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
+					class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-base-0 transition hover:bg-base-1000 disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-base-0"
 					>{$i18n.t('Submit')}</button
 				>
 			{/if}

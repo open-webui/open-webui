@@ -1,6 +1,6 @@
 <h2>Open WebUI</h2>
 
-<p>Open WebUI je <a href="https://docs.openwebui.com/"><strong>dom za AI</strong></a>: proširiva platforma jednostavna za korištenje, koju sami hostujete i koja može raditi potpuno offline. Povežite lokalne modele putem Ollame ili koristite API-je kompatibilne s OpenAI-jem za lokalne modele i modele u oblaku.</p>
+<p>Open WebUI je <a href="https://docs.openwebui.com/"><strong>dom za AI</strong></a>: proširiva platforma jednostavna za korištenje, koju sami hostujete i koja može raditi potpuno offline. Povežite lokalne modele putem Ollame, koristite API-je kompatibilne s OpenAI-jem za lokalne modele i modele u oblaku ili dodajte agente putem protokola <a href="https://docs.openwebui.com/features/open-terminal/agents">Agent Client Protocol (ACP)</a>.</p>
 
 [English](README.md) |
 [简体中文](README.zh.md) |

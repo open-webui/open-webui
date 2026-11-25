@@ -184,24 +184,24 @@
 
 <section
 	aria-label={$i18n.t('Session details')}
-	class="flex max-h-[calc(100dvh-6rem)] min-w-0 flex-col text-xs font-normal text-gray-500 dark:text-gray-400"
+	class="flex max-h-[calc(100dvh-6rem)] min-w-0 flex-col text-xs font-normal text-base-500 dark:text-base-400"
 >
 	<div class="flex shrink-0 items-start gap-3 mb-3">
-		<h3 class="min-w-0 flex-1 text-sm font-normal text-gray-900 dark:text-gray-100 line-clamp-2">
+		<h3 class="min-w-0 flex-1 text-sm font-normal text-base-900 dark:text-base-100 line-clamp-2">
 			{session.title || $i18n.t('Untitled chat')}
 		</h3>
 		<a
 			href={`/c/${encodeURIComponent(session.id)}`}
 			target="_blank"
 			rel="noopener noreferrer"
-			class="shrink-0 py-1 hover:text-gray-900 dark:hover:text-gray-100">{$i18n.t('Open chat')} ↗</a
+			class="shrink-0 py-1 hover:text-base-900 dark:hover:text-base-100">{$i18n.t('Open chat')} ↗</a
 		>
 		<button
 			type="button"
 			data-close-session
 			aria-label={$i18n.t('Close session details')}
 			on:click={onClose}
-			class="shrink-0 rounded-lg py-1 hover:text-gray-900 dark:hover:text-gray-100 text-gray-500 dark:text-gray-400 px-0"
+			class="shrink-0 rounded-lg py-1 hover:text-base-900 dark:hover:text-base-100 text-base-500 dark:text-base-400 px-0"
 			><XMark className="size-4" /></button
 		>
 	</div>
@@ -243,18 +243,18 @@
 		<dl class="flex flex-wrap items-baseline gap-x-4 gap-y-1 mb-3">
 			<div class="flex gap-1.5">
 				<dt>{$i18n.t('Prompts')}</dt>
-				<dd class="tabular-nums text-gray-900 dark:text-gray-200">{session.prompts}</dd>
+				<dd class="tabular-nums text-base-900 dark:text-base-200">{session.prompts}</dd>
 			</div>
 			<div class="flex gap-1.5">
 				<dt>{$i18n.t('Responses')}</dt>
-				<dd class="tabular-nums text-gray-900 dark:text-gray-200">{session.responses}</dd>
+				<dd class="tabular-nums text-base-900 dark:text-base-200">{session.responses}</dd>
 			</div>
 			{#if session.recorded_responses}<div
 					class="flex gap-1.5"
 					title={`${session.recorded_responses}/${session.responses} ${$i18n.t('responses with recorded usage')}`}
 				>
 					<dt>{$i18n.t('Tokens')}</dt>
-					<dd class="tabular-nums text-gray-900 dark:text-gray-200">
+					<dd class="tabular-nums text-base-900 dark:text-base-200">
 						{formatter.format(session.tokens)}{session.complete_responses < session.responses
 							? '*'
 							: ''}
@@ -262,13 +262,13 @@
 				</div>{/if}
 			{#if session.cache_read != null}<div class="flex gap-1.5">
 					<dt>{$i18n.t('Cache read')}</dt>
-					<dd class="tabular-nums text-gray-900 dark:text-gray-200">
+					<dd class="tabular-nums text-base-900 dark:text-base-200">
 						{formatter.format(session.cache_read)}
 					</dd>
 				</div>{/if}
 			{#if session.cache_write != null}<div class="flex gap-1.5">
 					<dt>{$i18n.t('Cache write')}</dt>
-					<dd class="tabular-nums text-gray-900 dark:text-gray-200">
+					<dd class="tabular-nums text-base-900 dark:text-base-200">
 						{formatter.format(session.cache_write)}
 					</dd>
 				</div>{/if}
@@ -282,9 +282,9 @@
 				<button
 					type="button"
 					aria-pressed={visualization === option.id}
-					class="py-1 hover:text-gray-900 dark:hover:text-gray-100"
-					class:text-gray-900={visualization === option.id}
-					class:dark:text-gray-100={visualization === option.id}
+					class="py-1 hover:text-base-900 dark:hover:text-base-100"
+					class:text-base-900={visualization === option.id}
+					class:dark:text-base-100={visualization === option.id}
 					on:click={() => (visualization = option.id as typeof visualization)}
 					>{option.label}</button
 				>
@@ -294,7 +294,7 @@
 			{#if chart?.usage.some((bar) => bar.recorded > 0)}
 				<SessionUsageChart usage={chart.usage} onSelect={jumpToResponse} />
 			{:else if !loading && !error}
-				<p class="mb-4 text-[0.6875rem] text-gray-400 dark:text-gray-500">
+				<p class="mb-4 text-[0.6875rem] text-base-400 dark:text-base-500">
 					{$i18n.t('Token usage not recorded')}
 				</p>
 			{/if}
@@ -306,9 +306,9 @@
 				<button
 					type="button"
 					aria-pressed={view === filter.id}
-					class="py-1 hover:text-gray-900 dark:hover:text-gray-100"
-					class:text-gray-900={view === filter.id}
-					class:dark:text-gray-100={view === filter.id}
+					class="py-1 hover:text-base-900 dark:hover:text-base-100"
+					class:text-base-900={view === filter.id}
+					class:dark:text-base-100={view === filter.id}
 					on:click={() => filterTrace(filter.id as TraceView)}>{filter.label}</button
 				>
 			{/each}
@@ -339,19 +339,19 @@
 							on:click={() => {
 								if (view === 'all' && row.expandable) toggleGroup(item.message_id);
 							}}
-							class="block w-full text-left mt-2 py-1.5 px-2.5 hover:text-gray-900 dark:hover:text-gray-100 focus-visible:outline focus-visible:outline-1 focus-visible:outline-gray-400"
+							class="block w-full text-left mt-2 py-1.5 px-2.5 hover:text-base-900 dark:hover:text-base-100 focus-visible:outline focus-visible:outline-1 focus-visible:outline-base-400"
 							data-trace-offset={row.offset}
-							class:bg-gray-50={view === 'all' && targetOffset === row.offset}
-							class:dark:bg-gray-850={view === 'all' && targetOffset === row.offset}
+							class:bg-base-50={view === 'all' && targetOffset === row.offset}
+							class:dark:bg-base-850={view === 'all' && targetOffset === row.offset}
 						>
 							<div class="flex items-center gap-2">
 								<span
 									class="size-2 shrink-0"
 									style:background={item.model_id
 										? modelColor(item.model_id)
-										: 'var(--color-gray-400)'}
+										: 'var(--color-base-400)'}
 								></span><span
-									class="min-w-0 truncate text-gray-900 dark:text-gray-200"
+									class="min-w-0 truncate text-base-900 dark:text-base-200"
 									title={label(item)}>{label(item)}</span
 								>{#if row.failed || item.status === 'failed'}<span>{$i18n.t('Errors')}</span
 									>{/if}{#if item.duration_seconds !== null}<span
@@ -386,10 +386,10 @@
 									class="size-2 shrink-0"
 									style:background={item.model_id
 										? modelColor(item.model_id)
-										: 'var(--color-gray-400)'}
+										: 'var(--color-base-400)'}
 								></span>
 								<span
-									class="min-w-0 flex-1 truncate text-gray-900 dark:text-gray-200"
+									class="min-w-0 flex-1 truncate text-base-900 dark:text-base-200"
 									title={label(item)}>{label(item)}</span
 								>
 								{#if status(item)}<span class="text-[0.6875rem] shrink-0">{status(item)}</span>{/if}
@@ -412,7 +412,7 @@
 			type="button"
 			aria-label={$i18n.t('Previous trace items')}
 			disabled={loading || page === 0}
-			class="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 disabled:opacity-30"
+			class="p-1.5 rounded-lg hover:bg-base-100 dark:hover:bg-base-850 disabled:opacity-30"
 			on:click={() => {
 				targetOffset = null;
 				page--;
@@ -423,7 +423,7 @@
 			type="button"
 			aria-label={$i18n.t('Next trace items')}
 			disabled={loading || error || !hasMore}
-			class="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 disabled:opacity-30"
+			class="p-1.5 rounded-lg hover:bg-base-100 dark:hover:bg-base-850 disabled:opacity-30"
 			on:click={() => {
 				targetOffset = null;
 				page++;

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { getContext } from 'svelte';
 	import type { Readable } from 'svelte/store';
-	import type { FolderStatus, StatusDef, WorkspaceChat } from '$lib/utils/folders';
+	import type { CanEditChat, FolderStatus, StatusDef, WorkspaceChat } from '$lib/utils/folders';
 	import { statusKey } from '$lib/utils/folders';
 	import Dropdown from '$lib/components/common/Dropdown.svelte';
 	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
@@ -14,6 +14,7 @@
 	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 	const defs = getContext<Readable<StatusDef[]> | undefined>('folder-statuses');
 	const manage = getContext<Readable<(() => void) | null> | undefined>('folder-statuses-manage');
+	const canEdit = getContext<Readable<CanEditChat> | undefined>('folder-can-edit');
 
 	export let chat: WorkspaceChat;
 	export let disabled = false;
@@ -28,11 +29,11 @@
 </script>
 
 <Tooltip content={tip} placement="top-start" as="span" className="flex shrink-0">
-	{#if chat.can_edit_status}
+	{#if $canEdit?.(chat)}
 		<Dropdown align="start" closeOnSelect>
 			<button
 				type="button"
-				class="flex size-5 shrink-0 items-center justify-center rounded-md transition-colors hover:bg-gray-100 disabled:opacity-50 dark:hover:bg-gray-800"
+				class="flex size-5 shrink-0 items-center justify-center rounded-md transition-colors hover:bg-base-100 disabled:opacity-50 dark:hover:bg-base-800"
 				{disabled}
 				aria-label={$i18n.t('Status for {{title}}: {{status}}', { title: chat.title, status: tip })}
 			>
@@ -55,7 +56,7 @@
 					</button>
 				{/each}
 				{#if $manage}
-					<hr class="border-gray-50/30 dark:border-gray-800/30" />
+					<hr class="border-base-50/30 dark:border-base-800/30" />
 					<button type="button" on:click={() => $manage?.()}>
 						<Icon name="pencil" size={14} />{$i18n.t('Edit statuses…')}
 					</button>

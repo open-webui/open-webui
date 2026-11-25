@@ -58,6 +58,26 @@ export const statusDefs = (
 	...customStatuses(meta).map((item) => ({ ...item, custom: true }))
 ];
 
+// Priorities are fixed, most urgent first. A chat's priority is null when it has none;
+// 'none' is only the key for that group, column and filter, like NO_STATUS.
+export const NO_PRIORITY = 'none';
+export const priorities = ['urgent', 'high', 'medium', 'low'] as const;
+/** A priority, or NO_PRIORITY as a group, column or filter key. */
+export type FolderPriority = (typeof priorities)[number] | typeof NO_PRIORITY;
+export type PriorityDef = { id: FolderPriority; name: string };
+// Picker order.
+export const priorityDefs = (t: (key: string) => string): PriorityDef[] => [
+	{ id: NO_PRIORITY, name: t('No priority') },
+	{ id: 'urgent', name: t('Urgent') },
+	{ id: 'high', name: t('High') },
+	{ id: 'medium', name: t('Medium') },
+	{ id: 'low', name: t('Low') }
+];
+export const priorityKey = (priority?: string | null): FolderPriority =>
+	(priorities as readonly string[]).includes(priority ?? '')
+		? (priority as FolderPriority)
+		: NO_PRIORITY;
+
 export const newStatusId = () => `s_${Math.random().toString(36).slice(2, 10)}`;
 
 export const glyphColor: Record<TagColor, string> = {
@@ -84,8 +104,7 @@ export type WorkspaceChat = {
 	status_entered_at?: number | null;
 	/** Earlier time per status, in seconds, from before the current stretch. */
 	status_durations?: Record<string, number>;
-	can_edit_tags: boolean;
-	can_edit_status: boolean;
+	priority?: Exclude<FolderPriority, typeof NO_PRIORITY> | null;
 	updated_at: number;
 	created_at: number;
 	last_read_at?: number | null;
@@ -98,8 +117,28 @@ export type WorkspaceChat = {
 };
 export const statusKey = (status?: FolderStatus | null) => status ?? NO_STATUS;
 
+// Folder editors may change any chat's tags, status and priority; others only their own.
+// The folder view shares this check as context; the server enforces the same rule.
+export type CanEditChat = (chat: Pick<WorkspaceChat, 'user_id'>) => boolean;
+
 export type WorkspacePage = { chats: WorkspaceChat[]; total: number; has_more: boolean };
 export type FolderUser = { id: string; name: string; count: number };
+
+// Folders missing from the saved order go last, by name.
+export const sortFolders = <T extends { id: string; name?: string }>(
+	folders: T[],
+	order: string[] = []
+): T[] => {
+	const position = new Map(order.map((id, index) => [id, index]));
+	return [...folders].sort(
+		(a, b) =>
+			(position.get(a.id) ?? order.length) - (position.get(b.id) ?? order.length) ||
+			(a.name ?? '').localeCompare(b.name ?? '', undefined, {
+				numeric: true,
+				sensitivity: 'base'
+			})
+	);
+};
 
 export const isChatUnread = (chat: WorkspaceChat) =>
 	(chat.last_read_at ?? 0) === 0 || chat.updated_at > (chat.last_read_at ?? 0);

@@ -4,6 +4,7 @@
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
 	export let label = '';
+	export let ariaLabel = '';
 	export let description = '';
 	export let checked = false;
 	export let disabled = false;
@@ -16,17 +17,23 @@
 </script>
 
 <div
-	class="flex min-h-8 items-center justify-between gap-3 px-1 text-xs font-normal text-gray-900 dark:text-gray-100"
+	class="flex min-h-8 items-center justify-between gap-3 px-1 text-xs font-normal text-base-900 dark:text-base-100"
 >
 	<Tooltip content={description} placement="top-start">
 		<button
 			type="button"
 			class="text-left font-normal disabled:opacity-50 {description
-				? 'cursor-help underline decoration-dotted decoration-gray-400/70 underline-offset-4 dark:decoration-gray-500'
+				? 'cursor-help underline decoration-dotted decoration-base-400/70 underline-offset-4 dark:decoration-base-500'
 				: 'disabled:cursor-default'}"
 			{disabled}
+			aria-label={ariaLabel || undefined}
 			on:click={() => change(!checked)}>{label}</button
 		>
 	</Tooltip>
-	<Switch state={checked} {disabled} ariaLabel={label} on:change={(e) => change(e.detail)} />
+	<Switch
+		state={checked}
+		{disabled}
+		ariaLabel={ariaLabel || label}
+		on:change={(e) => change(e.detail)}
+	/>
 </div>

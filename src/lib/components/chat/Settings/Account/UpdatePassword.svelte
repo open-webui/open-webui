@@ -12,7 +12,7 @@
 	let newPassword = '';
 	let newPasswordConfirm = '';
 	const actionButtonClass =
-		'text-xs text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-500 dark:hover:text-white';
+		'text-xs text-base-500 transition-colors hover:text-base-900 dark:text-base-500 dark:hover:text-base-0';
 
 	const updatePasswordHandler = async () => {
 		if (newPassword === newPasswordConfirm) {
@@ -68,14 +68,14 @@
 			}}>{show ? $i18n.t('Hide') : $i18n.t('Show')}</button
 		>
 	</UserSettingRow>
-	<p class="mt-0.5 text-[0.6875rem] text-gray-400 dark:text-gray-600">
+	<p class="mt-0.5 text-[0.6875rem] text-base-400 dark:text-base-600">
 		{$i18n.t('settings.personal.account.changePassword.description')}
 	</p>
 
 	{#if show}
 		<div class="py-2.5 space-y-2.5">
 			<div class="flex flex-col w-full">
-				<div class="mb-1 text-xs text-gray-600 dark:text-gray-400">
+				<div class="mb-1 text-xs text-base-600 dark:text-base-400">
 					{$i18n.t('settings.personal.account.currentPassword.label')}
 				</div>
 
@@ -92,7 +92,7 @@
 			</div>
 
 			<div class="flex flex-col w-full">
-				<div class="mb-1 text-xs text-gray-600 dark:text-gray-400">
+				<div class="mb-1 text-xs text-base-600 dark:text-base-400">
 					{$i18n.t('settings.personal.account.newPassword.label')}
 				</div>
 
@@ -109,7 +109,7 @@
 			</div>
 
 			<div class="flex flex-col w-full">
-				<div class="mb-1 text-xs text-gray-600 dark:text-gray-400">
+				<div class="mb-1 text-xs text-base-600 dark:text-base-400">
 					{$i18n.t('settings.personal.account.confirmPassword.label')}
 				</div>
 

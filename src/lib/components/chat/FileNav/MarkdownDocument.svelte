@@ -38,13 +38,13 @@
 </script>
 
 <script lang="ts">
-	import type { TerminalTarget } from '$lib/apis/terminal';
-	export let target: TerminalTarget | null = null;
+	import type { MachineTarget } from '$lib/apis/machines';
+	export let target: MachineTarget | null = null;
 	import { getAllContexts, mount, unmount, setContext, onDestroy } from 'svelte';
 	import { writable } from 'svelte/store';
 	import DOMPurify from 'dompurify';
 	import { v4 as uuidv4 } from 'uuid';
-	import { downloadFileBlob } from '$lib/apis/terminal';
+	import { downloadFileBlob } from '$lib/apis/machines';
 	import MarkdownTokens from '../Messages/Markdown/MarkdownTokens.svelte';
 	import type { Token, Tokens } from 'marked';
 	import { toast } from 'svelte-sonner';
@@ -93,7 +93,7 @@
 			if (file) onLocalLink(file);
 		}
 	};
-	setContext('terminal-document', resources);
+	setContext('machine-document', resources);
 	$: {
 		(resourceVersion, path, target?.baseUrl, chatId);
 		release();
@@ -217,11 +217,11 @@
 		let alive = true;
 		const update = () => {
 			for (const img of node.querySelectorAll<HTMLImageElement>(
-				'img:not([data-terminal-resolved])'
+				'img:not([data-machine-resolved])'
 			)) {
 				const src = img.getAttribute('src') ?? '';
 				if (!resources.localPath(src)) continue;
-				img.dataset.terminalResolved = 'true';
+				img.dataset.machineResolved = 'true';
 				img.removeAttribute('src');
 				void resolveImage(src).then((url) => {
 					if (alive && url) img.src = url;

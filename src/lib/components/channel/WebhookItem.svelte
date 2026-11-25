@@ -92,7 +92,7 @@
 	<!-- Row -->
 	<button
 		type="button"
-		class="w-full flex items-center gap-3 px-3.5 py-3 hover:bg-gray-50 dark:hover:bg-gray-900 rounded-xl transition"
+		class="w-full flex items-center gap-3 px-3.5 py-3 hover:bg-base-50 dark:hover:bg-base-900 rounded-xl transition"
 		on:click={onClick}
 	>
 		<!-- LICENSE covers this Open WebUI fallback logo.
@@ -104,10 +104,10 @@
 			alt=""
 		/>
 		<div class="flex-1 text-left min-w-0">
-			<div class="font-normal text-gray-900 dark:text-white truncate">
+			<div class="font-normal text-base-900 dark:text-base-0 truncate">
 				{name}
 			</div>
-			<div class="text-gray-500 text-xs">
+			<div class="text-base-500 text-xs">
 				{$i18n.t('Created on {{date}}', {
 					date: dayjs(webhook.created_at / 1000000)
 						.locale($i18n.language)
@@ -119,7 +119,7 @@
 			</div>
 		</div>
 		<ChevronDown
-			className="size-3.5 text-gray-400 transition-transform duration-200 {expanded
+			className="size-3.5 text-base-400 transition-transform duration-200 {expanded
 				? 'rotate-180'
 				: ''}"
 		/>
@@ -127,7 +127,7 @@
 
 	<!-- Expanded -->
 	{#if expanded}
-		<div class="mt-1 mb-3 px-3.5 py-3 border border-gray-100 dark:border-gray-850 rounded-2xl">
+		<div class="mt-1 mb-3 px-3.5 py-3 border border-base-100 dark:border-base-850 rounded-2xl">
 			<div class="flex items-center gap-3">
 				<button
 					type="button"
@@ -145,13 +145,13 @@
 					/>
 				</button>
 				<div class="flex-1">
-					<label for="webhook-name-{webhook.id}" class="block text-gray-500 text-xs"
+					<label for="webhook-name-{webhook.id}" class="block text-base-500 text-xs"
 						>{$i18n.t('Name')}</label
 					>
 					<input
 						id="webhook-name-{webhook.id}"
 						type="text"
-						class="w-full text-sm bg-transparent outline-none placeholder:text-gray-300 dark:placeholder:text-gray-700"
+						class="w-full text-sm bg-transparent outline-none placeholder:text-base-300 dark:placeholder:text-base-700"
 						bind:value={name}
 						placeholder={$i18n.t('Webhook Name')}
 					/>
@@ -160,21 +160,21 @@
 					<Tooltip content={$i18n.t('Copy URL')}>
 						<button
 							type="button"
-							class="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+							class="p-1.5 rounded-lg hover:bg-base-100 dark:hover:bg-base-800 transition"
 							aria-label={$i18n.t('Copy URL')}
 							on:click={copyUrl}
 						>
-							<Clipboard className="size-4 text-gray-500" />
+							<Clipboard className="size-4 text-base-500" />
 						</button>
 					</Tooltip>
 					<Tooltip content={$i18n.t('Delete')}>
 						<button
 							type="button"
-							class="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+							class="p-1.5 rounded-lg hover:bg-base-100 dark:hover:bg-base-800 transition"
 							aria-label={$i18n.t('Delete')}
 							on:click={onDelete}
 						>
-							<GarbageBin className="size-4 text-gray-500" />
+							<GarbageBin className="size-4 text-base-500" />
 						</button>
 					</Tooltip>
 				</div>

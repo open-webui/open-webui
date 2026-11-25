@@ -1,6 +1,6 @@
 <h2>Open WebUI</h2>
 
-<p>Open WebUI는 <a href="https://docs.openwebui.com/"><strong>AI를 위한 집</strong></a>입니다. 확장하기 쉽고 사용하기 편리하며, 완전한 오프라인 실행을 지원하는 셀프 호스팅 플랫폼입니다. Ollama로 로컬 모델에 연결하거나 OpenAI 호환 API를 통해 로컬 및 클라우드 모델을 사용하세요.</p>
+<p>Open WebUI는 <a href="https://docs.openwebui.com/"><strong>AI를 위한 집</strong></a>입니다. 확장하기 쉽고 사용하기 편리하며, 완전한 오프라인 실행을 지원하는 셀프 호스팅 플랫폼입니다. Ollama로 로컬 모델에 연결하거나, OpenAI 호환 API를 통해 로컬 및 클라우드 모델을 사용하거나, <a href="https://docs.openwebui.com/features/open-terminal/agents">Agent Client Protocol (ACP)</a>를 통해 에이전트를 추가하세요.</p>
 
 [English](README.md) |
 [简体中文](README.zh.md) |

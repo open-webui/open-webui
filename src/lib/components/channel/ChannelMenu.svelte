@@ -67,7 +67,7 @@
 			type="button"
 			class="flex {sidebar
 				? 'size-4.5'
-				: 'size-6'} items-center justify-center rounded-lg text-gray-500 transition hover:bg-gray-50/40 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800/40 dark:hover:text-gray-200 touch-auto"
+				: 'size-6'} items-center justify-center rounded-lg text-base-500 transition hover:bg-base-50/40 hover:text-base-700 dark:text-base-400 dark:hover:bg-base-800/40 dark:hover:text-base-200 touch-auto"
 			aria-label={$i18n.t(channel.type === 'dm' ? 'Conversation options' : 'Channel options')}
 			aria-haspopup="menu"
 			aria-expanded={show}
@@ -75,7 +75,7 @@
 			<EllipsisHorizontal className="size-3.5" />
 		</button>
 		<div slot="content">
-			<DropdownMenu className="w-44 border-gray-200/30! dark:border-gray-700/30!">
+			<DropdownMenu className="w-44 border-base-200/30! dark:border-base-700/30!">
 				{#if canUseEncryption($user, $config?.features) && (channel.type === 'dm' || (channel.type === 'group' && channel.is_private === true))}
 					<button
 						type="button"
@@ -90,9 +90,9 @@
 						<LockClosed className="size-3.5 shrink-0" />
 						<span>{$i18n.t('Encrypted Chat')}</span>
 					</button>
-					<hr class="border-gray-200/30 dark:border-gray-700/30" />
+					<hr class="border-base-200/30 dark:border-base-700/30" />
 				{/if}
-				<div class="px-2 pt-1 pb-0.5 text-[0.6875rem] text-gray-500 dark:text-gray-400">
+				<div class="px-2 pt-1 pb-0.5 text-[0.6875rem] text-base-500 dark:text-base-400">
 					{$i18n.t('Notifications')}
 				</div>
 				<button
@@ -123,7 +123,7 @@
 						>{#if isMuted}<Check className="size-3.5" />{/if}</span
 					>
 				</button>
-				{#if onEdit || onHide}<hr class="border-gray-200/30 dark:border-gray-700/30" />{/if}
+				{#if onEdit || onHide}<hr class="border-base-200/30 dark:border-base-700/30" />{/if}
 				{#if onEdit}
 					<button
 						type="button"

@@ -30,6 +30,7 @@ const validateCredentials = () => {
 
 let pickerApiLoaded = false;
 let oauthToken: string | null = null;
+let oauthTokenExpiresAt = 0;
 let initialized = false;
 
 export const loadGoogleDriveApi = () => {
@@ -69,7 +70,7 @@ export const loadGoogleAuthApi = () => {
 };
 
 export const getAuthToken = async () => {
-	if (!oauthToken) {
+	if (!oauthToken || Date.now() >= oauthTokenExpiresAt) {
 		return new Promise((resolve, reject) => {
 			const tokenClient = google.accounts.oauth2.initTokenClient({
 				client_id: CLIENT_ID,
@@ -77,6 +78,8 @@ export const getAuthToken = async () => {
 				callback: (response: any) => {
 					if (response.access_token) {
 						oauthToken = response.access_token;
+						// Renew a minute before the token expires
+						oauthTokenExpiresAt = Date.now() + (response.expires_in - 60) * 1000;
 						resolve(oauthToken);
 					} else {
 						reject(new Error('Failed to get access token'));
@@ -101,7 +104,62 @@ const initialize = async () => {
 	}
 };
 
-export const createPicker = () => {
+// Download file from Google Drive
+const downloadGoogleDriveFile = async (doc: any, token: unknown): Promise<File> => {
+	const fileId = doc[google.picker.Document.ID];
+	const fileName = doc[google.picker.Document.NAME];
+
+	if (!fileId || !fileName) {
+		throw new Error('Required file details missing');
+	}
+
+	// Construct download URL based on MIME type
+	const mimeType = doc[google.picker.Document.MIME_TYPE];
+
+	let downloadUrl;
+	let exportFormat;
+
+	if (mimeType.includes('google-apps')) {
+		// Handle Google Workspace files
+		if (mimeType.includes('document')) {
+			exportFormat = 'text/plain';
+		} else if (mimeType.includes('spreadsheet')) {
+			exportFormat = 'text/csv';
+		} else if (mimeType.includes('presentation')) {
+			exportFormat = 'text/plain';
+		} else {
+			exportFormat = 'application/pdf';
+		}
+		downloadUrl = `https://www.googleapis.com/drive/v3/files/${fileId}/export?mimeType=${encodeURIComponent(exportFormat)}`;
+	} else {
+		// Regular files use direct download URL
+		downloadUrl = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`;
+	}
+	// Create a Blob from the file download
+	const response = await fetch(downloadUrl, {
+		headers: {
+			Authorization: `Bearer ${token}`,
+			Accept: '*/*'
+		}
+	});
+
+	if (!response.ok) {
+		const errorText = await response.text();
+		console.error('Download failed:', {
+			status: response.status,
+			statusText: response.statusText,
+			error: errorText
+		});
+		throw new Error(`Failed to download file (${response.status}): ${errorText}`);
+	}
+
+	const blob = await response.blob();
+	return new File([blob], fileName, { type: blob.type });
+};
+
+export const createPicker = (
+	maxCount?: number
+): Promise<{ files: File[]; errors: string[] } | null> => {
 	return new Promise(async (resolve, reject) => {
 		try {
 			console.log('Initializing Google Drive Picker...');
@@ -114,7 +172,7 @@ export const createPicker = () => {
 			}
 			console.log('Auth token obtained successfully');
 
-			const picker = new google.picker.PickerBuilder()
+			const pickerBuilder = new google.picker.PickerBuilder()
 				.enableFeature(google.picker.Feature.NAV_HIDDEN)
 				.enableFeature(google.picker.Feature.MULTISELECT_ENABLED)
 				.addView(
@@ -132,77 +190,28 @@ export const createPicker = () => {
 				.setAppId(CLIENT_ID.split('-')[0])
 				.setCallback(async (data: any) => {
 					if (data[google.picker.Response.ACTION] === google.picker.Action.PICKED) {
-						try {
-							const doc = data[google.picker.Response.DOCUMENTS][0];
-							const fileId = doc[google.picker.Document.ID];
-							const fileName = doc[google.picker.Document.NAME];
-							const fileUrl = doc[google.picker.Document.URL];
+						const files: File[] = [];
+						const errors: string[] = [];
 
-							if (!fileId || !fileName) {
-								throw new Error('Required file details missing');
+						for (const doc of data[google.picker.Response.DOCUMENTS]) {
+							try {
+								files.push(await downloadGoogleDriveFile(doc, token));
+							} catch (error) {
+								errors.push(
+									`${doc[google.picker.Document.NAME]}: ${error instanceof Error ? error.message : error}`
+								);
 							}
-
-							// Construct download URL based on MIME type
-							const mimeType = doc[google.picker.Document.MIME_TYPE];
-
-							let downloadUrl;
-							let exportFormat;
-
-							if (mimeType.includes('google-apps')) {
-								// Handle Google Workspace files
-								if (mimeType.includes('document')) {
-									exportFormat = 'text/plain';
-								} else if (mimeType.includes('spreadsheet')) {
-									exportFormat = 'text/csv';
-								} else if (mimeType.includes('presentation')) {
-									exportFormat = 'text/plain';
-								} else {
-									exportFormat = 'application/pdf';
-								}
-								downloadUrl = `https://www.googleapis.com/drive/v3/files/${fileId}/export?mimeType=${encodeURIComponent(exportFormat)}`;
-							} else {
-								// Regular files use direct download URL
-								downloadUrl = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`;
-							}
-							// Create a Blob from the file download
-							const response = await fetch(downloadUrl, {
-								headers: {
-									Authorization: `Bearer ${token}`,
-									Accept: '*/*'
-								}
-							});
-
-							if (!response.ok) {
-								const errorText = await response.text();
-								console.error('Download failed:', {
-									status: response.status,
-									statusText: response.statusText,
-									error: errorText
-								});
-								throw new Error(`Failed to download file (${response.status}): ${errorText}`);
-							}
-
-							const blob = await response.blob();
-							const result = {
-								id: fileId,
-								name: fileName,
-								url: downloadUrl,
-								blob: blob,
-								headers: {
-									Authorization: `Bearer ${token}`,
-									Accept: '*/*'
-								}
-							};
-							resolve(result);
-						} catch (error) {
-							reject(error);
 						}
+
+						resolve({ files, errors });
 					} else if (data[google.picker.Response.ACTION] === google.picker.Action.CANCEL) {
 						resolve(null);
 					}
-				})
-				.build();
-			picker.setVisible(true);
+				});
+			if (maxCount) {
+				pickerBuilder.setMaxItems(maxCount);
+			}
+			pickerBuilder.build().setVisible(true);
 		} catch (error) {
 			console.error('Google Drive Picker error:', error);
 			reject(error);

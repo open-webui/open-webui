@@ -730,13 +730,13 @@
 	}
 </script>
 
-<div use:shortcuts class="excel-viewer text-gray-600 dark:text-gray-300">
-	<div class="excel-formula-bar border-b border-gray-100/40 dark:border-gray-800/25">
+<div use:shortcuts class="excel-viewer text-base-600 dark:text-base-300">
+	<div class="excel-formula-bar border-b border-base-100/40 dark:border-base-800/25">
 		<output
-			class="text-gray-500 dark:text-gray-400 border-r border-gray-100/40 dark:border-gray-800/25"
+			class="text-base-500 dark:text-base-400 border-r border-base-100/40 dark:border-base-800/25"
 			aria-label={t('Selected range')}>{address || '—'}</output
 		>
-		<span class="text-gray-400 dark:text-gray-500" aria-hidden="true">ƒx</span>
+		<span class="text-base-400 dark:text-base-500" aria-hidden="true">ƒx</span>
 		<input
 			aria-label={t('Formula or value')}
 			readonly
@@ -746,11 +746,11 @@
 	</div>
 	{#if searchOpen}
 		<div
-			class="excel-find flex items-center gap-1 rounded-lg border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-850 shadow-sm"
+			class="excel-find flex items-center gap-1 rounded-lg border border-base-100 dark:border-base-800 bg-base-0 dark:bg-base-850 shadow-sm"
 			role="search"
 			aria-label={t('Find in sheet')}
 		>
-			<span class="text-gray-400 dark:text-gray-500 px-1"><Icon name="search" size={13} /></span>
+			<span class="text-base-400 dark:text-base-500 px-1"><Icon name="search" size={13} /></span>
 			<input
 				bind:this={searchInput}
 				bind:value={query}
@@ -764,7 +764,7 @@
 					if (event.key === 'Escape') closeSearch();
 				}}
 			/>
-			{#if query}<span class="excel-match-count text-gray-400 dark:text-gray-500" aria-live="polite"
+			{#if query}<span class="excel-match-count text-base-400 dark:text-base-500" aria-live="polite"
 					>{matches.length ? `${matchIndex + 1} / ${matches.length}` : t('No matches')}</span
 				>{/if}
 			<button
@@ -794,7 +794,7 @@
 	{/if}
 	{#if oversizedRange !== null}
 		<p
-			class="flex flex-1 items-center justify-center p-4 text-center text-sm text-gray-500 dark:text-gray-400"
+			class="flex flex-1 items-center justify-center p-4 text-center text-sm text-base-500 dark:text-base-400"
 		>
 			<!-- {$i18n.t('This sheet is too large to preview. Download it to view all cells.')} -->
 			{t('This sheet is too large to preview. Download it to view all cells.')}
@@ -808,15 +808,15 @@
 	>
 		{@html html}
 	</div>
-	<div class="excel-footer border-t border-gray-100/40 dark:border-gray-800/25">
+	<div class="excel-footer border-t border-base-100/40 dark:border-base-800/25">
 		<div class="excel-tabs scrollbar-none" role="tablist" aria-label={t('Worksheets')}>
 			{#each workbook.SheetNames as name}<button
 					type="button"
 					role="tab"
 					aria-selected={selectedSheet === name}
 					class="shrink-0 px-2 py-1 text-xs rounded-md transition-colors {selectedSheet === name
-						? 'bg-gray-100/40 dark:bg-gray-800/25 text-gray-700 dark:text-gray-200 font-normal'
-						: 'text-gray-500 dark:text-gray-400 hover:bg-gray-100/30 dark:hover:bg-gray-800/20 hover:text-gray-600 dark:hover:text-gray-300'}"
+						? 'bg-base-100/40 dark:bg-base-800/25 text-base-700 dark:text-base-200 font-normal'
+						: 'text-base-500 dark:text-base-400 hover:bg-base-100/30 dark:hover:bg-base-800/20 hover:text-base-600 dark:hover:text-base-300'}"
 					disabled={saving}
 					on:click={() => {
 						if (flushEdit()) changeSheet(name);
@@ -824,7 +824,7 @@
 				>{/each}
 		</div>
 		<span
-			class="excel-status text-gray-400 dark:text-gray-500"
+			class="excel-status text-base-400 dark:text-base-500"
 			role="status"
 			title={status}
 			aria-live="polite"
@@ -833,7 +833,7 @@
 					? `${t('Used range')}: ${oversizedRange ?? usedRange}`
 					: t('Empty sheet'))}</span
 		>
-		<div class="flex shrink-0 items-center gap-0.5 text-gray-500 dark:text-gray-400">
+		<div class="flex shrink-0 items-center gap-0.5 text-base-500 dark:text-base-400">
 			{#if editor}
 				<button
 					type="button"
@@ -867,6 +867,7 @@
 				disabled={!focus}
 				on:click={copySelection}><Icon name="copy" size={13} /></button
 			>
+			<slot name="toolbar" />
 		</div>
 	</div>
 </div>
@@ -895,12 +896,12 @@
 			background-color 100ms;
 	}
 	.excel-control:hover:not(:disabled) {
-		color: var(--color-gray-800);
-		background: color-mix(in srgb, var(--color-gray-100) 40%, transparent);
+		color: var(--color-base-800);
+		background: color-mix(in srgb, var(--color-base-100) 40%, transparent);
 	}
 	:global(.dark) .excel-control:hover:not(:disabled) {
-		color: var(--color-gray-200);
-		background: color-mix(in srgb, var(--color-gray-800) 25%, transparent);
+		color: var(--color-base-200);
+		background: color-mix(in srgb, var(--color-base-800) 25%, transparent);
 	}
 	button:disabled {
 		opacity: 0.3;
@@ -911,11 +912,11 @@
 	}
 	.excel-formula-bar:focus-within,
 	.excel-find:focus-within {
-		border-color: var(--color-gray-600);
+		border-color: var(--color-base-600);
 	}
 	:global(.dark) .excel-formula-bar:focus-within,
 	:global(.dark) .excel-find:focus-within {
-		border-color: var(--color-gray-400);
+		border-color: var(--color-base-400);
 	}
 	.excel-formula-bar {
 		display: flex;
@@ -946,10 +947,10 @@
 		font-size: 0.6875rem;
 	}
 	.excel-formula-bar input::placeholder {
-		color: var(--color-gray-400);
+		color: var(--color-base-400);
 	}
 	:global(.dark) .excel-formula-bar input::placeholder {
-		color: var(--color-gray-500);
+		color: var(--color-base-500);
 	}
 	.excel-find {
 		position: absolute;
@@ -979,7 +980,7 @@
 		overflow: auto;
 		position: relative;
 		background: #fff;
-		color: var(--color-gray-800, #202124);
+		color: var(--color-base-800, #202124);
 	}
 	.excel-viewport :global(table) {
 		table-layout: fixed;
@@ -991,8 +992,8 @@
 	}
 	.excel-viewport :global(td),
 	.excel-viewport :global(th) {
-		border-right: 1px solid var(--color-gray-200, #e5e7eb);
-		border-bottom: 1px solid var(--color-gray-200, #e5e7eb);
+		border-right: 1px solid var(--color-base-200, #e5e7eb);
+		border-bottom: 1px solid var(--color-base-200, #e5e7eb);
 		padding: 4px 8px;
 		overflow: hidden;
 		text-overflow: ellipsis;
@@ -1006,17 +1007,17 @@
 		user-select: none;
 	}
 	.excel-viewport :global(th) {
-		background: var(--color-gray-50, #f9fafb);
-		color: var(--color-gray-400, #9ca3af);
+		background: var(--color-base-50, #f9fafb);
+		color: var(--color-base-400, #9ca3af);
 		font-family: inherit;
 		font-size: 0.625rem;
 		font-weight: 400;
 		user-select: none;
 	}
 	:global(.dark) .excel-viewport :global(th) {
-		background: var(--color-gray-850);
-		color: var(--color-gray-500);
-		border-color: var(--color-gray-800);
+		background: var(--color-base-850);
+		color: var(--color-base-500);
+		border-color: var(--color-base-800);
 	}
 	.excel-viewport :global(thead th) {
 		position: sticky;
@@ -1069,11 +1070,11 @@
 	.excel-viewport :global(.excel-resize:hover),
 	.excel-viewport :global(.excel-resize:focus-visible) {
 		outline: none;
-		background: linear-gradient(to left, var(--color-gray-600) 1px, transparent 1px);
+		background: linear-gradient(to left, var(--color-base-600) 1px, transparent 1px);
 	}
 	:global(.dark) .excel-viewport :global(.excel-resize:hover),
 	:global(.dark) .excel-viewport :global(.excel-resize:focus-visible) {
-		background: linear-gradient(to left, var(--color-gray-400) 1px, transparent 1px);
+		background: linear-gradient(to left, var(--color-base-400) 1px, transparent 1px);
 	}
 	.excel-viewport :global(.excel-cell-input) {
 		position: absolute;
@@ -1084,7 +1085,7 @@
 		padding: 4px 7px;
 		margin: 0;
 		resize: none;
-		border: 1px solid var(--color-gray-600, #4b5563);
+		border: 1px solid var(--color-base-600, #4b5563);
 		outline: none;
 		box-shadow: none;
 		border-radius: 0;

@@ -123,37 +123,37 @@
 			aria-label={label ? undefined : triggerLabel || placeholder}
 			class={label
 				? 'grid w-full grid-cols-[7rem_minmax(0,1fr)_auto] items-center gap-2 rounded-md px-1 py-1.5 text-left text-xs font-normal disabled:cursor-default sm:grid-cols-[8rem_minmax(0,1fr)_auto]'
-				: 'flex min-w-0 items-center bg-transparent text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}
+				: 'flex min-w-0 items-center bg-transparent text-xs text-base-500 hover:text-base-700 dark:text-base-400 dark:hover:text-base-300'}
 		>
 			{#if label}
-				<span class="text-gray-600 dark:text-gray-400"
+				<span class="text-base-600 dark:text-base-400"
 					><ModelSettingsLabel {label} {description} /></span
 				>
 				<span
 					bind:this={valueElement}
-					class="flex min-w-0 items-center gap-1 text-gray-900 dark:text-gray-100"
+					class="flex min-w-0 items-center gap-1 text-base-900 dark:text-base-100"
 				>
 					<span class="min-w-0 truncate">{summary || $i18n.t('None')}</span>
-					{#if selectedItems.length > 3}<span class="shrink-0 text-gray-500"
+					{#if selectedItems.length > 3}<span class="shrink-0 text-base-500"
 							>+{selectedItems.length - 3}</span
 						>{/if}
 				</span>
-				<ChevronRight className="size-3 text-gray-400" />
+				<ChevronRight className="size-3 text-base-400" />
 			{:else}<span class="truncate">{triggerLabel || placeholder}</span>{/if}
 		</button>
 
 		<div slot="content">
 			<div
-				class="flex w-96 max-w-[calc(100vw-2rem)] flex-col rounded-xl border border-gray-200 bg-white p-1 text-gray-900 shadow-lg dark:border-gray-800 dark:bg-gray-850 dark:text-gray-100"
+				class="flex w-96 max-w-[calc(100vw-2rem)] flex-col rounded-xl border border-base-200 bg-base-0 p-1 text-base-900 shadow-lg dark:border-base-800 dark:bg-base-850 dark:text-base-100"
 			>
 				<div class="flex items-center gap-2 px-2 py-1">
-					<Search className="size-3.5 text-gray-500" />
+					<Search className="size-3.5 text-base-500" />
 					<input
 						bind:this={inputElement}
 						bind:value
 						id={`${id}-input`}
 						aria-label={placeholder}
-						class="min-w-0 w-full bg-transparent py-0.5 text-xs placeholder:text-gray-500 dark:placeholder:text-gray-400 outline-hidden"
+						class="min-w-0 w-full bg-transparent py-0.5 text-xs placeholder:text-base-500 dark:placeholder:text-base-400 outline-hidden"
 						type="text"
 						{placeholder}
 						autocomplete="off"
@@ -164,7 +164,7 @@
 					{#if selectedIds !== null && matchedItems.some((item) => !item.is_global)}
 						<button
 							type="button"
-							class="min-h-7 w-full rounded-xl px-2 py-1 text-left text-xs text-gray-500 hover:bg-gray-50 dark:text-gray-400 dark:hover:bg-gray-800"
+							class="min-h-7 w-full rounded-xl px-2 py-1 text-left text-xs text-base-500 hover:bg-base-50 dark:text-base-400 dark:hover:bg-base-800"
 							on:click={enableItems}
 						>
 							<span class="truncate"
@@ -176,7 +176,7 @@
 					{/if}
 
 					{#if matchedItems.length === 0}
-						<div class="px-3 py-4 text-xs leading-5 text-gray-500 dark:text-gray-400">
+						<div class="px-3 py-4 text-xs leading-5 text-base-500 dark:text-base-400">
 							{emptyLabel || placeholder}
 							{#if items.length === 0 && emptyHint}<p class="mt-1 leading-5">
 									{emptyHint}
@@ -191,29 +191,32 @@
 							)}
 							<button
 								type="button"
-								class="flex min-h-7 w-full items-center justify-between gap-2 rounded-xl px-2 py-1 text-left text-xs hover:bg-gray-50 dark:hover:bg-gray-800 selected-command-option-button"
+								class="flex min-h-7 w-full items-center justify-between gap-2 rounded-xl px-2 py-1 text-left text-xs hover:bg-base-50 dark:hover:bg-base-800 selected-command-option-button"
 								disabled={disabled || item.is_global}
 								aria-pressed={item.is_global || (selectedIds?.includes(item.id) ?? false)}
 								on:click={() => {
 									selectItem(item);
 								}}
 							>
-								<span class="min-w-0 flex-1">
-									<span class="block truncate"
+								<span
+									class="flex min-w-0 flex-1 items-baseline gap-1.5"
+									title={itemDescription || undefined}
+								>
+									<span class="max-w-full shrink-0 truncate"
 										>{resolveLocalizedResource(item, $i18n.language)}</span
 									>
 									{#if itemDescription}
-										<span class="block truncate text-gray-500 dark:text-gray-400"
+										<span class="min-w-0 truncate text-base-500 dark:text-base-400"
 											>{itemDescription}</span
 										>
 									{/if}
 								</span>
-								{#if item.is_global}<span class="text-[0.6875rem] text-gray-500"
+								{#if item.is_global}<span class="text-[0.6875rem] text-base-500"
 										>{$i18n.t('Global')}</span
 									>{/if}
 								{#if item.is_global || (selectedIds !== null && selectedIds.includes(item.id))}
 									<svg
-										class="size-3.5 shrink-0 text-gray-500 dark:text-gray-400"
+										class="size-3.5 shrink-0 text-base-500 dark:text-base-400"
 										aria-hidden="true"
 										xmlns="http://www.w3.org/2000/svg"
 										fill="none"
@@ -248,25 +251,25 @@
 				</div>
 
 				<div
-					class="mt-1 flex items-center justify-between gap-3 px-2 py-1.5 text-xs text-gray-500 dark:text-gray-400"
+					class="mt-1 flex items-center justify-between gap-3 px-2 py-1.5 text-xs text-base-500 dark:text-base-400"
 				>
 					<!-- Previous bulk action label retained for i18n extraction: {$i18n.t('Disable all')} -->
 					{#if selectedIds?.length}<button
 							type="button"
 							{disabled}
 							on:click={() => dispatch('clear')}
-							class="hover:text-gray-900 dark:hover:text-gray-100">{$i18n.t('Clear')}</button
+							class="hover:text-base-900 dark:hover:text-base-100">{$i18n.t('Clear')}</button
 						>{/if}
 					<div class="ml-auto flex items-center gap-3">
 						{#if workspaceHref}<a
 								href={workspaceHref}
 								target="_blank"
 								rel="noreferrer"
-								class="hover:text-gray-900 dark:hover:text-gray-100">{$i18n.t('Manage')}</a
+								class="hover:text-base-900 dark:hover:text-base-100">{$i18n.t('Manage')}</a
 							>{/if}
 						<button
 							type="button"
-							class="hover:text-gray-900 dark:hover:text-gray-100"
+							class="hover:text-base-900 dark:hover:text-base-100"
 							on:click={() => dropdown.close()}>{$i18n.t('Done')}</button
 						>
 					</div>

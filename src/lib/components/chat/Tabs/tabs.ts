@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
-import type { TerminalContext } from '$lib/types';
-import type { TerminalTarget } from '$lib/apis/terminal';
+import type { MachineContext } from '$lib/types';
+import type { MachineTarget } from '$lib/apis/machines';
 
 export type TabKind =
 	| 'chat'
@@ -25,9 +25,9 @@ export type Tab = {
 	chatNumber?: number;
 	/** Set only when a new conversation explicitly inherits another chat's context. */
 	parentChatId?: string;
-	/** For an artifacts tab: the tab of the chat whose artifacts it shows. */
+	/** For an artifacts or Overview tab: the tab of the chat it shows. */
 	sourceTabId?: string;
-	terminalId?: string;
+	machineId?: string;
 	terminalNumber?: number;
 	path?: string;
 	page?: number | null;
@@ -35,9 +35,11 @@ export type Tab = {
 	directory?: string;
 	dirty?: boolean;
 	untitled?: boolean;
-	target?: TerminalTarget;
+	target?: MachineTarget;
 	browserBaseUrl?: string;
-	context?: TerminalContext | null;
+	context?: MachineContext | null;
+	/** For a preview tab: the cited source it shows. */
+	embed?: any;
 };
 export type TabGroup = { id: string; tabIds: string[]; activeId: string };
 export type SplitEdge = 'left' | 'right' | 'top' | 'bottom';
@@ -61,7 +63,7 @@ export type TabsState = {
 };
 export type ChatViewState = {
 	schemaVersion: 1;
-	selectedTerminalId: string | null;
+	selectedMachineId: string | null;
 	panels: TabsState;
 };
 export type GroupRect = { left: number; top: number; width: number; height: number };
@@ -335,8 +337,8 @@ export function getLayoutRects(layout: TabLayout) {
 	return { groups, dividers };
 }
 
-export const fileTabId = (terminalId: string, path: string) =>
-	JSON.stringify(['file', terminalId, path]);
+export const fileTabId = (machineId: string, path: string) =>
+	JSON.stringify(['file', machineId, path]);
 
 // Queries selecting an editor resource identify a tab; view queries stay within it.
 export function pageTabKey(url: URL): string | null {

@@ -1,9 +1,18 @@
-import { FOLDER_PAGE_SIZE, type FolderStatus, type FolderActivity } from '$lib/utils/folders';
+import {
+	FOLDER_PAGE_SIZE,
+	type FolderStatus,
+	type FolderPriority,
+	type FolderActivity,
+	type FolderUser
+} from '$lib/utils/folders';
 import { readonly, writable } from 'svelte/store';
 import { getFolderById, getSharedFolderChats } from '$lib/apis/folders';
 import { getChatListByFolderId } from '$lib/apis/chats';
 import { getModels } from '$lib/apis';
 import type { Model } from '$lib/stores';
+import type { FolderAutomation } from '$lib/apis/automations';
+import type { FolderTag } from '$lib/utils/tags';
+import { isMachine, machineIdOf } from '$lib/utils/machines';
 
 export type FolderDetails = {
 	id: string;
@@ -11,7 +20,7 @@ export type FolderDetails = {
 	parent_id?: string | null;
 	user_id?: string;
 	data?: {
-		terminal_id?: string;
+		machine_id?: string;
 		working_directory?: string;
 		model_ids?: string[];
 		[key: string]: any;
@@ -24,13 +33,14 @@ export type FolderDetails = {
 export type FolderChat = { id: string; [key: string]: any };
 export type FolderChatQuery = {
 	page?: number;
-	sortBy?: 'title' | 'updated_at' | 'unread_updated_at';
+	sortBy?: 'title' | 'updated_at' | 'unread_updated_at' | 'priority';
 	sortDir?: 'asc' | 'desc';
 	workspace?: boolean;
 	search?: string;
 	tagIds?: string[];
 	userIds?: string[];
 	status?: FolderStatus | FolderStatus[];
+	priority?: FolderPriority | FolderPriority[];
 	activity?: FolderActivity;
 	updatedAtGte?: number;
 };
@@ -45,8 +55,13 @@ export type FolderState = {
 	details: FolderDetails | null;
 	chatPages: Record<string, FolderChatPage>;
 	sidebarPage: number;
+	tags?: FolderTag[];
+	users?: FolderUser[];
+	/** The first page. */
+	notes?: { items: any[]; total: number };
+	automations?: FolderAutomation[];
 	agentModels: {
-		terminalId: string;
+		machineId: string;
 		directory: string;
 		connectionRevision: number;
 		models: Model[];
@@ -75,6 +90,7 @@ export const folderChatPageKey = (query: FolderChatQuery = {}) =>
 					query.search?.trim() ?? '',
 					[...new Set(query.tagIds ?? [])].sort(),
 					query.status ?? null,
+					query.priority ?? null,
 					query.activity ?? null,
 					query.updatedAtGte ?? null,
 					[...new Set(query.userIds ?? [])].sort()
@@ -201,6 +217,22 @@ export function loadFolderChatPage(
 	);
 }
 
+/** Where chats were put from this window; a list that is not loaded does not show them. */
+const movedChats = new Map<string, string | null>();
+/** The folder a chat is known to be in, without asking the server. */
+export const findFolderChat = (
+	chatId: string
+): { folder_id: string | null; title?: string } | undefined => {
+	for (const [folder_id, folder] of Object.entries(entries)) {
+		for (const [key, page] of Object.entries(folder.chatPages)) {
+			const chat = !JSON.parse(key)[3] && page.chats.find((chat) => chat.id === chatId);
+			if (chat) return { folder_id, title: chat.title };
+		}
+	}
+	const folder_id = movedChats.get(chatId);
+	return folder_id === undefined ? undefined : { folder_id };
+};
+
 export function setFolderSidebarPage(id: string, page: number) {
 	getFolderState(id).sidebarPage = page;
 	notify();
@@ -247,6 +279,7 @@ export function updateFolderChatLists(
 ) {
 	const { chat: conversation, ...row } = chat;
 	chat = row;
+	if (destination !== undefined) movedChats.set(chat.id, destination);
 	for (const [id, folder] of Object.entries(entries)) {
 		const known = Object.values(folder.chatPages).some((page) =>
 			page.chats.some((item) => item.id === chat.id)
@@ -325,7 +358,7 @@ export function setFolderModelConnections(configuration: unknown) {
 export function getFolderAgentModels(folder: FolderDetails): Model[] | null {
 	const loaded = entries[folder.id]?.agentModels;
 	return loaded &&
-		loaded.terminalId === folder.data?.terminal_id &&
+		loaded.machineId === machineIdOf(folder.data) &&
 		loaded.directory === (folder.data?.working_directory ?? '') &&
 		loaded.connectionRevision === connectionRevision
 		? loaded.models
@@ -339,11 +372,11 @@ export async function loadFolderAgentModels(
 ): Promise<Model[]> {
 	const loaded = getFolderAgentModels(folder);
 	if (loaded && !refresh) return loaded;
-	const terminalId = folder.data?.terminal_id;
-	if (!terminalId) return [];
+	const machineId = machineIdOf(folder.data);
+	if (!machineId) return [];
 	const directory = folder.data?.working_directory ?? '';
 	const version = connectionRevision;
-	const resource = `models:${JSON.stringify([terminalId, directory, version])}`;
+	const resource = `models:${JSON.stringify([machineId, directory, version])}`;
 	return request(
 		folder.id,
 		resource,
@@ -351,10 +384,10 @@ export async function loadFolderAgentModels(
 			let discovery = agentRequests.get(resource);
 			if (!discovery) {
 				discovery = getModels(token, false, false, {
-					terminalId,
+					machineId,
 					chatId: null,
 					cwd: directory || null
-				}).then((models) => models.filter((model: Model) => model.owned_by === 'terminal'));
+				}).then((models) => models.filter((model: Model) => isMachine(model.owned_by)));
 				agentRequests.set(resource, discovery);
 			}
 			try {
@@ -368,13 +401,13 @@ export async function loadFolderAgentModels(
 			const details = current.details;
 			if (
 				details &&
-				(details.data?.terminal_id !== terminalId ||
+				(machineIdOf(details.data) !== machineId ||
 					(details.data?.working_directory ?? '') !== directory)
 			)
 				return;
 			if (version === connectionRevision)
 				current.agentModels = {
-					terminalId,
+					machineId,
 					directory,
 					connectionRevision: version,
 					models
@@ -388,6 +421,7 @@ export function clearFolderStates() {
 	entries = {};
 	pending.clear();
 	agentRequests.clear();
+	movedChats.clear();
 	revisions.clear();
 	connectionsSignature = '';
 	connectionRevision++;

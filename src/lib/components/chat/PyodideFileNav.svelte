@@ -6,7 +6,7 @@
 	import { getContext, onMount, onDestroy, tick } from 'svelte';
 	import { pyodideWorker } from '$lib/stores';
 	import { createPyodideWorker } from '$lib/pyodide/createPyodideWorker';
-	import type { FileEntry } from '$lib/apis/terminal';
+	import type { FileEntry } from '$lib/apis/machines';
 
 	import FileNavToolbar from './FileNav/FileNavToolbar.svelte';
 	import FilesOverlay from './MessageInput/FilesOverlay.svelte';
@@ -412,7 +412,7 @@
 	>
 		<!-- File action buttons when a file is selected (slot content) -->
 		<button
-			class="shrink-0 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400"
+			class="shrink-0 p-1 rounded hover:bg-base-100 dark:hover:bg-base-800 transition text-base-400 dark:text-base-500 hover:text-base-600 dark:hover:text-base-400"
 			on:click={() => selectedFile && downloadFile(selectedFile)}
 			aria-label={$i18n.t('Download')}
 		>
@@ -442,11 +442,11 @@
 			</div>
 		{:else if error}
 			<div class="flex items-center justify-center flex-1 p-6 text-center">
-				<div class="text-xs text-gray-500 dark:text-gray-400">{error}</div>
+				<div class="text-xs text-base-500 dark:text-base-400">{error}</div>
 			</div>
 		{:else if entries.length === 0 && !creatingFolder && !creatingFile}
 			<div class="flex flex-1 items-center justify-center p-6 text-center">
-				<div class="text-xs text-gray-400 dark:text-gray-500">
+				<div class="text-xs text-base-400 dark:text-base-500">
 					<!-- Retired empty state: keep its translation.
 					{$i18n.t('No files yet. Upload files or run Python code to create them.')}
 					-->
@@ -477,7 +477,7 @@
 			{/if}
 			{#if creatingFile}
 				<div class="flex items-center gap-2 px-3 py-1.5">
-					<Document className="size-4 shrink-0 text-gray-400 dark:text-gray-500" />
+					<Document className="size-4 shrink-0 text-base-400 dark:text-base-500" />
 					<input
 						bind:this={newFileInput}
 						bind:value={newFileName}

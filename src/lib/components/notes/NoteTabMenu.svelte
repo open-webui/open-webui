@@ -23,7 +23,7 @@
 
 <Dropdown align="start" closeOnSelect>
 	<button
-		class="{className} flex size-5 items-center justify-center rounded-lg text-gray-500 hover:text-gray-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5"
+		class="{className} flex size-5 items-center justify-center rounded-lg text-base-500 hover:text-base-900 dark:hover:text-base-0 hover:bg-base-1000/5 dark:hover:bg-base-0/5"
 		disabled={busy}
 		aria-label={$i18n.t('Page menu')}><EllipsisHorizontal className="size-3.5" /></button
 	>
@@ -52,7 +52,7 @@
 					>
 				{/if}
 			{/if}
-			<hr class="border-gray-100 dark:border-gray-800" />
+			<hr class="border-base-100 dark:border-base-800" />
 			<button class="w-full text-start px-3 py-1.5" on:click={() => onCopyLink(page.id)}
 				>{$i18n.t('Copy page link')}</button
 			>
@@ -62,7 +62,7 @@
 				>
 			{/each}
 			{#if editable && page.id !== 'main'}
-				<hr class="border-gray-100 dark:border-gray-800" />
+				<hr class="border-base-100 dark:border-base-800" />
 				<button
 					class="w-full text-start px-3 py-1.5 disabled:opacity-40"
 					disabled={pages.length === 1}

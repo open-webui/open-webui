@@ -1,6 +1,6 @@
 <h2>Open WebUI</h2>
 
-<p>Open WebUI هو <a href="https://docs.openwebui.com/"><strong>بيت للذكاء الاصطناعي</strong></a>: منصة قابلة للتوسعة وسهلة الاستخدام تستضيفها بنفسك، ومصممة للعمل بالكامل دون اتصال بالإنترنت. اربط النماذج المحلية عبر Ollama أو استخدم واجهات API المتوافقة مع OpenAI للنماذج المحلية والسحابية.</p>
+<p>Open WebUI هو <a href="https://docs.openwebui.com/"><strong>بيت للذكاء الاصطناعي</strong></a>: منصة قابلة للتوسعة وسهلة الاستخدام تستضيفها بنفسك، ومصممة للعمل بالكامل دون اتصال بالإنترنت. اربط النماذج المحلية عبر Ollama، أو استخدم واجهات API المتوافقة مع OpenAI للنماذج المحلية والسحابية، أو أضف الوكلاء عبر <a href="https://docs.openwebui.com/features/open-terminal/agents">Agent Client Protocol (ACP)</a>.</p>
 
 [English](README.md) |
 [简体中文](README.zh.md) |

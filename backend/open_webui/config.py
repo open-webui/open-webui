@@ -42,6 +42,7 @@ from open_webui.utils.json_codec import JSONCodec
 
 async def seed_registered_defaults():
     await Config.rename_prefix('rag.web', 'web')
+    await Config.rename_prefix('terminal_server', 'machines')  # Terminals became Machines
     await Config.repair_config_rows()
     await Config.seed_defaults(DEFAULT_CONFIG)
 
@@ -370,16 +371,18 @@ TOOL_SERVER_CONNECTIONS = tool_server_connections
 
 OAUTH_CLIENT_TIMEOUT = os.getenv('OAUTH_CLIENT_TIMEOUT', '')
 
-# TERMINAL_SERVER
+# MACHINES (formerly TERMINAL_SERVER: stored rows are renamed on load; TERMINAL_SERVER_CONNECTIONS is a fallback)
 
-terminal_server_connections = JSONCodec.loads(os.getenv('TERMINAL_SERVER_CONNECTIONS', '[]'))
+MACHINE_CONNECTIONS = JSONCodec.loads(
+    os.getenv('MACHINE_CONNECTIONS') or os.getenv('TERMINAL_SERVER_CONNECTIONS') or '[]'
+)
 
-TERMINAL_SERVER_CONNECTIONS = terminal_server_connections
-
-try:
-    TERMINAL_PROXY_HEADERS = JSONCodec.loads(os.getenv('TERMINAL_PROXY_HEADERS', '{}'))
+try:  # TERMINAL_PROXY_HEADERS is the former name, still read as a fallback.
+    MACHINE_PROXY_HEADERS = JSONCodec.loads(
+        os.getenv('MACHINE_PROXY_HEADERS') or os.getenv('TERMINAL_PROXY_HEADERS') or '{}'
+    )
 except Exception:
-    TERMINAL_PROXY_HEADERS = {}
+    MACHINE_PROXY_HEADERS = {}
 
 # Code Interpreter
 
@@ -961,15 +964,19 @@ ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS = (
 )
 
 RAG_FULL_CONTEXT = os.getenv('RAG_FULL_CONTEXT', 'False').lower() == 'true'
-RAG_FULL_TEXT_CHAR_THRESHOLD = max(
+RAG_FULL_TEXT_THRESHOLD = max(
     0,
     int(
         os.getenv(
-            'RAG_FULL_TEXT_CHAR_THRESHOLD',
-            os.getenv('RAG_RETRIEVAL_CHAR_THRESHOLD', os.getenv('RAG_FULL_CONTEXT_CHAR_THRESHOLD', '50000')),
+            'RAG_FULL_TEXT_THRESHOLD',
+            os.getenv(
+                'RAG_FULL_TEXT_CHAR_THRESHOLD',
+                os.getenv('RAG_RETRIEVAL_CHAR_THRESHOLD', os.getenv('RAG_FULL_CONTEXT_CHAR_THRESHOLD', '50000')),
+            ),
         )
     ),
 )
+RAG_FULL_TEXT_THRESHOLD_TYPE = os.getenv('RAG_FULL_TEXT_THRESHOLD_TYPE', '')
 
 RAG_FILE_MAX_COUNT = int(os.getenv('RAG_FILE_MAX_COUNT')) if os.getenv('RAG_FILE_MAX_COUNT') else None
 KNOWLEDGE_MAX_UPLOAD_COUNT = (
@@ -1072,26 +1079,11 @@ CHUNK_MIN_SIZE_TARGET = int(os.getenv('CHUNK_MIN_SIZE_TARGET', '0'))
 
 CHUNK_OVERLAP = int(os.getenv('CHUNK_OVERLAP', '100'))
 
-DEFAULT_RAG_TEMPLATE = """### Task:
-Respond to the user query using the provided context, incorporating inline citations in the format [id] **only when the <source> tag includes an explicit id attribute** (e.g., <source id="1">).
+DEFAULT_RAG_TEMPLATE = """Answer the user's message using the sources inside <context> below. They were retrieved automatically for this conversation and may be incomplete or irrelevant.
 
-### Guidelines:
-- If you don't know the answer, clearly state that.
-- If uncertain, ask the user for clarification.
-- Respond in the same language as the user's query.
-- If the context is unreadable or of poor quality, inform the user and provide the best possible answer.
-- If the answer isn't present in the context but you possess the knowledge, explain this to the user and provide the answer using your own understanding.
-- **Only include inline citations using [id] (e.g., [1], [2]) when the <source> tag includes an id attribute.**
-- Do not cite if the <source> tag does not contain an id attribute.
-- Do not use XML tags in your response.
-- Ensure citations are concise and directly related to the information provided.
+Cite a source directly after each statement it supports, using its id in square brackets: "The warranty covers parts for two years [1]." For several sources, write [1][2]. Use only ids that appear in the context. A <source> tag with nothing inside it labels the material just above it.
 
-### Example of Citation:
-If the user asks about a specific topic and the information is found in a source with a provided id attribute, the response should include the citation like in the following example:
-* "According to the study, the proposed method increases efficiency by 20% [1]."
-
-### Output:
-Provide a clear and direct response to the user's query, including inline citations in the format [id] only when the <source> tag with id attribute is present in the context.
+If the sources don't contain the answer, say so, then answer from your own knowledge if you can. If the context is unrelated to the message, ignore it. Reply in the user's language, and don't reproduce the <context> or <source> tags.
 
 <context>
 {{CONTEXT}}
@@ -1869,6 +1861,10 @@ USER_PERMISSIONS_NOTES_ALLOW_PUBLIC_SHARING = (
 
 USER_PERMISSIONS_FOLDERS_ALLOW_SHARING = os.getenv('USER_PERMISSIONS_FOLDERS_ALLOW_SHARING', 'False').lower() == 'true'
 
+USER_PERMISSIONS_AUTOMATIONS_ALLOW_SHARING = (
+    os.getenv('USER_PERMISSIONS_AUTOMATIONS_ALLOW_SHARING', 'False').lower() == 'true'
+)
+
 
 USER_PERMISSIONS_CALENDAR_ALLOW_PUBLIC_SHARING = (
     os.getenv('USER_PERMISSIONS_CALENDAR_ALLOW_PUBLIC_SHARING', 'False').lower() == 'true'
@@ -2013,6 +2009,7 @@ DEFAULT_USER_PERMISSIONS = {
         'notes': USER_PERMISSIONS_NOTES_ALLOW_SHARING,
         'public_notes': USER_PERMISSIONS_NOTES_ALLOW_PUBLIC_SHARING,
         'folders': USER_PERMISSIONS_FOLDERS_ALLOW_SHARING,
+        'automations': USER_PERMISSIONS_AUTOMATIONS_ALLOW_SHARING,
         'public_chats': USER_PERMISSIONS_CHAT_ALLOW_PUBLIC_SHARING,
         'open_chats': USER_PERMISSIONS_CHAT_ALLOW_OPEN_SHARING,
         'public_calendars': USER_PERMISSIONS_CALENDAR_ALLOW_PUBLIC_SHARING,
@@ -2088,6 +2085,10 @@ VIEW_CHAT_MAX_CHARS = int(os.environ['VIEW_CHAT_MAX_CHARS']) if os.getenv('VIEW_
 if VIEW_CHAT_MAX_CHARS is not None and VIEW_CHAT_MAX_CHARS <= 0:
     raise ValueError('VIEW_CHAT_MAX_CHARS must be a positive integer or unset')
 
+TOOL_OUTPUT_MAX_CHARS = int(os.environ['TOOL_OUTPUT_MAX_CHARS']) if os.getenv('TOOL_OUTPUT_MAX_CHARS') else None
+if TOOL_OUTPUT_MAX_CHARS is not None and TOOL_OUTPUT_MAX_CHARS <= 0:
+    raise ValueError('TOOL_OUTPUT_MAX_CHARS must be a positive integer or unset')
+
 ENABLE_CHANNELS = os.getenv('ENABLE_CHANNELS', 'False').lower() == 'true'
 
 ENABLE_ENCRYPTED_CHANNELS = os.getenv('ENABLE_ENCRYPTED_CHANNELS', 'False').lower() == 'true'
@@ -2099,9 +2100,9 @@ CHANNEL_MODEL_RESPONSE_MODE = os.getenv('CHANNEL_MODEL_RESPONSE_MODE', 'thread')
 ENABLE_CALENDAR = os.getenv('ENABLE_CALENDAR', 'True').lower() == 'true'
 
 ENABLE_AUTOMATIONS = os.getenv('ENABLE_AUTOMATIONS', 'True').lower() == 'true'
+ENABLE_AUTOMATION_WEBHOOKS = os.getenv('ENABLE_AUTOMATION_WEBHOOKS', 'True').lower() == 'true'
 
 ENABLE_SUBAGENTS = os.getenv('ENABLE_SUBAGENTS', 'False').lower() == 'true'
-SUBAGENTS_BACKGROUND_ENABLED = os.getenv('SUBAGENTS_BACKGROUND_ENABLED', 'False').lower() == 'true'
 # Leave empty for unlimited.
 SUBAGENTS_MAX_CONCURRENT = os.getenv('SUBAGENTS_MAX_CONCURRENT', '')
 SUBAGENTS_MAX_CONCURRENT = int(SUBAGENTS_MAX_CONCURRENT) if SUBAGENTS_MAX_CONCURRENT else None
@@ -2117,6 +2118,10 @@ AUTOMATION_MAX_COUNT = os.getenv('AUTOMATION_MAX_COUNT', '')
 
 AUTOMATION_MIN_INTERVAL = os.getenv('AUTOMATION_MIN_INTERVAL', '')
 
+# Leave empty for unlimited.
+AUTOMATION_MAX_CONCURRENT = os.getenv('AUTOMATION_MAX_CONCURRENT', '')
+AUTOMATION_MAX_CONCURRENT = int(AUTOMATION_MAX_CONCURRENT) if AUTOMATION_MAX_CONCURRENT else None
+
 AUTOMATION_AUTH_TOKEN_EXPIRES_IN = os.getenv('AUTOMATION_AUTH_TOKEN_EXPIRES_IN', '1h')
 
 ENABLE_COMMENTS = os.getenv('ENABLE_COMMENTS', 'False').lower() == 'true'
@@ -2126,31 +2131,15 @@ ENABLE_NOTES = os.getenv('ENABLE_NOTES', 'True').lower() == 'true'
 
 ENABLE_USER_STATUS = os.getenv('ENABLE_USER_STATUS', 'True').lower() == 'true'
 
-ENABLE_EVALUATION_ARENA_MODELS = os.getenv('ENABLE_EVALUATION_ARENA_MODELS', 'False').lower() == 'true'
 try:
-    evaluation_arena_models = JSONCodec.loads(os.getenv('EVALUATION_ARENA_MODELS', '[]'))
-    if not isinstance(evaluation_arena_models, list) or not all(
-        isinstance(model, dict) for model in evaluation_arena_models
-    ):
-        raise ValueError('EVALUATION_ARENA_MODELS must be a JSON list of objects')
+    router_models = JSONCodec.loads(os.getenv('ROUTER_MODELS', '[]'))
+    if not isinstance(router_models, list) or not all(isinstance(model, dict) for model in router_models):
+        raise ValueError('ROUTER_MODELS must be a JSON list of objects')
 except Exception as e:
-    log.exception(f'Error loading EVALUATION_ARENA_MODELS: {e}')
-    evaluation_arena_models = []
+    log.exception(f'Error loading ROUTER_MODELS: {e}')
+    router_models = []
 
-EVALUATION_ARENA_MODELS = evaluation_arena_models
-
-DEFAULT_ARENA_MODEL = {
-    'id': 'arena-model',
-    'name': 'Arena Model',
-    'meta': {
-        # LICENSE covers this Open WebUI fallback logo.
-        # Do not alter, remove, obscure, or replace it except as LICENSE permits:
-        # https://docs.openwebui.com/license.
-        'profile_image_url': '/favicon.png',
-        'description': 'Submit your questions to anonymous AI chatbots and vote on the best response.',
-        'model_ids': None,
-    },
-}
+ROUTER_MODELS = router_models
 
 WEBHOOK_URL = os.getenv('WEBHOOK_URL', '')
 
@@ -2307,6 +2296,10 @@ TOOL_SEARCH_ALWAYS_LOADED = [
 ]
 
 TOOL_SEARCH_DEFER_BUILTIN_TOOLS = os.getenv('TOOL_SEARCH_DEFER_BUILTIN_TOOLS', 'True').lower() == 'true'
+
+# Listing deferred tools in the system prompt helps models find them, but the prompt then changes
+# (and the provider prompt cache is invalidated) whenever the set of deferred tools changes.
+TOOL_SEARCH_LIST_TOOLS = os.getenv('TOOL_SEARCH_LIST_TOOLS', 'True').lower() == 'true'
 
 TITLE_GENERATION_PROMPT_TEMPLATE = os.getenv('TITLE_GENERATION_PROMPT_TEMPLATE', '')
 
@@ -2971,6 +2964,7 @@ DEFAULT_CONFIG = {
     'skills.content_max_chars': SKILL_CONTENT_MAX_CHARS,
     'skills.preview_max_chars': SKILL_PREVIEW_MAX_CHARS,
     'chats.view_max_chars': VIEW_CHAT_MAX_CHARS,
+    'tools.output_max_chars': TOOL_OUTPUT_MAX_CHARS,
     'ollama.enable': ENABLE_OLLAMA_API,
     'ollama.base_urls': OLLAMA_BASE_URLS,
     'ollama.api_configs': OLLAMA_API_CONFIGS,
@@ -2981,7 +2975,7 @@ DEFAULT_CONFIG = {
     'models.base_models_cache': ENABLE_BASE_MODELS_CACHE,
     'tool_server.connections': TOOL_SERVER_CONNECTIONS,
     'oauth.client.timeout': OAUTH_CLIENT_TIMEOUT,
-    'terminal_server.connections': TERMINAL_SERVER_CONNECTIONS,
+    'machines.connections': MACHINE_CONNECTIONS,
     'code_execution.enable': ENABLE_CODE_EXECUTION,
     'code_execution.engine': CODE_EXECUTION_ENGINE,
     'code_execution.jupyter.url': CODE_EXECUTION_JUPYTER_URL,
@@ -3054,7 +3048,8 @@ DEFAULT_CONFIG = {
     'rag.enable_hybrid_search_enriched_texts': ENABLE_RAG_HYBRID_SEARCH_ENRICHED_TEXTS,
     'rag.full_context': RAG_FULL_CONTEXT,
     # Retain the stored key so renaming the setting preserves saved thresholds.
-    'rag.full_context_char_threshold': RAG_FULL_TEXT_CHAR_THRESHOLD,
+    'rag.full_context_char_threshold': RAG_FULL_TEXT_THRESHOLD,
+    'rag.full_text_threshold_type': RAG_FULL_TEXT_THRESHOLD_TYPE,
     'rag.file.max_count': RAG_FILE_MAX_COUNT,
     'knowledge.max_upload_count': KNOWLEDGE_MAX_UPLOAD_COUNT,
     'knowledge.max_file_count': KNOWLEDGE_MAX_FILE_COUNT,
@@ -3281,8 +3276,8 @@ DEFAULT_CONFIG = {
     'channels.model_response_mode': CHANNEL_MODEL_RESPONSE_MODE,
     'calendar.enable': ENABLE_CALENDAR,
     'automations.enable': ENABLE_AUTOMATIONS,
+    'automations.webhooks.enable': ENABLE_AUTOMATION_WEBHOOKS,
     'subagents.enable': ENABLE_SUBAGENTS,
-    'subagents.background_enabled': SUBAGENTS_BACKGROUND_ENABLED,
     'subagents.max_concurrent': SUBAGENTS_MAX_CONCURRENT,
     'subagents.max_async': SUBAGENTS_MAX_ASYNC,
     'subagents.max_iterations': SUBAGENTS_MAX_ITERATIONS,
@@ -3290,13 +3285,13 @@ DEFAULT_CONFIG = {
     'subagents.system_prompt': SUBAGENTS_SYSTEM_PROMPT,
     'automations.max_count': AUTOMATION_MAX_COUNT,
     'automations.min_interval': AUTOMATION_MIN_INTERVAL,
+    'automations.max_concurrent': AUTOMATION_MAX_CONCURRENT,
     'automations.auth_token_expires_in': AUTOMATION_AUTH_TOKEN_EXPIRES_IN,
     'notes.enable': ENABLE_NOTES,
     'comments.enable': ENABLE_COMMENTS,
     'notifications.enable': ENABLE_NOTIFICATIONS,
     'users.enable_status': ENABLE_USER_STATUS,
-    'evaluation.arena.enable': ENABLE_EVALUATION_ARENA_MODELS,
-    'evaluation.arena.models': EVALUATION_ARENA_MODELS,
+    'router.models': ROUTER_MODELS,
     'webhook_url': WEBHOOK_URL,
     'ui.enable_community_sharing': ENABLE_COMMUNITY_SHARING,
     'ui.enable_message_rating': ENABLE_MESSAGE_RATING,
@@ -3333,6 +3328,7 @@ DEFAULT_CONFIG = {
     'chat.tool_search.defer_threshold': TOOL_SEARCH_DEFER_THRESHOLD,
     'chat.tool_search.always_loaded': TOOL_SEARCH_ALWAYS_LOADED,
     'chat.tool_search.defer_builtin_tools': TOOL_SEARCH_DEFER_BUILTIN_TOOLS,
+    'chat.tool_search.list_tools': TOOL_SEARCH_LIST_TOOLS,
     'task.title.prompt_template': TITLE_GENERATION_PROMPT_TEMPLATE,
     'task.tags.prompt_template': TAGS_GENERATION_PROMPT_TEMPLATE,
     'task.image.prompt_template': IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE,

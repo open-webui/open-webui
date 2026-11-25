@@ -12,6 +12,7 @@
 	import MentionList from '$lib/components/channel/MessageInput/MentionList.svelte';
 	import { getSuggestionRenderer } from '$lib/components/common/RichTextInput/suggestions';
 	import { commentsRequest, resourceQuery, type CommentResource } from '$lib/apis/comments';
+	import { middleTruncate } from './anchors';
 	export let resource: CommentResource;
 	export let draftKey: string;
 	export let contextLabel = '';
@@ -27,7 +28,24 @@
 	}
 	export let onSubmit: (content: string, tempId: string) => Promise<void>;
 	export let onCancel: (() => void) | null = null;
+	export let cancelOnOutsideClick = false;
+	export let compact = false;
 	const i18n = getContext<any>('i18n');
+	let root: HTMLDivElement;
+	const outsidePointer = (event: PointerEvent) => {
+		const target = event.target as Element | null;
+		if (
+			!cancelOnOutsideClick ||
+			!onCancel ||
+			saving ||
+			!target?.isConnected ||
+			root?.contains(target) ||
+			target.closest('.suggestion-list-container')
+		)
+			return;
+		drafts.delete(draftKey);
+		onCancel();
+	};
 	if (draftAccount !== $user?.id) {
 		drafts.clear();
 		draftAccount = $user?.id;
@@ -82,7 +100,10 @@
 	};
 </script>
 
+<svelte:window on:pointerdown={outsidePointer} />
+
 <div
+	bind:this={root}
 	class="w-full"
 	on:focusout={(event) => {
 		if (
@@ -103,7 +124,7 @@
 					: 'auto'}
 			class="relative {embedded
 				? ''
-				: `rounded-2xl border border-gray-100/50 dark:border-gray-850/50 hover:border-gray-200/70 focus-within:border-gray-100/70 hover:dark:border-gray-800/70 focus-within:dark:border-gray-800/70 transition bg-white/5 dark:bg-gray-500/5 ps-3 pb-2.5 ${contextLabel || quote ? 'pt-1' : 'pt-2.5'}`} {($settings?.highContrastMode ??
+				: `rounded-2xl border border-base-100/50 dark:border-base-850/50 hover:border-base-200/70 focus-within:border-base-100/70 hover:dark:border-base-800/70 focus-within:dark:border-base-800/70 transition bg-base-0/5 dark:bg-base-500/5 ps-3 pb-2.5 ${contextLabel || quote ? 'pt-1' : 'pt-2.5'}`} {($settings?.highContrastMode ??
 			false)
 				? 'focus-within:outline focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-blue-500'
 				: ''}"
@@ -112,29 +133,35 @@
 				<div class="pb-2 {embedded ? '' : 'pe-3'} text-left w-full flex flex-col">
 					{#if contextLabel || onClearContext}
 						<div
-							class="flex items-center justify-between gap-2 text-xs text-gray-500 dark:text-gray-400"
+							class="flex items-center justify-between gap-2 text-xs text-base-500 dark:text-base-400"
 						>
 							<span class="truncate">{contextLabel}</span>{#if onClearContext}<button
 									type="button"
-									class="flex h-6 shrink-0 items-center justify-center p-0 hover:text-gray-700 dark:hover:text-gray-200"
+									class="flex h-6 shrink-0 items-center justify-center p-0 hover:text-base-700 dark:hover:text-base-200"
 									aria-label={$i18n.t('Remove context')}
 									on:click={onClearContext}><XMark className="size-3.5" /></button
 								>{/if}
 						</div>
 					{/if}
 					{#if quote}<div
-							class="{embedded ? '' : 'mb-1 mt-1'} {scrollable
-								? 'max-h-20 overflow-auto'
-								: ''} border-l-2 border-gray-200 dark:border-gray-700 ps-2 text-xs text-gray-500 whitespace-pre-wrap break-words"
+							class="{embedded
+								? ''
+								: 'mb-1 mt-1'} border-l-2 border-base-200 dark:border-base-700 ps-2 text-xs text-base-500 break-words"
+							title={quote}
 						>
-							{quote}
+							{middleTruncate(quote)}
 						</div>{/if}
 				</div>
 			{/if}
-			<div class={embedded ? 'min-h-6 py-0.5 pe-9' : submitLabel === 'Save' ? 'pe-16' : 'pe-12'}>
+			<div class={embedded ? 'min-h-6 py-0.5' : ''}>
+				<!-- Padding lives inside the scroller so its scrollbar sits in the send-button column. -->
 				<div
-					class="scrollbar-hidden rtl:text-right ltr:text-left bg-transparent dark:text-gray-100 outline-hidden w-full resize-none h-fit {scrollable
-						? 'max-h-96 overflow-auto'
+					class="scrollbar-hidden rtl:text-right ltr:text-left bg-transparent dark:text-base-100 outline-hidden w-full resize-none h-fit {embedded
+						? 'pe-9'
+						: submitLabel === 'Save'
+							? 'pe-16'
+							: 'pe-12'} {scrollable
+						? `${embedded || compact ? 'max-h-40' : 'max-h-96'} overflow-auto`
 						: ''}"
 				>
 					<RichTextInput
@@ -172,7 +199,7 @@
 					/>
 				</div>
 			</div>
-			{#if error}<p role="alert" class="py-1 text-xs text-gray-500 dark:text-gray-400">
+			{#if error}<p role="alert" class="py-1 text-xs text-base-500 dark:text-base-400">
 					{error}
 				</p>{/if}
 			<div class="absolute {embedded ? 'bottom-0 end-0' : 'bottom-2 end-2.5'} flex items-center">
@@ -181,7 +208,7 @@
 						type="button"
 						aria-label={$i18n.t(submitLabel)}
 						title={$i18n.t(submitLabel)}
-						class="flex h-6 shrink-0 items-center justify-center bg-black text-white transition hover:bg-gray-900 disabled:bg-gray-200 disabled:text-gray-500 dark:bg-white dark:text-black dark:hover:bg-gray-100 dark:disabled:bg-gray-600 dark:disabled:text-gray-850 {submitLabel ===
+						class="flex h-6 shrink-0 items-center justify-center bg-base-1000 text-base-0 transition hover:bg-base-900 disabled:bg-base-200 disabled:text-base-500 dark:bg-base-0 dark:text-base-1000 dark:hover:bg-base-100 dark:disabled:bg-base-600 dark:disabled:text-base-850 {submitLabel ===
 						'Save'
 							? 'rounded-md px-2 text-xs'
 							: 'size-6 rounded-full'}"

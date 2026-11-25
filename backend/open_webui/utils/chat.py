@@ -1,6 +1,5 @@
 import json
 import logging
-import random
 import sys
 import time
 from typing import Any, Optional
@@ -25,6 +24,7 @@ from open_webui.socket.main import (
     get_event_call,
     get_event_emitter,
 )
+from open_webui.utils.audit import log_model_usage
 from open_webui.utils.chat_id import get_temporary_chat_session_id
 from open_webui.utils.filter import (
     get_filter_functions,
@@ -36,7 +36,9 @@ from open_webui.utils.payload import apply_system_prompt_to_body, convert_chat_c
 from open_webui.utils.response import (
     convert_ollama_response_to_chat_completions,
     convert_ollama_stream_to_chat_completions,
+    get_response_usage,
 )
+from open_webui.utils.router_models import resolve_router_model
 from starlette.responses import JSONResponse, Response, StreamingResponse
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
@@ -103,7 +105,7 @@ async def register_temporary_chat_session(redis, chat_id, user_id, session_id, s
 
 # When the question has been asked, let silence not be the
 # answer. But if the answer must wait, let it come honest.
-async def generate_chat_completion(
+async def dispatch_chat_completion(
     request: Request,
     form_data: dict,
     user: Any,
@@ -144,41 +146,33 @@ async def generate_chat_completion(
         except Exception as e:
             raise e
 
-    # Arena model — sub-model was already resolved by process_chat_payload.
-    # Inject selected_model_id into the response for the frontend.
+    # Router model: target already resolved by process_chat_payload.
+    # Inject selected_model_id and strategy into the response for the frontend.
     metadata = form_data.get('metadata', {})
     selected_model_id = metadata.pop('selected_model_id', None)
-    # Also clear from request.state.metadata to prevent the merge at
-    # lines 177-179 from re-adding it on the recursive call.
+    strategy = metadata.pop('strategy', None)
+    # Also clear from request.state.metadata so the merge on the recursive
+    # call doesn't re-add them.
     if hasattr(request.state, 'metadata'):
         request.state.metadata.pop('selected_model_id', None)
+        request.state.metadata.pop('strategy', None)
 
-    # Fallback: if generate_chat_completion is called with an arena model
-    # from a path that did NOT go through process_chat_payload (e.g.,
-    # background tasks for title/follow-up/tags generation), resolve now.
-    if not selected_model_id and model.get('owned_by') == 'arena':
-        model_ids = model.get('info', {}).get('meta', {}).get('model_ids')
-        filter_mode = model.get('info', {}).get('meta', {}).get('filter_mode')
-        if model_ids and filter_mode == 'exclude':
-            model_ids = [
-                available_model['id']
-                for available_model in list(request.app.state.MODELS.values())
-                if available_model.get('owned_by') != 'arena' and available_model['id'] not in model_ids
-            ]
-
-        if isinstance(model_ids, list) and model_ids:
-            selected_model_id = random.choice(model_ids)
-        else:
-            model_ids = [
-                available_model['id']
-                for available_model in list(request.app.state.MODELS.values())
-                if available_model.get('owned_by') != 'arena'
-            ]
-            selected_model_id = random.choice(model_ids)
-
+    # Fallback for paths that skip process_chat_payload (title, tags, follow-ups),
+    # so background tasks for sensitive chats are routed too.
+    if not selected_model_id and model.get('owned_by') == 'router':
+        # Tasks route on the text they are about, not on their own instructions.
+        task_body = metadata.get('task_body')
+        routing_form_data = form_data
+        if task_body:
+            messages = list(task_body.get('messages') or [])
+            if task_body.get('prompt'):
+                messages.append({'role': 'user', 'content': task_body['prompt']})
+            messages += [{'role': 'assistant', 'content': content} for content in task_body.get('responses') or []]
+            routing_form_data = {**form_data, 'messages': messages}
+        selected_model_id, strategy = await resolve_router_model(model['id'], routing_form_data, user)
         form_data['model'] = selected_model_id
 
-        # bypass_filter recursion below skips the line-200 check; gate the resolved model here.
+        # bypass_filter recursion below skips the access check; gate the resolved model here.
         if not bypass_filter and user.role == 'user':
             selected_model = request.app.state.MODELS.get(selected_model_id)
             if selected_model:
@@ -188,11 +182,11 @@ async def generate_chat_completion(
         if form_data.get('stream') == True:
 
             async def stream_wrapper(stream):
-                yield f'data: {JSONCodec.dumps({"selected_model_id": selected_model_id})}\n\n'
+                yield f'data: {JSONCodec.dumps({"selected_model_id": selected_model_id, "strategy": strategy})}\n\n'
                 async for chunk in stream:
                     yield chunk
 
-            response = await generate_chat_completion(
+            response = await dispatch_chat_completion(
                 request,
                 form_data,
                 user,
@@ -208,7 +202,7 @@ async def generate_chat_completion(
                 background=response.background,
             )
         else:
-            response = await generate_chat_completion(
+            response = await dispatch_chat_completion(
                 request,
                 form_data,
                 user,
@@ -217,7 +211,7 @@ async def generate_chat_completion(
             )
             if not isinstance(response, dict):
                 return response
-            return {**response, 'selected_model_id': selected_model_id}
+            return {**response, 'selected_model_id': selected_model_id, 'strategy': strategy}
 
     if model.get('pipe'):
         # Below does not require bypass_filter because this is the only route the uses this function and it is already bypassing the filter
@@ -253,6 +247,31 @@ async def generate_chat_completion(
             form_data=form_data,
             user=user,
         )
+
+
+async def generate_chat_completion(
+    request: Request,
+    form_data: dict,
+    user: Any,
+    bypass_filter: bool = False,
+    bypass_system_prompt: bool = False,
+):
+    # Read before dispatch; pipes take the metadata and may swap in their base model.
+    model_id = form_data.get('model')
+    task = (form_data.get('metadata') or {}).get('task')
+
+    response = await dispatch_chat_completion(request, form_data, user, bypass_filter, bypass_system_prompt)
+
+    # Task calls never reach the chat response handler, which logs chat replies.
+    if task and isinstance(response, dict):
+        log_model_usage(
+            request,
+            user,
+            response.get('selected_model_id') or model_id,
+            get_response_usage(response),
+            task=task,
+        )
+    return response
 
 
 chat_completion = generate_chat_completion

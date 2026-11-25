@@ -32,7 +32,7 @@
 					>
 						<button
 							id="sidebar-toggle-button"
-							class=" cursor-pointer flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 transition cursor-"
+							class=" cursor-pointer flex rounded-lg hover:bg-base-100 dark:hover:bg-base-850 transition cursor-"
 							aria-label={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
 							on:click={() => {
 								showSidebar.set(!$showSidebar);
@@ -56,14 +56,14 @@
 							$pageUrl.pathname
 						)
 							? ''
-							: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition select-none"
+							: 'text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-base-0'} transition select-none"
 						href="/playground">{$i18n.t('Chat')}</a
 					>
 
 					<!-- <a
 						class="min-w-fit p-1.5 {$pageUrl.pathname.includes('/playground/notes')
 							? ''
-							: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition"
+							: 'text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-base-0'} transition"
 						href="/playground/notes">{$i18n.t('Notes')}</a
 					> -->
 
@@ -71,7 +71,7 @@
 						draggable="false"
 						class="min-w-fit px-1 text-sm {$pageUrl.pathname.includes('/playground/completions')
 							? ''
-							: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition select-none"
+							: 'text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-base-0'} transition select-none"
 						href="/playground/completions">{$i18n.t('Completions')}</a
 					>
 
@@ -79,7 +79,7 @@
 						draggable="false"
 						class="min-w-fit px-1 text-sm {$pageUrl.pathname.includes('/playground/images')
 							? ''
-							: 'text-gray-300 dark:text-gray-600 hover:text-gray-700 dark:hover:text-white'} transition select-none"
+							: 'text-base-300 dark:text-base-600 hover:text-base-700 dark:hover:text-base-0'} transition select-none"
 						href="/playground/images">{$i18n.t('Images')}</a
 					>
 				</div>

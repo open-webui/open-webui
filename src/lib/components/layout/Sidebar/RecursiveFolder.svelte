@@ -1,11 +1,15 @@
 <script context="module">
 	let closeActiveHoverPreview = null;
+	// Drag data can't be read until the drop
+	/** @type {string | null} */
+	let draggedFolderId = null;
 </script>
 
 <script>
 	import { getContext, createEventDispatcher, onMount, onDestroy, tick } from 'svelte';
 
 	const i18n = getContext('i18n');
+	const appLayout = getContext('appLayout');
 	const dispatch = createEventDispatcher();
 
 	import DOMPurify from 'dompurify';
@@ -14,9 +18,20 @@
 	const { saveAs } = fileSaver;
 
 	import { goto } from '$app/navigation';
+	import { navigating, page } from '$app/stores';
 	import { toast } from 'svelte-sonner';
 
-	import { chatId, mobile, selectedFolder, showSidebar, user } from '$lib/stores';
+	import {
+		activeChatTabId,
+		chatId,
+		chatTabRequest,
+		config,
+		mobile,
+		selectedFolder,
+		settings,
+		showSidebar,
+		user
+	} from '$lib/stores';
 	import {
 		folderStates,
 		folderChatPageKey,
@@ -29,7 +44,12 @@
 		removeFolderState,
 		isCancelledFolderRequest
 	} from '$lib/stores/folderStates';
+	import { pendingChatRequest } from '$lib/stores/chatCache';
 	import { refreshFolderChatLists } from '$lib/stores/chatList';
+	import { sortFolders } from '$lib/utils/folders';
+	import { updateNoteFolderIdById } from '$lib/apis/notes';
+	import { createNoteHandler } from '$lib/components/notes/utils';
+	import dayjs from '$lib/dayjs';
 
 	import {
 		deleteFolderById,
@@ -51,7 +71,7 @@
 	import Collapsible from '../../common/Collapsible.svelte';
 	import DragGhost from '$lib/components/common/DragGhost.svelte';
 
-	import FolderIcon from './icons/Folder.svelte';
+	import FolderIcon from '$lib/components/icons/Folder.svelte';
 	import MoreHorizontal from './icons/MoreHorizontal.svelte';
 
 	import ChatItem from './ChatItem.svelte';
@@ -77,9 +97,13 @@
 
 	export let onDelete = () => {};
 	export let onItemMove = () => {};
+	/** @type {(id: string, targetId: string, position: 'before' | 'after') => void} */
+	export let onReorder = () => {};
 	export let onFolderUnreadCounts = () => {};
 
 	let folderElement;
+	/** @type {HTMLElement} */
+	let rowElement;
 
 	let openPreview = false;
 	let showFolderModal = false;
@@ -90,9 +114,8 @@
 	let createSubFolderParentId = null;
 
 	let draggedOver = false;
+	let dropPosition = 'inside';
 	let dragged = false;
-
-	let clickTimer = null;
 
 	$: if ($mobile || edit || dragged || parentDragged || draggedOver || showFolderModal) {
 		openPreview = false;
@@ -186,6 +209,18 @@
 
 	$: isWritable = !folders[folderId]?.shared || folders[folderId]?.permission === 'write';
 
+	/** @param {any} e */
+	const getDropPosition = (e) => {
+		// Only folders reorder, and shared folders keep their place
+		if (draggedFolderId && !folders[folderId]?.shared && rowElement.contains(e.target)) {
+			const rect = rowElement.getBoundingClientRect();
+			const offset = (e.clientY - rect.top) / rect.height;
+			if (offset < 0.25) return 'before';
+			if (offset > 0.75) return 'after';
+		}
+		return 'inside';
+	};
+
 	const onDragOver = (e) => {
 		e.stopPropagation();
 		if (dragged || parentDragged || !isWritable) {
@@ -193,6 +228,7 @@
 		}
 		e.preventDefault();
 		draggedOver = true;
+		dropPosition = getDropPosition(e);
 	};
 
 	const onDrop = async (e) => {
@@ -247,6 +283,13 @@
 							const { type, id, item } = data;
 
 							if (type === 'folder') {
+								const position = getDropPosition(e);
+								if (position !== 'inside') {
+									draggedOver = false;
+									onReorder(id, folderId, position);
+									return;
+								}
+
 								open = true;
 								if (id === folderId) {
 									return;
@@ -262,6 +305,18 @@
 								if (res) {
 									updateFolderDetails(id, res);
 									dispatch('update');
+								}
+							} else if (type === 'note') {
+								const res = await updateNoteFolderIdById(localStorage.token, id, folderId).catch(
+									(error) => {
+										toast.error(`${error}`);
+										return null;
+									}
+								);
+
+								if (res) {
+									toast.success($i18n.t('Note moved successfully'));
+									void refreshFolderChatLists();
 								}
 							} else if (type === 'chat') {
 								open = true;
@@ -361,6 +416,7 @@
 		event.dataTransfer.setData('application/x-open-webui-drag', '');
 
 		dragged = true;
+		draggedFolderId = folderId;
 		folderElement.style.opacity = '0.5'; // Optional: Visual cue to show it's being dragged
 	};
 
@@ -376,6 +432,7 @@
 
 		folderElement.style.opacity = '1'; // Reset visual cue after drag
 		dragged = false;
+		draggedFolderId = null;
 	};
 
 	onMount(async () => {
@@ -573,9 +630,31 @@
 		if (open) void setFolderItems(false, false);
 	}
 
+	$: current = $navigating?.to
+		? $navigating.to.params?.folderId === folderId
+		: $selectedFolder?.id === folderId &&
+			!$activeChatTabId &&
+			!($pendingChatRequest && $pendingChatRequest.id === $page.params.id);
+
 	const openFolderHandler = async () => {
-		await goto(`/folders/${folderId}`);
+		await goto(`/folders/${folderId}`, { keepFocus: true });
 		if ($mobile) showSidebar.set(false);
+	};
+
+	const newNoteHandler = async () => {
+		const note = await createNoteHandler(
+			dayjs().locale($i18n.language).format('YYYY-MM-DD'),
+			'',
+			'',
+			folderId
+		);
+		if (!note) return;
+
+		if (appLayout?.openPageTab)
+			appLayout.openPageTab({ href: `/notes/${note.id}`, label: note.title });
+		else await goto(`/notes/${note.id}`);
+		if ($mobile) showSidebar.set(false);
+		void refreshFolderChatLists(folderId);
 	};
 
 	const renameHandler = async () => {
@@ -641,7 +720,7 @@
 		deleteHandler();
 	}}
 >
-	<div class=" text-sm text-gray-700 dark:text-gray-300 flex-1 line-clamp-3 mb-2">
+	<div class=" text-sm text-base-700 dark:text-base-300 flex-1 line-clamp-3 mb-2">
 		<!-- {$i18n.t('This will delete <strong>{{NAME}}</strong> and <strong>all its contents</strong>.', {
 				NAME: folders[folderId].name
 			})} -->
@@ -658,7 +737,7 @@
 			bind:checked={deleteFolderContents}
 		/>
 
-		<div class="text-xs text-gray-500">
+		<div class="text-xs text-base-500">
 			{$i18n.t('Delete all contents inside this folder')}
 		</div>
 	</div>
@@ -677,10 +756,10 @@
 {#if dragged && x && y}
 	<DragGhost {x} {y}>
 		<div
-			class="w-fit max-w-40 rounded-lg bg-white/95 px-2.5 py-1.5 text-xs text-gray-600 shadow-sm ring-1 ring-black/5 dark:bg-gray-850/95 dark:text-gray-300 dark:ring-white/10"
+			class="w-fit max-w-40 rounded-lg bg-base-0/95 px-2.5 py-1.5 text-xs text-base-600 shadow-sm ring-1 ring-base-1000/5 dark:bg-base-850/95 dark:text-base-300 dark:ring-base-0/10"
 		>
 			<div class="flex items-center gap-1.5">
-				<FolderIcon className="size-3.5 shrink-0" strokeWidth="1.5" />
+				<FolderIcon className="size-3.5 shrink-0" strokeWidth="2" />
 				<div class="min-w-0 truncate">
 					{folders[folderId].name}
 				</div>
@@ -695,9 +774,16 @@
 	role="listitem"
 	draggable={!folders[folderId]?.shared}
 >
-	{#if draggedOver}
+	{#if draggedOver && dropPosition === 'inside'}
 		<div
-			class="pointer-events-none absolute inset-0 z-50 touch-none bg-black/[0.02] ring-1 ring-inset ring-black/10 dark:bg-white/[0.02] dark:ring-white/10"
+			class="pointer-events-none absolute inset-0 z-50 touch-none bg-base-1000/[0.02] ring-1 ring-inset ring-base-1000/10 dark:bg-base-0/[0.02] dark:ring-base-0/10"
+		></div>
+	{:else if draggedOver}
+		<div
+			class="pointer-events-none absolute inset-x-1 z-50 h-px rounded-[1px] bg-base-800/20 dark:bg-base-200/20 {dropPosition ===
+			'before'
+				? 'top-0'
+				: 'bottom-0'}"
 		></div>
 	{/if}
 
@@ -713,15 +799,17 @@
 		<div class="w-full group">
 			<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
 			<div
+				bind:this={rowElement}
 				id="folder-{folderId}-button"
-				class="relative w-full py-1 px-1.5 rounded-xl flex items-center gap-1.5 hover:bg-gray-100 dark:hover:bg-gray-900 transition {$selectedFolder?.id ===
-				folderId
-					? 'bg-gray-100/80 dark:bg-gray-850/50 selected'
-					: ''}"
+				class="relative w-full py-1 px-1.5 rounded-xl flex items-center gap-1.5 transition {current
+					? ($settings?.highContrastMode ?? false)
+						? 'bg-base-1000/[0.035] dark:bg-base-0/[0.06]'
+						: 'bg-base-1000/[0.035] dark:bg-base-0/[0.045]'
+					: 'hover:bg-base-100 dark:hover:bg-base-900'}"
 				on:click|stopPropagation
 			>
 				<button
-					class="text-gray-600 dark:text-gray-400 transition-all p-1 hover:bg-gray-100 dark:hover:bg-gray-900 rounded-lg"
+					class="text-base-600 dark:text-base-400 transition-all p-1 hover:bg-base-100 dark:hover:bg-base-900 rounded-lg"
 					aria-label={open
 						? $i18n.t('Collapse {{name}}', { name: folders[folderId]?.name })
 						: $i18n.t('Expand {{name}}', { name: folders[folderId]?.name })}
@@ -748,7 +836,7 @@
 						</div>
 					{:else}
 						<div class="flex group-hover:hidden transition-all">
-							<FolderIcon className="size-3.5" strokeWidth="1.5" />
+							<FolderIcon className="size-3.5" strokeWidth="2" />
 						</div>
 
 						<div class="hidden group-hover:flex transition-all p-[0.0625rem]">
@@ -761,17 +849,23 @@
 					{/if}
 				</button>
 
-				<div
-					class="translate-y-[0.5px] flex min-w-0 flex-1 self-stretch items-center gap-1.5 text-start"
-				>
+				<div class="flex min-w-0 flex-1 self-stretch items-center gap-1.5 text-start">
 					{#if edit}
 						<input
 							aria-label={$i18n.t('Rename')}
 							id="folder-{folderId}-input"
 							type="text"
 							bind:value={name}
-							on:blur={() => {
-								console.log('Blur');
+							on:blur={(e) => {
+								// Opening the folder focuses its composer while a rename is in progress.
+								// A composer the user pressed is active; one focused by the page is not.
+								const input = e.currentTarget;
+								const composer = e.relatedTarget?.closest('[data-composer-id]');
+								if (composer && !composer.matches(':active')) {
+									setTimeout(() => input.focus());
+									return;
+								}
+
 								updateHandler({ name });
 								edit = false;
 							}}
@@ -800,13 +894,9 @@
 							<LinkPreview.Trigger
 								href={`/folders/${folderId}`}
 								draggable="false"
-								class="flex min-w-0 flex-1 self-stretch -my-1 items-center gap-1.5 pr-6"
+								class="flex min-w-0 flex-1 self-stretch -my-1 -ms-1.5 ps-1.5 items-center gap-1.5 pr-6"
 								ondblclick={(e) => {
 									if (!isWritable || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
-									if (clickTimer) {
-										clearTimeout(clickTimer); // cancel the single-click action
-										clickTimer = null;
-									}
 									renameHandler();
 								}}
 								onclick={(e) => {
@@ -814,15 +904,8 @@
 									e.stopPropagation();
 									if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
 									e.preventDefault();
-									if (clickTimer) {
-										clearTimeout(clickTimer);
-										clickTimer = null;
-									}
-
-									clickTimer = setTimeout(async () => {
-										await openFolderHandler();
-										clickTimer = null;
-									}, 100); // 100ms delay (typical double-click threshold)
+									// A double click's second click only renames.
+									if (e.detail < 2) openFolderHandler();
 								}}
 								onkeydown={(e) => {
 									if (e.currentTarget !== e.target) return;
@@ -861,12 +944,21 @@
 
 				{#if isWritable}
 					<div
-						class="absolute z-10 right-2 hover-reveal self-center flex items-center dark:text-gray-300"
+						class="absolute z-10 right-2 hover-reveal pointer-coarse:opacity-100! pointer-coarse:pointer-events-auto! self-center flex items-center dark:text-base-300"
 						role="presentation"
 						on:pointerdown={() => (openPreview = false)}
 					>
 						<FolderMenu
-							onNewChat={openFolderHandler}
+							onNewChat={async () => {
+								if ($selectedFolder?.id !== folderId) await openFolderHandler();
+								if ($page.params.folderId === folderId || $selectedFolder?.id === folderId)
+									chatTabRequest.set({ folderId });
+								if ($mobile) showSidebar.set(false);
+							}}
+							onNewNote={($config?.features?.enable_notes ?? false) &&
+							($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true))
+								? newNoteHandler
+								: null}
 							onEdit={() => {
 								showFolderModal = true;
 							}}
@@ -887,7 +979,7 @@
 								: null}
 						>
 							<div
-								class="flex size-5 items-center justify-center self-center dark:hover:text-white transition m-0 touch-auto"
+								class="flex size-5 items-center justify-center self-center dark:hover:text-base-0 transition m-0 touch-auto"
 							>
 								<MoreHorizontal className="size-3.5" strokeWidth="2" />
 							</div>
@@ -900,17 +992,13 @@
 		<div slot="content" class="w-full">
 			{#if (folders[folderId]?.childrenIds ?? []).length > 0 || chats !== null || hasMoreChats || chatsLoading}
 				<div
-					class="ml-3 pl-1 mt-[0.0625rem] flex flex-col overflow-y-auto scrollbar-hidden border-s border-gray-100 dark:border-gray-900"
+					class="ml-3 pl-1 mt-[0.0625rem] flex flex-col overflow-y-auto scrollbar-hidden border-s border-base-100 dark:border-base-900"
 				>
 					{#if folders[folderId]?.childrenIds}
-						{@const children = folders[folderId]?.childrenIds
-							.map((id) => folders[id])
-							.sort((a, b) =>
-								a.name.localeCompare(b.name, undefined, {
-									numeric: true,
-									sensitivity: 'base'
-								})
-							)}
+						{@const children = sortFolders(
+							folders[folderId].childrenIds.map((id) => folders[id]),
+							$settings?.folderOrder?.[folderId]
+						)}
 
 						{#if children.length > 0}
 							<div role="list">
@@ -920,8 +1008,9 @@
 										{folders}
 										folderId={childFolder.id}
 										{shiftKey}
-										parentDragged={dragged}
+										parentDragged={dragged || parentDragged}
 										{onItemMove}
+										{onReorder}
 										{onDelete}
 										{onFolderUnreadCounts}
 										on:import={(e) => {
@@ -941,18 +1030,18 @@
 
 					{#if chats === null && chatsLoading}
 						<div class="flex gap-1 px-2 py-1.5" aria-label={$i18n.t('Loading')}>
-							<span class="size-1 rounded-full bg-gray-400 animate-pulse dark:bg-gray-600"></span>
+							<span class="size-1 rounded-full bg-base-400 animate-pulse dark:bg-base-600"></span>
 							<span
-								class="size-1 rounded-full bg-gray-400 animate-pulse [animation-delay:150ms] dark:bg-gray-600"
+								class="size-1 rounded-full bg-base-400 animate-pulse [animation-delay:150ms] dark:bg-base-600"
 							></span>
 							<span
-								class="size-1 rounded-full bg-gray-400 animate-pulse [animation-delay:300ms] dark:bg-gray-600"
+								class="size-1 rounded-full bg-base-400 animate-pulse [animation-delay:300ms] dark:bg-base-600"
 							></span>
 						</div>
 					{/if}
 
 					{#if chats !== null && chats.length === 0 && !chatsLoading}
-						<div class="px-2 py-0.5 text-[0.6875rem] text-gray-400 dark:text-gray-600">
+						<div class="px-2 py-0.5 text-[0.6875rem] text-base-400 dark:text-base-600">
 							{$i18n.t('No chats')}
 						</div>
 					{/if}
@@ -992,19 +1081,19 @@
 
 					{#if hasMoreChats}
 						<button
-							class="w-full px-2 py-0.5 text-left text-[0.6875rem] text-gray-400 transition hover:text-gray-700 disabled:cursor-not-allowed dark:text-gray-600 dark:hover:text-gray-300"
+							class="w-full px-2 py-0.5 text-left text-[0.6875rem] text-base-400 transition hover:text-base-700 disabled:cursor-not-allowed dark:text-base-600 dark:hover:text-base-300"
 							disabled={chatsLoading}
 							on:click={() => setFolderItems(true)}
 						>
 							{#if chatsLoading}
 								<div class="flex gap-1 px-2 py-1.5" aria-label={$i18n.t('Loading')}>
-									<span class="size-1 rounded-full bg-gray-400 animate-pulse dark:bg-gray-600"
+									<span class="size-1 rounded-full bg-base-400 animate-pulse dark:bg-base-600"
 									></span>
 									<span
-										class="size-1 rounded-full bg-gray-400 animate-pulse [animation-delay:150ms] dark:bg-gray-600"
+										class="size-1 rounded-full bg-base-400 animate-pulse [animation-delay:150ms] dark:bg-base-600"
 									></span>
 									<span
-										class="size-1 rounded-full bg-gray-400 animate-pulse [animation-delay:300ms] dark:bg-gray-600"
+										class="size-1 rounded-full bg-base-400 animate-pulse [animation-delay:300ms] dark:bg-base-600"
 									></span>
 								</div>
 							{:else}

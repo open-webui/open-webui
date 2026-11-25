@@ -44,12 +44,32 @@ async def run(transport, output, prompt, images, options):
             'message': {'role': 'user', 'content': content},
             'parent_tool_use_id': None,
             'session_id': options.get('resume') or 'default',
+            # Claude reports which messages it read and answered only when they carry an id.
+            'uuid': str(uuid4()),
         }
     )
     streamed_text = streamed_thinking = False
+    steered = set()
+
+    async def steer(text):
+        message_id = str(uuid4())
+        steered.add(message_id)
+        await send(
+            {
+                'type': 'user',
+                'message': {'role': 'user', 'content': [{'type': 'text', 'text': text}]},
+                'parent_tool_use_id': None,
+                'session_id': output.state['session_id'],
+                'uuid': message_id,
+            }
+        )
+
     try:
         async for message in messages:
             kind = message.get('type')
+            if output.state.get('session_id') and 'user_message_uuids' in message:
+                # Older versions don't say which messages a result answers.
+                output.steer = steer
             if kind == 'system' and message.get('subtype') == 'init':
                 output.state['session_id'] = message['session_id']
                 await output.flush(force=True, persist=True)
@@ -132,13 +152,28 @@ async def run(transport, output, prompt, images, options):
                             done=True,
                         )
             elif kind == 'result':
+                if (message.get('origin') or {}).get('kind') == 'task-notification' and not message.get(
+                    'user_message_uuids'
+                ):
+                    # About a background command, and answers no message of the user's.
+                    continue
                 output.state['session_id'] = message['session_id']
                 output.usage = message.get('usage')
                 if message.get('is_error'):
                     raise ValueError(
                         message.get('result') or '; '.join(message.get('errors') or []) or 'Claude Code turn failed'
                     )
-                return
+                steered.difference_update(message.get('user_message_uuids') or [])
+                if not steered:
+                    return
+                # Claude finished before reading a message, and answers it next.
+                await output.text('\n\n')
+            elif (
+                kind == 'command_lifecycle'
+                and message.get('command_uuid') in steered
+                and message.get('state') in {'cancelled', 'discarded', 'refused'}
+            ):
+                raise ValueError('Claude Code did not read your message. Send it again.')
         raise ValueError('Claude Code ended without a turn result')
     except asyncio.CancelledError:
         with contextlib.suppress(Exception):

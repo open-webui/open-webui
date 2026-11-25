@@ -40,8 +40,9 @@
 	<Tooltip content={$i18n.t('More')}>
 		<slot
 			><button
-				class="flex size-6 items-center justify-center rounded-lg text-gray-400 transition dark:text-gray-500"
+				class="flex size-6 items-center justify-center rounded-lg text-base-400 transition dark:text-base-500"
 				type="button"
+				data-focus-row={resourceId}
 				aria-label={$i18n.t('More Options')}
 				on:click={(e) => {
 					e.preventDefault();
@@ -66,7 +67,7 @@
 			{#if accessHandler}
 				<button
 					type="button"
-					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"
+					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-base-900 dark:hover:text-base-100"
 					on:click={() => {
 						accessHandler?.();
 						closeMenu();
@@ -79,7 +80,7 @@
 
 			{#if onExport}
 				<button
-					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"
+					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-base-900 dark:hover:text-base-100"
 					on:click={() => {
 						onExport();
 						closeMenu();
@@ -91,7 +92,7 @@
 			{/if}
 
 			<button
-				class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"
+				class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-base-900 dark:hover:text-base-100"
 				on:click={() => {
 					dispatch('delete');
 					closeMenu();

@@ -69,15 +69,15 @@
 {#if channel}
 	<Modal ariaLabel={$i18n.t('Pinned Messages')} size="sm" bind:show>
 		<div>
-			<div class=" flex justify-between dark:text-gray-100 px-4 pt-3 mb-1">
-				<div class="self-center text-base">
+			<div class=" flex justify-between dark:text-base-100 px-4 pt-3 mb-1">
+				<div class="text-sm font-medium self-center">
 					<div class="flex items-center gap-0.5 shrink-0">
 						{$i18n.t('Pinned Messages')}
 					</div>
 				</div>
 				<button
 					aria-label={$i18n.t('Close')}
-					class="self-center rounded-lg py-1 text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 px-0"
+					class="self-center rounded-lg py-1 text-base-500 transition hover:text-base-700 dark:text-base-400 dark:hover:text-base-200 px-0"
 					on:click={() => {
 						show = false;
 					}}
@@ -86,7 +86,7 @@
 				</button>
 			</div>
 
-			<div class="flex flex-col md:flex-row w-full px-4 pb-4 md:space-x-4 dark:text-gray-200">
+			<div class="flex flex-col md:flex-row w-full px-4 pb-4 md:space-x-4 dark:text-base-200">
 				<div class=" flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6">
 					<div class="flex flex-col w-full h-full pb-2 gap-1">
 						{#if pinnedMessages === null}
@@ -95,11 +95,11 @@
 							</div>
 						{:else}
 							<div
-								class="max-h-[60vh] overflow-y-auto will-change-transform scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-700 scrollbar-track-transparent pb-2"
+								class="max-h-[60vh] overflow-y-auto will-change-transform scrollbar-thin scrollbar-thumb-base-300 dark:scrollbar-thumb-base-700 scrollbar-track-transparent pb-2"
 							>
 								<div class="flex flex-col gap-2 pt-7">
 									{#if pinnedMessages.length === 0}
-										<div class=" text-center text-xs text-gray-500 dark:text-gray-400 py-6">
+										<div class=" text-center text-xs text-base-500 dark:text-base-400 py-6">
 											{$i18n.t('No pinned messages')}
 										</div>
 									{:else}

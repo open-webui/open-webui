@@ -16,6 +16,10 @@
 	import PinSlash from '$lib/components/icons/PinSlash.svelte';
 	import CloudArrowUp from '$lib/components/icons/CloudArrowUp.svelte';
 	import Bold from '$lib/components/icons/Bold.svelte';
+	import FolderIcon from '$lib/components/icons/Folder.svelte';
+	import Check from '$lib/components/icons/Check.svelte';
+	import { folders } from '$lib/stores';
+	import EditPencilIcon from '$lib/components/layout/Sidebar/icons/EditPencil.svelte';
 
 	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
@@ -24,7 +28,11 @@
 
 	export let onDownload = (type) => {};
 	export let onAccess: (() => void) | null = null;
-	export let onDelete = () => {};
+	export let onRename: (() => void) | null = null;
+	export let onMove: ((folderId: string | null) => void) | null = null;
+	/** The note's current folder, for the Move submenu. */
+	export let folderId: string | null = null;
+	export let onDelete: (() => void) | null = () => {};
 	export let onPin = null;
 	export let isPinned = false;
 	export let onUploadFiles = null;
@@ -53,12 +61,55 @@
 			{#if onAccess}
 				<button
 					type="button"
-					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"
+					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-base-900 dark:hover:text-base-100"
 					on:click={() => onAccess?.()}
 				>
 					<LockClosed className="size-3.5" />
 					<div class="flex items-center">{$i18n.t('Access')}</div>
 				</button>
+			{/if}
+
+			{#if onRename}
+				<button
+					type="button"
+					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-base-900 dark:hover:text-base-100"
+					on:click={() => onRename?.()}
+				>
+					<EditPencilIcon className="size-3.5" strokeWidth="1.5" />
+					<div class="flex items-center">{$i18n.t('Rename')}</div>
+				</button>
+			{/if}
+
+			{#if onMove && (folderId || $folders.length > 0)}
+				<DropdownSub contentClass="select-none z-50 max-h-52 overflow-y-auto scrollbar-hidden">
+					<button
+						slot="trigger"
+						class="flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-base-900 dark:hover:text-base-100"
+					>
+						<FolderIcon className="size-3.5" />
+						<div class="flex items-center">{$i18n.t('Move')}</div>
+					</button>
+
+					{#if folderId}
+						<button
+							class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-base-900 dark:hover:text-base-100"
+							on:click={() => onMove?.(null)}
+						>
+							<div class="flex items-center">{$i18n.t('No folder')}</div>
+						</button>
+					{/if}
+					{#each [...$folders].sort((a, b) => b.updated_at - a.updated_at) as folder (folder.id)}
+						<button
+							class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 overflow-hidden rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-base-900 dark:hover:text-base-100"
+							disabled={folder.id === folderId}
+							on:click={() => onMove?.(folder.id)}
+						>
+							<div class="shrink-0"><FolderIcon className="size-3.5" /></div>
+							<div class="min-w-0 flex-1 truncate text-left">{folder?.name ?? 'Folder'}</div>
+							{#if folder.id === folderId}<Check className="size-3! shrink-0" />{/if}
+						</button>
+					{/each}
+				</DropdownSub>
 			{/if}
 
 			{#if showAutoFormat}
@@ -70,7 +121,7 @@
 				>
 					<!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
 					<div
-						class="select-none flex h-[1.6875rem] items-center gap-2 rounded-xl px-2 text-[0.8125rem] hover:bg-gray-50/60 dark:hover:bg-gray-800/60"
+						class="select-none flex h-[1.6875rem] items-center gap-2 rounded-xl px-2 text-[0.8125rem] hover:bg-base-50/60 dark:hover:bg-base-800/60"
 						on:click={(e) => e.preventDefault()}
 					>
 						<Bold className="size-3.5 shrink-0" strokeWidth="2" />
@@ -78,19 +129,19 @@
 						<Switch bind:state={autoFormat} ariaLabel={$i18n.t('Formatting')} />
 					</div>
 				</Tooltip>
-				<hr class="border-gray-100 dark:border-gray-800" />
+				<hr class="border-base-100 dark:border-base-800" />
 			{/if}
 			<DropdownSub contentClass="select-none z-50">
 				<button
 					slot="trigger"
-					class="flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"
+					class="flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-base-900 dark:hover:text-base-100"
 				>
 					<Download className="size-3.5" strokeWidth="2" />
 					<div class="flex items-center">{$i18n.t('Download')}</div>
 				</button>
 
 				<button
-					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"
+					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-base-900 dark:hover:text-base-100"
 					on:click={() => {
 						onDownload('txt');
 					}}
@@ -99,7 +150,7 @@
 				</button>
 
 				<button
-					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"
+					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-base-900 dark:hover:text-base-100"
 					on:click={() => {
 						onDownload('md');
 					}}
@@ -108,7 +159,7 @@
 				</button>
 
 				<button
-					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"
+					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-base-900 dark:hover:text-base-100"
 					on:click={() => {
 						onDownload('pdf');
 					}}
@@ -119,7 +170,7 @@
 
 			{#if onUploadFiles}
 				<button
-					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"
+					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-base-900 dark:hover:text-base-100"
 					on:click={() => {
 						onUploadFiles();
 					}}
@@ -133,7 +184,7 @@
 				<DropdownSub contentClass="select-none z-50">
 					<button
 						slot="trigger"
-						class="flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"
+						class="flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-base-900 dark:hover:text-base-100"
 					>
 						<Share className="size-3.5" strokeWidth="2" />
 						<div class="flex items-center">{$i18n.t('Share')}</div>
@@ -141,7 +192,7 @@
 
 					{#if onCopyLink}
 						<button
-							class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"
+							class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-base-900 dark:hover:text-base-100"
 							on:click={() => {
 								onCopyLink();
 							}}
@@ -153,7 +204,7 @@
 
 					{#if onCopyToClipboard}
 						<button
-							class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"
+							class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-base-900 dark:hover:text-base-100"
 							on:click={() => {
 								onCopyToClipboard();
 							}}
@@ -167,7 +218,7 @@
 
 			{#if onPin}
 				<button
-					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"
+					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-base-900 dark:hover:text-base-100"
 					on:click={() => {
 						onPin();
 					}}
@@ -182,15 +233,17 @@
 				</button>
 			{/if}
 
-			<button
-				class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-gray-900 dark:hover:text-gray-100"
-				on:click={() => {
-					onDelete();
-				}}
-			>
-				<GarbageBin className="size-3.5" />
-				<div class="flex items-center">{$i18n.t('Delete')}</div>
-			</button>
+			{#if onDelete}
+				<button
+					class="select-none flex h-[1.6875rem] w-full cursor-pointer items-center gap-2 rounded-xl bg-transparent px-2 text-[0.8125rem] hover:text-base-900 dark:hover:text-base-100"
+					on:click={() => {
+						onDelete?.();
+					}}
+				>
+					<GarbageBin className="size-3.5" />
+					<div class="flex items-center">{$i18n.t('Delete')}</div>
+				</button>
+			{/if}
 		</DropdownMenu>
 	</div>
 </Dropdown>

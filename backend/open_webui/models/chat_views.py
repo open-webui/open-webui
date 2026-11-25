@@ -3,10 +3,12 @@
 import time
 from typing import Annotated, Literal
 
+from fastapi import HTTPException, Request
 from open_webui.internal.db import Base
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from sqlalchemy import JSON, BigInteger, Column, Text, update
 from sqlalchemy.exc import IntegrityError
+from starlette.requests import ClientDisconnect
 
 
 class ViewModel(BaseModel):
@@ -18,7 +20,7 @@ class PanelTab(ViewModel):
     kind: Literal['chat', 'comments', 'files', 'file', 'terminal', 'browser', 'desktop', 'side', 'page', 'overview']
     label: str
     href: str | None = None
-    terminalId: str | None = None
+    machineId: str | None = None
     terminalNumber: int | None = None
     chatId: str | None = None
     chatNumber: int | None = None
@@ -30,6 +32,16 @@ class PanelTab(ViewModel):
     page: int | None = None
     sessionId: str | None = None
     directory: str | None = None
+
+    @model_validator(mode='before')
+    @classmethod
+    def _former_machine_key(cls, data):
+        # Saved views from before Terminals became Machines carry terminalId.
+        if isinstance(data, dict) and 'terminalId' in data:
+            data = {**data}
+            legacy = data.pop('terminalId')
+            data.setdefault('machineId', legacy)
+        return data
 
 
 class PanelGroup(ViewModel):
@@ -103,8 +115,31 @@ class PanelTabs(ViewModel):
 
 class ChatViewData(ViewModel):
     schemaVersion: Literal[1]
-    selectedTerminalId: str | None
+    selectedMachineId: str | None
     panels: PanelTabs
+
+    @model_validator(mode='before')
+    @classmethod
+    def _former_machine_key(cls, data):
+        # Saved views and older clients use selectedTerminalId.
+        if isinstance(data, dict) and 'selectedTerminalId' in data:
+            data = {**data}
+            legacy = data.pop('selectedTerminalId')
+            data.setdefault('selectedMachineId', legacy)
+        return data
+
+
+async def read_bounded_view(request: Request) -> bytes:
+    """Bound the body before JSON/schema parsing, including chunked requests."""
+    body = bytearray()
+    try:
+        async for chunk in request.stream():
+            body.extend(chunk)
+            if len(body) > 1024 * 1024:
+                raise HTTPException(status_code=413, detail='View is too large')
+    except ClientDisconnect:
+        raise HTTPException(status_code=499)
+    return bytes(body)
 
 
 class ChatViewStateForm(ViewModel):

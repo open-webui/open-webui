@@ -86,30 +86,30 @@
 	ariaLabel={`${$i18n.t("What's New in")} ${$WEBUI_NAME}`}
 	bind:show
 	size="lg"
-	className="bg-white dark:bg-gray-900 rounded-3xl overflow-hidden"
+	className="bg-base-0 dark:bg-base-900 rounded-3xl overflow-hidden"
 	containerClassName="p-3"
 >
 	<div class="flex max-h-[58vh] flex-col">
 		<div
-			class="flex shrink-0 items-start justify-between gap-4 px-4 pb-2.5 pt-3.5 dark:text-white text-black"
+			class="flex shrink-0 items-start justify-between gap-4 px-4 pb-2.5 pt-3 dark:text-base-0 text-base-1000"
 		>
 			<div class="min-w-0">
 				<!-- LICENSE covers this Open WebUI release identifier.
 				Do not alter, remove, obscure, or replace it except as LICENSE permits:
 				https://docs.openwebui.com/license. -->
-				<h2 class="m-0 truncate text-base font-normal">
+				<h2 class="text-sm font-medium m-0 truncate">
 					{$i18n.t("What's New in")}
 					{$WEBUI_NAME}
 				</h2>
-				<div class="mt-1 flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+				<div class="mt-1 flex items-center gap-2 text-xs text-base-500 dark:text-base-400">
 					<span>{$i18n.t('Release Notes')}</span>
-					<span class="h-1 w-1 rounded-full bg-gray-300 dark:bg-gray-700"></span>
+					<span class="h-1 w-1 rounded-full bg-base-300 dark:bg-base-700"></span>
 					<span>v{WEBUI_VERSION}</span>
 				</div>
 			</div>
 
 			<button
-				class="flex h-8 shrink-0 items-center justify-center rounded-xl text-gray-400 transition hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-200 px-0"
+				class="flex h-8 shrink-0 items-center justify-center rounded-xl text-base-400 transition hover:text-base-700 dark:text-base-500 dark:hover:text-base-200 px-0"
 				on:click={closeModal}
 				aria-label={$i18n.t('Close')}
 			>
@@ -118,15 +118,15 @@
 		</div>
 
 		<div
-			class="min-h-0 flex-1 overflow-y-auto px-4 py-2 text-gray-700 scrollbar-hidden dark:text-gray-100"
+			class="min-h-0 flex-1 overflow-y-auto px-4 py-2 text-base-700 scrollbar-hidden dark:text-base-100"
 		>
 			{#if changelog}
 				<div class="space-y-4">
 					{#each Object.keys(changelog) as version}
 						<section class="pr-1">
 							<div class="mb-2">
-								<h3 class="m-0 text-sm font-normal text-gray-950 dark:text-white">v{version}</h3>
-								<div class="mt-0.5 text-[0.6875rem] text-gray-400 dark:text-gray-500">
+								<h3 class="m-0 text-sm font-normal text-base-950 dark:text-base-0">v{version}</h3>
+								<div class="mt-0.5 text-[0.6875rem] text-base-400 dark:text-base-500">
 									{formatDate(changelog[version].date)}
 								</div>
 							</div>
@@ -143,7 +143,7 @@
 													? 'text-yellow-700 dark:text-yellow-300'
 													: section === 'removed'
 														? 'text-red-600 dark:text-red-300'
-														: 'text-gray-500 dark:text-gray-400'}"
+														: 'text-base-500 dark:text-base-400'}"
 									>
 										{section}
 									</div>
@@ -152,10 +152,10 @@
 										{#each getSectionEntries(version, section) as entry}
 											<div class="flex gap-2.5">
 												<span
-													class="mt-[0.6em] h-1 w-1 shrink-0 rounded-full bg-gray-300 dark:bg-gray-700"
+													class="mt-[0.6em] h-1 w-1 shrink-0 rounded-full bg-base-300 dark:bg-base-700"
 												></span>
 												<div
-													class="min-w-0 markdown-prose-sm list-none !max-w-none !text-[0.8125rem] text-gray-600 dark:text-gray-300 [&_*]:!my-0 [&_b]:!font-normal [&_strong]:!font-normal"
+													class="min-w-0 markdown-prose-sm list-none !max-w-none !text-[0.8125rem] text-base-600 dark:text-base-300 [&_*]:!my-0 [&_b]:!font-normal [&_strong]:!font-normal"
 												>
 													<!-- eslint-disable-next-line svelte/no-at-html-tags -->
 													{@html DOMPurify.sanitize(entry?.raw)}
@@ -170,7 +170,7 @@
 				</div>
 			{:else if error}
 				<div class="flex flex-col items-center justify-center gap-3 py-16 text-center">
-					<p class="text-sm text-gray-500 dark:text-gray-400">
+					<p class="text-sm text-base-500 dark:text-base-400">
 						{$i18n.t('Could not load release notes.')}
 					</p>
 					<button
@@ -178,24 +178,24 @@
 							error = false;
 							init();
 						}}
-						class="text-sm font-normal text-gray-700 transition hover:text-black dark:text-gray-300 dark:hover:text-white"
+						class="text-sm font-normal text-base-700 transition hover:text-base-1000 dark:text-base-300 dark:hover:text-base-0"
 					>
 						{$i18n.t('Retry')}
 					</button>
 				</div>
 			{:else}
 				<div
-					class="flex items-center justify-center py-16 text-sm text-gray-400 dark:text-gray-500"
+					class="flex items-center justify-center py-16 text-sm text-base-400 dark:text-base-500"
 				>
 					{$i18n.t('Loading release notes...')}
 				</div>
 			{/if}
 		</div>
 
-		<div class="flex shrink-0 justify-end px-4 pb-3.5 pt-1.5 text-sm">
+		<div class="flex shrink-0 justify-end px-4 pb-3.5 pt-1.5 text-xs">
 			<button
 				on:click={closeModal}
-				class="font-normal text-gray-600 transition hover:text-gray-950 dark:text-gray-400 dark:hover:text-white"
+				class="font-normal text-base-600 transition hover:text-base-950 dark:text-base-400 dark:hover:text-base-0"
 			>
 				<span class="relative">{$i18n.t("Okay, Let's Go!")}</span>
 			</button>

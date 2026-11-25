@@ -37,12 +37,12 @@
 >
 	<button
 		type="button"
-		class="group flex min-w-0 items-center gap-1 text-[0.8125rem] font-normal text-gray-600 transition hover:text-gray-900 dark:text-gray-300 dark:hover:text-white"
+		class="group flex min-w-0 items-center gap-1 text-[0.8125rem] font-normal text-base-600 transition hover:text-base-900 dark:text-base-300 dark:hover:text-base-0"
 		aria-label={$i18n.t('Chat history')}
 	>
 		<span class="min-w-0 truncate">{title}</span>
 		<ChevronRight
-			className="size-3.5 shrink-0 text-gray-400/70 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 dark:text-gray-500/70"
+			className="size-3.5 shrink-0 text-base-400/70 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 dark:text-base-500/70"
 			strokeWidth="2"
 		/>
 	</button>
@@ -61,7 +61,7 @@
 					<EditPencilIcon className="size-3.5" strokeWidth="1.5" />
 					<span class="min-w-0 truncate">{$i18n.t('New chat')}</span>
 				</button>
-				<hr class="border-gray-100/70 dark:border-gray-800/60" />
+				<hr class="border-base-100/70 dark:border-base-800/60" />
 			{/if}
 
 			{#if chats.length > 0}
@@ -94,7 +94,7 @@
 					/>
 				{/each}
 			{:else}
-				<div class="px-2 py-1.5 text-[0.8125rem] text-gray-400 dark:text-gray-500">
+				<div class="px-2 py-1.5 text-[0.8125rem] text-base-400 dark:text-base-500">
 					{$i18n.t('No chat history')}
 				</div>
 			{/if}

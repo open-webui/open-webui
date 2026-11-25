@@ -3,13 +3,19 @@ import resourcesToBackend from 'i18next-resources-to-backend';
 import LanguageDetector from 'i18next-browser-languagedetector';
 import type { i18n as i18nType } from 'i18next';
 import { writable } from 'svelte/store';
-import dayjs, { getDayjsLocale } from '$lib/dayjs';
+import dayjs, { loadDayjsLocale } from '$lib/dayjs';
 import type { I18nOverrides } from '$lib/utils/translationDictionary';
 
 import { assembleSettingsTranslations } from './settings-translations';
 import languages from './locales/languages.json';
 
 let overrides: I18nOverrides = {};
+let dayjsLocale: Promise<void> = Promise.resolve();
+// Resolve language switches only once dates can be localized too.
+const withDayjsLocale = async <T>(value: T) => {
+	await dayjsLocale;
+	return value;
+};
 
 export const loadBundledResource = async (language: string): Promise<Record<string, string>> =>
 	(await import(`./locales/${language}/translation.json`)).default;
@@ -48,7 +54,12 @@ const createI18nStore = (i18n: i18nType) => {
 	});
 	i18n.on('added', () => i18nWritable.set(i18n));
 	i18n.on('languageChanged', (lang) => {
-		dayjs.locale(getDayjsLocale(lang));
+		// The locale file loads on demand; update the store again once dates can be localized.
+		dayjsLocale = loadDayjsLocale(lang).then((locale) => {
+			if (i18n.language !== lang) return;
+			dayjs.locale(locale);
+			i18nWritable.set(i18n);
+		});
 		i18nWritable.set(i18n);
 		if (typeof document !== 'undefined') {
 			document.documentElement.setAttribute('lang', lang);
@@ -115,7 +126,8 @@ export const initI18n = (defaultLocale?: string, value: I18nOverrides = {}) => {
 			interpolation: {
 				escapeValue: false // not needed for svelte as it escapes by default
 			}
-		});
+		})
+		.then(withDayjsLocale);
 };
 
 const i18n = createI18nStore(i18next);
@@ -125,7 +137,9 @@ export const getLanguages = async () => languages;
 // Serialize switches so a slower download cannot overwrite a newer selection.
 let languageChange = Promise.resolve();
 export const changeLanguage = (lang: string) => {
-	const change = languageChange.then(() => i18next.changeLanguage(toBundleCode(lang)));
+	const change = languageChange
+		.then(() => i18next.changeLanguage(toBundleCode(lang)))
+		.then(withDayjsLocale);
 	languageChange = change.then(
 		() => {},
 		() => {}

@@ -43,6 +43,7 @@ export type OutputDetailToken = {
 		type: string;
 		id?: string;
 		name?: string;
+		tool_id?: string;
 		display_label?: string;
 		running_label?: string;
 		done?: string;
@@ -199,7 +200,10 @@ function getInlineFileFromToolOutput(callItem?: OutputItem, resultItem?: OutputI
 	}
 
 	const result = parseJSONStringValue(getToolResultText(resultItem)) as Record<string, unknown>;
-	const isTerminalFile = result?.source === 'open_terminal' && !!result.terminal_selector;
+	if (result && result.machine_selector === undefined && result.terminal_selector !== undefined) {
+		result.machine_selector = result.terminal_selector; // saved before the rename
+	}
+	const isMachineFile = result?.source === 'open_terminal' && !!result.machine_selector;
 	const isOpenWebUIFile = result?.source === 'open_webui';
 	if (
 		!result ||
@@ -207,7 +211,7 @@ function getInlineFileFromToolOutput(callItem?: OutputItem, resultItem?: OutputI
 		result.type !== 'file' ||
 		!result.path ||
 		result.exists === false ||
-		!(isTerminalFile || isOpenWebUIFile)
+		!(isMachineFile || isOpenWebUIFile)
 	) {
 		return null;
 	}
@@ -234,9 +238,7 @@ export function buildToolCallToken(
 				typeof item.arguments === 'string'
 					? JSON.parse(item.arguments || '{}')
 					: (item.arguments ?? {});
-			const task = typeof args.task === 'string' && args.task ? args.task : '?';
-			const label = args.background ? 'Background sub-agent' : 'Sub-agent';
-			name = `${label}: "${task.length > 60 ? `${task.slice(0, 60)}...` : task}"`;
+			name = String(args.title || args.task || 'Sub-agent').slice(0, 60);
 		} catch {
 			name = 'Sub-agent';
 		}
@@ -257,6 +259,8 @@ export function buildToolCallToken(
 			type: 'tool_calls',
 			id: callId,
 			name,
+			// Only server-set builtin ids get fixed labels; a user tool may share a builtin's name.
+			tool_id: item.tool_type === 'builtin' ? item.tool_id : undefined,
 			running_label:
 				typeof item.display_labels?.running === 'string' ? item.display_labels.running : '',
 			display_label:

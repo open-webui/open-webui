@@ -6,6 +6,7 @@
 	export let comment: ResourceComment;
 	export let autofocus = true;
 	export let className = 'px-3 py-2';
+	export let compact = false;
 	export let onCancel: (() => void) | null;
 	export let onSubmitted: (id: string) => void;
 	export let onPosted: (comment: ResourceComment) => void;
@@ -27,6 +28,7 @@
 		resource={comment}
 		draftKey={`${$user?.id}:${resourceQuery(comment)}:${comment.id}`}
 		submitLabel="Reply"
+		{compact}
 		onSubmitted={() => {
 			onSubmitted(comment.id);
 			if (postedComment) onPosted(postedComment);

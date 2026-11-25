@@ -4,10 +4,7 @@ import logging
 import sys
 
 from fastapi import Request
-from open_webui.config import (
-    BYPASS_ADMIN_ACCESS_CONTROL,
-    DEFAULT_ARENA_MODEL,
-)
+from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
 from open_webui.env import BYPASS_MODEL_ACCESS_CONTROL, ENABLE_FUNCTIONS, GLOBAL_LOG_LEVEL, REDIS_KEY_PREFIX
 from open_webui.events import EVENTS, publish_event
 from open_webui.functions import get_function_models
@@ -19,13 +16,14 @@ from open_webui.models.models import Models
 from open_webui.models.users import UserModel
 from open_webui.routers import ollama, openai
 from open_webui.socket.utils import RedisDict
-from open_webui.utils.access_control import has_access, has_base_model_access
+from open_webui.utils.access_control import has_base_model_access
 from open_webui.utils.chat_variables import get_chat_variables_schema
 from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.plugin import (
     get_function_module_from_cache,
     get_functions_cache,
 )
+from open_webui.utils.router_models import LEGACY_CONFIG_KEYS, heal_router_models
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
@@ -121,10 +119,10 @@ async def publish_model_availability_events(request: Request, base_models: list[
 async def get_all_models(request, refresh: bool = False, user: UserModel = None):
     config = await Config.get_many(
         'models.base_models_cache',
-        'evaluation.arena.enable',
-        'evaluation.arena.models',
+        'router.models',
         'models.default_metadata',
         'models.default_params',
+        *LEGACY_CONFIG_KEYS,
     )
     if refresh:
         await openai.get_all_models.cache.clear()
@@ -166,41 +164,23 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
     if len(models) == 0:
         return []
 
-    # Add arena models
-    if config.get('evaluation.arena.enable'):
-        arena_models = []
-        arena_config = config.get('evaluation.arena.models') or []
-        if len(arena_config) > 0:
-            arena_models = [
-                {
-                    'id': model['id'],
-                    'name': model['name'],
-                    'info': {
-                        'meta': model['meta'],
-                    },
-                    'object': 'model',
-                    'created': 0,
-                    'owned_by': 'arena',
-                    'arena': True,
-                }
-                for model in arena_config
-            ]
-        else:
-            # Add default arena model
-            arena_models = [
-                {
-                    'id': DEFAULT_ARENA_MODEL['id'],
-                    'name': DEFAULT_ARENA_MODEL['name'],
-                    'info': {
-                        'meta': DEFAULT_ARENA_MODEL['meta'],
-                    },
-                    'object': 'model',
-                    'created': 0,
-                    'owned_by': 'arena',
-                    'arena': True,
-                }
-            ]
-        models = models + arena_models
+    config['router.models'] = await heal_router_models(models, config)
+
+    # Add router models
+    models = models + [
+        {
+            'id': model['id'],
+            'name': model['name'],
+            'info': {
+                'meta': model['meta'],
+            },
+            'object': 'model',
+            'created': 0,
+            'owned_by': 'router',
+            'router': True,
+        }
+        for model in config.get('router.models') or []
+    ]
 
     # One query per type: the global sets are subsets of the active sets, so
     # deriving them from the same rows halves the function-table queries.
@@ -236,18 +216,13 @@ async def get_all_models(request, refresh: bool = False, user: UserModel = None)
 
             if model:
                 if custom_model.is_active:
-                    arena_meta = model['info']['meta'] if model.get('arena') else None
-                    model['name'] = custom_model.name
+                    router_meta = model['info']['meta'] if model.get('router') else None
+                    if not router_meta:
+                        model['name'] = custom_model.name
                     model['info'] = custom_model.model_dump(exclude={'meta': {'profile_image_url'}})
-                    if arena_meta:
-                        # Evaluation config owns arena access grants and model_ids
-                        model['info']['meta'].update(
-                            {
-                                key: arena_meta[key]
-                                for key in ('access_grants', 'model_ids', 'filter_mode')
-                                if key in arena_meta
-                            }
-                        )
+                    if router_meta:
+                        # Router settings own name, details and routes; the row adds access, visibility and the rest
+                        model['info']['meta'].update(router_meta)
                     schema = get_chat_variables_schema(custom_model.params.model_dump().get('system'))
                     if schema:
                         model['info'].setdefault('meta', {})['chat_variables_schema'] = schema
@@ -536,67 +511,48 @@ async def check_model_access(user, model, model_info=None, db=None):
     if model.get('owner_id') is not None and model.get('owner_id') == getattr(user, 'id', None):
         # The caller's own connection, resolved from their settings.
         return
-    if model.get('arena'):
-        meta = model.get('info', {}).get('meta', {})
-        access_grants = meta.get('access_grants', [])
-        if not (
-            (not access_grants and user.role == 'admin')
-            or await has_access(
-                user.id,
-                permission='read',
-                access_grants=access_grants,
-                db=db,
-            )
-        ):
-            log.warning(
-                'Model access denied: user_id=%r model_id=%r reason=arena_read_denied',
-                user.id,
-                model.get('id'),
-            )
-            raise Exception('Model not found')
-    else:
-        # Callers that already fetched the row (chat completion entry) pass it in
-        if model_info is None or model_info.id != model.get('id'):
-            model_info = await Models.get_model_by_id(model.get('id'), db=db)
-        if not model_info:
-            log.warning(
-                'Model access denied: user_id=%r model_id=%r reason=model_unregistered',
-                user.id,
-                model.get('id'),
-            )
-            raise Exception('Model not found')
+    # Callers that already fetched the row (chat completion entry) pass it in
+    if model_info is None or model_info.id != model.get('id'):
+        model_info = await Models.get_model_by_id(model.get('id'), db=db)
+    if not model_info:
+        if model.get('router') and user.role == 'admin':
+            return
+        log.warning(
+            'Model access denied: user_id=%r model_id=%r reason=model_unregistered',
+            user.id,
+            model.get('id'),
+        )
+        raise Exception('Model not found')
 
-        # One group-membership fetch shared by the direct check and every
-        # base-model hop; skipped when no check below needs it.
-        user_group_ids = None
-        if user.id != model_info.user_id or model_info.base_model_id:
-            user_group_ids = {
-                group.id for group in await Groups.get_groups_by_member_id(user.id, db=db, include_inherited=True)
-            }
+    # One group-membership fetch shared by the direct check and every
+    # base-model hop; skipped when no check below needs it.
+    user_group_ids = None
+    if user.id != model_info.user_id or model_info.base_model_id:
+        user_group_ids = {
+            group.id for group in await Groups.get_groups_by_member_id(user.id, db=db, include_inherited=True)
+        }
 
-        if not (
-            user.id == model_info.user_id
-            or await AccessGrants.has_access(
-                user_id=user.id,
-                resource_type='model',
-                resource_id=model_info.id,
-                permission='read',
-                user_group_ids=user_group_ids,
-                db=db,
-            )
-        ):
-            log.warning(
-                'Model access denied: user_id=%r model_id=%r reason=model_read_denied',
-                user.id,
-                model_info.id,
-            )
-            raise Exception('Model not found')
+    if not (
+        user.id == model_info.user_id
+        or await AccessGrants.has_access(
+            user_id=user.id,
+            resource_type='model',
+            resource_id=model_info.id,
+            permission='read',
+            user_group_ids=user_group_ids,
+            db=db,
+        )
+    ):
+        log.warning(
+            'Model access denied: user_id=%r model_id=%r reason=model_read_denied',
+            user.id,
+            model_info.id,
+        )
+        raise Exception('Model not found')
 
-        # Enforce access on chained base models
-        if not await has_base_model_access(
-            user.id, model_info, user_role=user.role, user_group_ids=user_group_ids, db=db
-        ):
-            raise Exception('Model not found')
+    # Enforce access on chained base models
+    if not await has_base_model_access(user.id, model_info, user_role=user.role, user_group_ids=user_group_ids, db=db):
+        raise Exception('Model not found')
 
 
 async def get_filtered_models(models, user, db=None):
@@ -606,10 +562,9 @@ async def get_filtered_models(models, user, db=None):
     ) and not BYPASS_MODEL_ACCESS_CONTROL:
         model_infos = {}
         for model in models:
-            if model.get('arena'):
-                continue
             info = model.get('info')
-            if info:
+            # Only saved model rows carry access; injected info (router models without a row) has no id.
+            if info and info.get('id'):
                 model_infos[model['id']] = info
 
         user_group_ids = {
@@ -628,18 +583,6 @@ async def get_filtered_models(models, user, db=None):
 
         filtered_models = []
         for model in models:
-            if model.get('arena'):
-                meta = model.get('info', {}).get('meta', {})
-                access_grants = meta.get('access_grants', [])
-                if (not access_grants and user.role == 'admin') or await has_access(
-                    user.id,
-                    permission='read',
-                    access_grants=access_grants,
-                    user_group_ids=user_group_ids,
-                ):
-                    filtered_models.append(model)
-                continue
-
             model_info = model_infos.get(model['id'])
             if model_info:
                 if (

@@ -33,7 +33,7 @@
 	const DEFAULT_HEATMAP_COLUMNS = 26;
 	const MIN_MONTH_LABEL_GAP = 6;
 
-	$: modelNames = new Map($models.map((model) => [model.id, model.name || model.id]));
+	$: modelNames = new Map(($models ?? []).map((model) => [model.id, model.name || model.id]));
 	$: dailyHeatmap = usage?.heatmap ?? [];
 	$: weeklyHeatmap = new Map((usage?.weekly_heatmap ?? []).map((entry) => [entry.date, entry]));
 	$: cumulativeHeatmap = new Map(
@@ -58,67 +58,67 @@
 
 	const palettes = [
 		[
-			'bg-gray-100 dark:bg-gray-800',
+			'bg-base-100 dark:bg-base-800',
 			'bg-green-100 dark:bg-green-900/40',
 			'bg-green-300 dark:bg-green-700/60',
 			'bg-green-500 dark:bg-green-600/80',
 			'bg-green-700 dark:bg-green-500'
 		],
 		[
-			'bg-gray-100 dark:bg-gray-800',
+			'bg-base-100 dark:bg-base-800',
 			'bg-blue-100 dark:bg-blue-900/40',
 			'bg-blue-300 dark:bg-blue-700/60',
 			'bg-blue-500 dark:bg-blue-600/80',
 			'bg-blue-700 dark:bg-blue-500'
 		],
 		[
-			'bg-gray-100 dark:bg-gray-800',
+			'bg-base-100 dark:bg-base-800',
 			'bg-purple-100 dark:bg-purple-900/40',
 			'bg-purple-300 dark:bg-purple-700/60',
 			'bg-purple-500 dark:bg-purple-600/80',
 			'bg-purple-700 dark:bg-purple-500'
 		],
 		[
-			'bg-gray-100 dark:bg-gray-800',
+			'bg-base-100 dark:bg-base-800',
 			'bg-orange-100 dark:bg-orange-900/40',
 			'bg-orange-300 dark:bg-orange-700/60',
 			'bg-orange-500 dark:bg-orange-600/80',
 			'bg-orange-700 dark:bg-orange-500'
 		],
 		[
-			'bg-gray-100 dark:bg-gray-800',
+			'bg-base-100 dark:bg-base-800',
 			'bg-rose-100 dark:bg-rose-900/40',
 			'bg-rose-300 dark:bg-rose-700/60',
 			'bg-rose-500 dark:bg-rose-600/80',
 			'bg-rose-700 dark:bg-rose-500'
 		],
 		[
-			'bg-gray-100 dark:bg-gray-800',
+			'bg-base-100 dark:bg-base-800',
 			'bg-yellow-100 dark:bg-yellow-900/40',
 			'bg-yellow-300 dark:bg-yellow-700/60',
 			'bg-yellow-500 dark:bg-yellow-600/80',
 			'bg-yellow-700 dark:bg-yellow-500'
 		],
 		[
-			'bg-gray-100 dark:bg-gray-800',
+			'bg-base-100 dark:bg-base-800',
 			'bg-cyan-100 dark:bg-cyan-900/40',
 			'bg-cyan-300 dark:bg-cyan-700/60',
 			'bg-cyan-500 dark:bg-cyan-600/80',
 			'bg-cyan-700 dark:bg-cyan-500'
 		],
 		[
-			'bg-gray-100 dark:bg-gray-800',
+			'bg-base-100 dark:bg-base-800',
 			'bg-red-100 dark:bg-red-900/40',
 			'bg-red-300 dark:bg-red-700/60',
 			'bg-red-500 dark:bg-red-600/80',
 			'bg-red-700 dark:bg-red-500'
 		],
 		[
-			'bg-gray-100 dark:bg-gray-800',
-			'bg-neutral-200 dark:bg-neutral-800',
-			'bg-neutral-400 dark:bg-neutral-600',
-			'bg-neutral-600 dark:bg-neutral-400',
-			'bg-neutral-800 dark:bg-neutral-200'
+			'bg-base-100 dark:bg-base-800',
+			'bg-base-200 dark:bg-base-850',
+			'bg-base-500 dark:bg-base-700',
+			'bg-base-700 dark:bg-base-500',
+			'bg-base-850 dark:bg-base-200'
 		]
 	];
 
@@ -275,7 +275,7 @@
 
 <div id="tab-usage" class="flex h-full min-h-0 flex-col">
 	<div class="mb-4">
-		<h2 class="text-sm font-medium text-gray-900 dark:text-white">
+		<h2 class="text-sm font-medium text-base-900 dark:text-base-0">
 			{$i18n.t('settings.personal.usage.title')}
 		</h2>
 	</div>
@@ -285,7 +285,7 @@
 			<Spinner className="size-5" />
 		</div>
 	{:else if !usage}
-		<div class="flex flex-1 items-center justify-center text-xs text-gray-500">
+		<div class="flex flex-1 items-center justify-center text-xs text-base-500">
 			{$i18n.t('Failed to load usage')}
 		</div>
 	{:else}
@@ -293,42 +293,42 @@
 			<UserSettingSection title={$i18n.t('settings.personal.usage.sections.overview.title')} first>
 				<div class="grid grid-cols-2 gap-x-6 gap-y-3 md:grid-cols-5">
 					<div>
-						<div class="text-sm font-medium text-gray-900 dark:text-white">
+						<div class="text-sm font-medium text-base-900 dark:text-base-0">
 							{formatNumber(usage.totals.lifetime_tokens)}
 						</div>
-						<div class="mt-0.5 text-[0.6875rem] text-gray-400 dark:text-gray-600">
+						<div class="mt-0.5 text-[0.6875rem] text-base-400 dark:text-base-600">
 							{$i18n.t('Lifetime tokens')}
 						</div>
 					</div>
 					<div>
-						<div class="text-sm font-medium text-gray-900 dark:text-white">
+						<div class="text-sm font-medium text-base-900 dark:text-base-0">
 							{formatNumber(usage.totals.peak_daily_tokens)}
 						</div>
-						<div class="mt-0.5 text-[0.6875rem] text-gray-400 dark:text-gray-600">
+						<div class="mt-0.5 text-[0.6875rem] text-base-400 dark:text-base-600">
 							{$i18n.t('Peak tokens')}
 						</div>
 					</div>
 					<div>
-						<div class="text-sm font-medium text-gray-900 dark:text-white">
+						<div class="text-sm font-medium text-base-900 dark:text-base-0">
 							{formatDuration(usage.totals.longest_chat_seconds)}
 						</div>
-						<div class="mt-0.5 text-[0.6875rem] text-gray-400 dark:text-gray-600">
+						<div class="mt-0.5 text-[0.6875rem] text-base-400 dark:text-base-600">
 							{$i18n.t('Longest active chat')}
 						</div>
 					</div>
 					<div>
-						<div class="text-sm font-medium text-gray-900 dark:text-white">
+						<div class="text-sm font-medium text-base-900 dark:text-base-0">
 							{usage.totals.current_streak.toLocaleString()}
 						</div>
-						<div class="mt-0.5 text-[0.6875rem] text-gray-400 dark:text-gray-600">
+						<div class="mt-0.5 text-[0.6875rem] text-base-400 dark:text-base-600">
 							{$i18n.t('Current streak')}
 						</div>
 					</div>
 					<div>
-						<div class="text-sm font-medium text-gray-900 dark:text-white">
+						<div class="text-sm font-medium text-base-900 dark:text-base-0">
 							{usage.totals.longest_streak.toLocaleString()}
 						</div>
-						<div class="mt-0.5 text-[0.6875rem] text-gray-400 dark:text-gray-600">
+						<div class="mt-0.5 text-[0.6875rem] text-base-400 dark:text-base-600">
 							{$i18n.t('Longest streak')}
 						</div>
 					</div>
@@ -337,7 +337,7 @@
 
 			<section class="mt-4 w-full">
 				<div class="mb-2 flex min-w-0 items-center justify-between gap-3">
-					<h3 class="min-w-0 shrink truncate text-xs text-gray-400 dark:text-gray-600">
+					<h3 class="min-w-0 shrink truncate text-xs text-base-400 dark:text-base-600">
 						{$i18n.t('Token activity')}
 					</h3>
 					<div
@@ -348,8 +348,8 @@
 								type="button"
 								class="min-w-0 shrink truncate whitespace-nowrap text-xs transition-colors {heatmapMode ===
 								mode.value
-									? 'text-gray-900 dark:text-white'
-									: 'text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}
+									? 'text-base-900 dark:text-base-0'
+									: 'text-base-400 hover:text-base-700 dark:hover:text-base-200'}
 								"
 								on:click={() => {
 									heatmapMode = mode.value;
@@ -385,7 +385,7 @@
 						</div>
 
 						<div
-							class="mx-auto mt-2 grid text-[0.6875rem] leading-none text-gray-400 dark:text-gray-600"
+							class="mx-auto mt-2 grid text-[0.6875rem] leading-none text-base-400 dark:text-base-600"
 							style="width: min(100%, {heatmapGridWidth}); column-gap: {HEATMAP_GAP_PX}px; grid-template-columns: repeat({heatmapColumns}, minmax(0, 1fr));"
 						>
 							{#each monthLabels as month}
@@ -398,7 +398,7 @@
 
 					{#if usage.top_models.length > 0}
 						<div
-							class="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[0.6875rem] text-gray-400 dark:text-gray-600"
+							class="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[0.6875rem] text-base-400 dark:text-base-600"
 						>
 							{#each usage.top_models.slice(0, 6) as model}
 								<div class="flex min-w-0 items-center gap-1.5">
@@ -414,7 +414,7 @@
 
 			{#if !hasUsage}
 				<UserSettingSection title={$i18n.t('settings.personal.usage.sections.activity.title')}>
-					<div class="text-xs text-gray-500 dark:text-gray-400">
+					<div class="text-xs text-base-500 dark:text-base-400">
 						{$i18n.t('No usage data found')}
 					</div>
 				</UserSettingSection>
@@ -423,33 +423,33 @@
 					title={$i18n.t('settings.personal.usage.sections.activityInsights.title')}
 				>
 					<UserSettingRow label={$i18n.t('Models')}>
-						<span class="text-xs text-gray-900 dark:text-white">
+						<span class="text-xs text-base-900 dark:text-base-0">
 							{usage.totals.models_used.toLocaleString()}
 						</span>
 					</UserSettingRow>
 					<UserSettingRow label={$i18n.t('Average tokens per chat')}>
-						<span class="text-xs text-gray-900 dark:text-white">
+						<span class="text-xs text-base-900 dark:text-base-0">
 							{formatNumber(usage.insights.average_tokens_per_chat)}
 						</span>
 					</UserSettingRow>
 					<UserSettingRow label={$i18n.t('Average messages per active day')}>
-						<span class="text-xs text-gray-900 dark:text-white">
+						<span class="text-xs text-base-900 dark:text-base-0">
 							{usage.insights.average_messages_per_active_day.toLocaleString()}
 						</span>
 					</UserSettingRow>
 					<UserSettingRow label={$i18n.t('User messages')}>
-						<span class="text-xs text-gray-900 dark:text-white">
+						<span class="text-xs text-base-900 dark:text-base-0">
 							{usage.totals.user_messages.toLocaleString()} · {usage.insights.user_message_share}%
 						</span>
 					</UserSettingRow>
 					<UserSettingRow label={$i18n.t('Assistant messages')}>
-						<span class="text-xs text-gray-900 dark:text-white">
+						<span class="text-xs text-base-900 dark:text-base-0">
 							{usage.totals.assistant_messages.toLocaleString()} · {usage.insights
 								.assistant_message_share}%
 						</span>
 					</UserSettingRow>
 					<UserSettingRow label={$i18n.t('Total chats')}>
-						<span class="text-xs text-gray-900 dark:text-white">
+						<span class="text-xs text-base-900 dark:text-base-0">
 							{usage.totals.total_chats.toLocaleString()}
 						</span>
 					</UserSettingRow>
@@ -457,13 +457,13 @@
 
 				<UserSettingSection title={$i18n.t('settings.personal.usage.sections.topModels.title')}>
 					{#if usage.top_models.length === 0}
-						<div class="text-xs text-gray-500 dark:text-gray-400">
+						<div class="text-xs text-base-500 dark:text-base-400">
 							{$i18n.t('No model usage found')}
 						</div>
 					{:else}
 						{#each usage.top_models as model}
 							<UserSettingRow label={modelName(model.model_id)}>
-								<span class="text-xs text-gray-500 dark:text-gray-400">
+								<span class="text-xs text-base-500 dark:text-base-400">
 									{model.messages.toLocaleString()}
 									{$i18n.t('messages')} · {formatNumber(model.total_tokens)}
 								</span>
@@ -478,7 +478,7 @@
 					>
 						{#each usage.top_tools as tool}
 							<UserSettingRow label={tool.name}>
-								<span class="text-xs text-gray-500 dark:text-gray-400">
+								<span class="text-xs text-base-500 dark:text-base-400">
 									{tool.count.toLocaleString()}
 									{$i18n.t('runs')}
 								</span>
@@ -488,7 +488,7 @@
 				{/if}
 			{/if}
 
-			<div class="mt-4 text-right text-[0.6875rem] text-gray-400 dark:text-gray-600">
+			<div class="mt-4 text-right text-[0.6875rem] text-base-400 dark:text-base-600">
 				{$i18n.t('Token counts are estimates and may not reflect actual API usage')}
 			</div>
 		</div>

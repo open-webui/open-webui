@@ -9,6 +9,7 @@ from urllib.parse import urlencode, urlsplit, urlunsplit
 import aiohttp
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from fastapi.security import HTTPAuthorizationCredentials
+from open_webui.utils.machines import machine_id_of
 from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL, DEFAULT_REALTIME_CALL_PROMPT_TEMPLATE
 from open_webui.env import AIOHTTP_CLIENT_SESSION_SSL, BYPASS_MODEL_ACCESS_CONTROL, ENABLE_FORWARD_USER_INFO_HEADERS
 from open_webui.models.chats import Chats
@@ -407,20 +408,20 @@ async def realtime_call(ws: WebSocket):
         if agent_model:
             from open_webui.utils.agents.discovery import get_models as get_agent_models
 
-            terminal_id = auth.get('terminal_id')
-            if not isinstance(terminal_id, str) or not terminal_id:
-                raise ValueError('Select a terminal to call an agent')
+            machine_id = machine_id_of(auth)
+            if not isinstance(machine_id, str) or not machine_id:
+                raise ValueError('Select a machine to call an agent')
             parts = model_id.split(':', 3)
             if len(parts) != 4:
                 raise ValueError('Invalid agent model')
-            # Match HTTP chat authentication for terminal connections using session auth.
+            # Match HTTP chat authentication for machine connections using session auth.
             ws.state.token = HTTPAuthorizationCredentials(scheme='Bearer', credentials=token)
             candidates = await get_agent_models(
-                ws, user, {'terminal_id': terminal_id, 'chat_id': chat_id}, provider=parts[2]
+                ws, user, {'machine_id': machine_id, 'chat_id': chat_id}, provider=parts[2]
             )
             model = next((item for item in candidates if item['id'] == model_id), None)
             if model is None:
-                raise ValueError('Agent model is unavailable in the selected terminal')
+                raise ValueError('Agent model is unavailable on the selected machine')
         else:
             if not ws.app.state.MODELS:
                 await get_all_models(ws, user=user)

@@ -35,6 +35,8 @@
 	let view: 'month' | 'week' | 'day' = 'month';
 	let currentDate = new Date();
 
+	let calendarView: CalendarView;
+	let occurrenceStart: number;
 	let showEventModal = false;
 	let editEvent: CalendarEventModel | null = null;
 	let defaultStartAt: number | null = null;
@@ -149,6 +151,7 @@
 			}
 			return;
 		}
+		occurrenceStart = evt.start_at;
 		editEvent = evt.instance_id
 			? ((await getCalendarEventById(localStorage.token, evt.id)) ?? evt)
 			: evt;
@@ -220,6 +223,7 @@
 			const event = await getCalendarEventById(localStorage.token, id);
 			if ($pageUrl.searchParams.get('event') !== id) return;
 			currentDate = new Date(event.start_at / 1e6);
+			occurrenceStart = event.start_at;
 			editEvent = event;
 			defaultStartAt = null;
 			showEventModal = true;
@@ -269,7 +273,11 @@
 	{defaultStartAt}
 	on:close={closeLinkedEvent}
 	on:save={() => refresh()}
-	on:delete={() => refresh()}
+	on:delete={async () => {
+		const date = new Date(occurrenceStart / 1e6);
+		await refresh();
+		await calendarView?.focusSlot(date);
+	}}
 />
 
 <CreateCalendarModal
@@ -296,7 +304,7 @@
 						>
 							<button
 								id="sidebar-toggle-button"
-								class="cursor-pointer flex rounded-lg hover:bg-gray-100 dark:hover:bg-gray-850 transition"
+								class="cursor-pointer flex rounded-lg hover:bg-base-100 dark:hover:bg-base-850 transition"
 								aria-label={$showSidebar ? $i18n.t('Close Sidebar') : $i18n.t('Open Sidebar')}
 								on:click={() => showSidebar.set(!$showSidebar)}
 							>
@@ -312,7 +320,7 @@
 					<div class="flex items-center gap-0.5 py-1">
 						<span class="min-w-fit px-1 text-sm select-none">{headerText}</span>
 						<button
-							class="p-1 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-850 transition"
+							class="p-1 rounded-lg hover:bg-base-50 dark:hover:bg-base-850 transition"
 							on:click={() => navigateCalendar(-1)}
 							aria-label={$i18n.t('Previous')}
 						>
@@ -322,7 +330,7 @@
 								viewBox="0 0 24 24"
 								stroke-width="1.5"
 								stroke="currentColor"
-								class="size-3.5 text-gray-400"
+								class="size-3.5 text-base-400"
 								><path
 									stroke-linecap="round"
 									stroke-linejoin="round"
@@ -331,7 +339,7 @@
 							>
 						</button>
 						<button
-							class="p-1 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-850 transition"
+							class="p-1 rounded-lg hover:bg-base-50 dark:hover:bg-base-850 transition"
 							on:click={() => navigateCalendar(1)}
 							aria-label={$i18n.t('Next')}
 						>
@@ -341,7 +349,7 @@
 								viewBox="0 0 24 24"
 								stroke-width="1.5"
 								stroke="currentColor"
-								class="size-3.5 text-gray-400"
+								class="size-3.5 text-base-400"
 								><path
 									stroke-linecap="round"
 									stroke-linejoin="round"
@@ -353,7 +361,7 @@
 
 					<div class="ml-auto flex items-center gap-1">
 						<button
-							class="hidden sm:inline text-xs px-2 py-1 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-850 transition text-gray-500 hover:text-gray-700 dark:hover:text-white"
+							class="hidden sm:inline text-xs px-2 py-1 rounded-lg hover:bg-base-50 dark:hover:bg-base-850 transition text-base-500 hover:text-base-700 dark:hover:text-base-0"
 							on:click={goToToday}
 						>
 							{$i18n.t('Today')}
@@ -367,8 +375,8 @@
 								{ value: 'month', label: $i18n.t('Month') }
 							]}
 							onChange={() => handleNavigate()}
-							triggerClass="relative flex items-center gap-1 px-2 py-1 rounded-lg text-xs text-gray-500 transition hover:bg-gray-50 hover:text-gray-700 dark:hover:bg-gray-850 dark:hover:text-white"
-							contentClass="rounded-xl w-28 p-1 border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-850 dark:text-white shadow-lg"
+							triggerClass="relative flex items-center gap-1 px-2 py-1 rounded-lg text-xs text-base-500 transition hover:bg-base-50 hover:text-base-700 dark:hover:bg-base-850 dark:hover:text-base-0"
+							contentClass="rounded-xl w-28 p-1 border border-base-100 dark:border-base-800 bg-base-0 dark:bg-base-850 dark:text-base-0 shadow-lg"
 							align="end"
 						>
 							<svelte:fragment slot="trigger" let:selectedLabel>
@@ -389,7 +397,7 @@
 						</Select>
 
 						<button
-							class="ml-1 rounded-lg bg-gray-50 px-2.5 py-1 text-xs text-gray-900 transition ring-1 ring-gray-200 hover:bg-gray-100 dark:bg-gray-850 dark:text-gray-100 dark:ring-gray-800 dark:hover:bg-gray-800"
+							class="ml-1 rounded-lg bg-base-50 px-2.5 py-1 text-xs text-base-900 transition ring-1 ring-base-200 hover:bg-base-100 dark:bg-base-850 dark:text-base-100 dark:ring-base-800 dark:hover:bg-base-800"
 							on:click={handleNewEvent}
 						>
 							{$i18n.t('Create')}
@@ -417,6 +425,7 @@
 			<!-- Calendar -->
 			<div class="flex-1 flex flex-col min-h-0">
 				<CalendarView
+					bind:this={calendarView}
 					{events}
 					{calendars}
 					{visibleCalendarIds}

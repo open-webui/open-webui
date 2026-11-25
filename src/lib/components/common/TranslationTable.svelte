@@ -89,8 +89,8 @@
 
 <div class="flex min-h-0 flex-1 flex-col gap-1.5">
 	<div class="flex min-h-7 flex-wrap items-center justify-between gap-x-2 gap-y-1">
-		<div class="text-xs text-gray-600 dark:text-gray-400">{$i18n.t('Translations')}</div>
-		<div class="ms-auto flex shrink-0 items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
+		<div class="text-xs text-base-600 dark:text-base-400">{$i18n.t('Translations')}</div>
+		<div class="ms-auto flex shrink-0 items-center gap-3 text-xs text-base-500 dark:text-base-400">
 			<slot name="language" />
 			<input
 				bind:this={fileInput}
@@ -101,19 +101,19 @@
 			/>
 			<button
 				type="button"
-				class="hover:text-gray-900 disabled:opacity-40 dark:hover:text-gray-100"
+				class="hover:text-base-900 disabled:opacity-40 dark:hover:text-base-100"
 				disabled={readOnly}
 				on:click={() => fileInput.click()}>{$i18n.t('Import')}</button
 			>
 			<button
 				type="button"
-				class="hover:text-gray-900 disabled:opacity-40 dark:hover:text-gray-100"
+				class="hover:text-base-900 disabled:opacity-40 dark:hover:text-base-100"
 				on:click={exportFile}>{$i18n.t('Export')}</button
 			>
 			{#if allowNewKeys && !readOnly}
 				<Tooltip content={$i18n.t('Add translation')}>
 					<button
-						class="flex size-6 items-center justify-center text-gray-400 dark:text-gray-600"
+						class="flex size-6 items-center justify-center text-base-400 dark:text-base-600"
 						type="button"
 						aria-label={$i18n.t('Add translation')}
 						on:click={() => (adding = !adding)}><Plus className="size-3.5" /></button
@@ -124,7 +124,7 @@
 	</div>
 	{#if adding && !readOnly}<div class="flex items-center gap-2 text-xs">
 			<input
-				class="min-w-0 flex-1 bg-transparent px-2 py-1 text-[0.8125rem] outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700"
+				class="min-w-0 flex-1 bg-transparent px-2 py-1 text-[0.8125rem] outline-hidden placeholder:text-base-300 dark:placeholder:text-base-700"
 				aria-label={$i18n.t('Translation key')}
 				placeholder={$i18n.t('Translation key')}
 				bind:value={newKey}
@@ -141,10 +141,10 @@
 				on:click={addKey}><Plus className="size-4" /></button
 			>
 		</div>{/if}
-	<div class="flex items-center gap-2 px-2 py-1 text-xs text-gray-500 dark:text-gray-400">
-		<Search className="size-3.5 shrink-0 text-gray-500" />
+	<div class="flex items-center gap-2 px-2 py-1 text-xs text-base-500 dark:text-base-400">
+		<Search className="size-3.5 shrink-0 text-base-500" />
 		<input
-			class="min-w-0 w-full bg-transparent py-0.5 text-xs placeholder:text-gray-500 dark:placeholder:text-gray-400 outline-hidden"
+			class="min-w-0 w-full bg-transparent py-0.5 text-xs placeholder:text-base-500 dark:placeholder:text-base-400 outline-hidden"
 			bind:value={query}
 			placeholder={$i18n.t('Search')}
 			aria-label={$i18n.t('Search translations')}
@@ -166,14 +166,14 @@
 							placement="top-start"
 						>
 							<span
-								class="block whitespace-pre-wrap break-words text-xs text-gray-600 dark:text-gray-400"
+								class="block whitespace-pre-wrap break-words text-xs text-base-600 dark:text-base-400"
 								>{source[key] || key}</span
 							>
 						</Tooltip>
 						<textarea
 							rows="1"
 							readonly={readOnly}
-							class="block min-h-7 max-h-40 min-w-0 w-full resize-none rounded-lg border border-gray-100/50 bg-gray-50/40 px-2 py-1.5 text-xs text-gray-700 outline-hidden transition-colors placeholder:text-gray-500 focus:border-blue-400 dark:border-white/[0.04] dark:bg-white/[0.03] dark:text-gray-300 dark:placeholder:text-gray-400 dark:focus:border-blue-500 [field-sizing:content]"
+							class="block min-h-7 max-h-40 min-w-0 w-full resize-none rounded-lg border border-base-100/50 bg-base-50/40 px-2 py-1.5 text-xs text-base-700 outline-hidden transition-colors placeholder:text-base-500 focus:border-blue-400 dark:border-base-0/[0.04] dark:bg-base-0/[0.03] dark:text-base-300 dark:placeholder:text-base-400 dark:focus:border-blue-500 [field-sizing:content]"
 							aria-label={key}
 							placeholder={$i18n.t('Translation')}
 							value={value?.[key] ?? ''}
@@ -185,7 +185,7 @@
 							<Tooltip content={$i18n.t('Use default')}>
 								<button
 									type="button"
-									class="flex size-6 items-center justify-center text-gray-400 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-300"
+									class="flex size-6 items-center justify-center text-base-400 hover:text-base-700 dark:text-base-500 dark:hover:text-base-300"
 									aria-label={`${$i18n.t('Use default')}: ${key}`}
 									on:click={() => reset(key)}><ArrowUturnLeft className="size-3.5" /></button
 								>
@@ -194,14 +194,14 @@
 					</div>
 				</div>
 			{:else}
-				<div class="px-2 py-1 text-xs text-gray-500 dark:text-gray-400">
+				<div class="px-2 py-1 text-xs text-base-500 dark:text-base-400">
 					{$i18n.t('No results found')}
 				</div>
 			{/each}
 		</div>
 	</div>
 	{#if pages > 1}
-		<div class="flex items-center justify-end gap-3 text-xs text-gray-500">
+		<div class="flex items-center justify-end gap-3 text-xs text-base-500">
 			<span>{page + 1} / {pages}</span>
 			<button
 				type="button"

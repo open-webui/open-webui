@@ -56,9 +56,9 @@
 	let showAdvanced = false;
 
 	const inputClass =
-		'bg-transparent outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700';
+		'bg-transparent outline-hidden placeholder:text-base-300 dark:placeholder:text-base-700';
 	const selectClass =
-		'bg-transparent pr-5 outline-hidden placeholder:text-gray-300 dark:placeholder:text-gray-700';
+		'bg-transparent pr-5 outline-hidden placeholder:text-base-300 dark:placeholder:text-base-700';
 
 	const parsePassthroughParams = (value: string) =>
 		value
@@ -195,7 +195,7 @@
 				return;
 			}
 
-			if (!key && !['azure_ad', 'microsoft_entra_id'].includes(auth_type)) {
+			if (!key && auth_type === 'bearer') {
 				loading = false;
 
 				toast.error($i18n.t('Key is required'));
@@ -304,6 +304,12 @@
 		init();
 	}
 
+	const handleUrlInput = () => {
+		if (!ollama && url.includes('api.openai.com')) {
+			apiType = 'responses';
+		}
+	};
+
 	$: azure =
 		provider === 'azure' ||
 		((url.includes('azure.') || url.includes('cognitive.microsoft.com')) &&
@@ -321,8 +327,8 @@
 	bind:show
 >
 	<div>
-		<div class=" flex justify-between dark:text-gray-100 px-5 pt-4 pb-1.5">
-			<h1 class="text-lg font-medium self-center font-primary">
+		<div class=" flex justify-between dark:text-base-100 px-4 pt-3 pb-1.5">
+			<h1 class="text-sm font-medium self-center">
 				{#if edit}
 					{$i18n.t('Edit Connection')}
 				{:else}
@@ -336,11 +342,11 @@
 					show = false;
 				}}
 			>
-				<XMark className={'size-5'} />
+				<XMark className={'size-4'} />
 			</button>
 		</div>
 
-		<div class="flex flex-col md:flex-row w-full px-4 pb-4 md:space-x-4 dark:text-gray-200">
+		<div class="flex flex-col md:flex-row w-full px-4 pb-4 md:space-x-4 dark:text-base-200">
 			<div class=" flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6">
 				<form
 					class="flex flex-col w-full"
@@ -349,10 +355,10 @@
 						submitHandler();
 					}}
 				>
-					<div class="px-1">
+					<div>
 						<div class="flex gap-2">
 							<div class="flex w-full justify-between items-center">
-								<div class=" text-xs text-gray-500">{$i18n.t('Connection Type')}</div>
+								<div class=" text-xs text-base-500">{$i18n.t('Connection Type')}</div>
 
 								<div class="">
 									<button
@@ -360,7 +366,7 @@
 											connectionType = connectionType === 'local' ? 'external' : 'local';
 										}}
 										type="button"
-										class=" text-xs text-gray-700 dark:text-gray-300"
+										class=" text-xs text-base-700 dark:text-base-300"
 									>
 										{#if connectionType === 'local'}
 											{$i18n.t('Local')}
@@ -376,7 +382,7 @@
 							<div class="flex flex-col w-full">
 								<label
 									for="url-input"
-									class={`mb-0.5 text-xs text-gray-500
+									class={`mb-0.5 text-xs text-base-500
 								`}>{$i18n.t('URL')}</label
 								>
 
@@ -386,6 +392,7 @@
 										class={`w-full text-sm ${inputClass}`}
 										type="text"
 										bind:value={url}
+										on:input={handleUrlInput}
 										placeholder={$i18n.t('API Base URL')}
 										autocomplete="off"
 										list={ollama ? undefined : 'suggestions'}
@@ -408,7 +415,7 @@
 
 							<Tooltip content={$i18n.t('Verify Connection')} className="self-end -mb-1">
 								<button
-									class="self-center p-1 bg-transparent hover:bg-gray-100 dark:hover:bg-gray-850 rounded-lg transition"
+									class="self-center p-1 bg-transparent hover:bg-base-100 dark:hover:bg-base-850 rounded-lg transition"
 									on:click={() => {
 										verifyHandler();
 									}}
@@ -443,7 +450,7 @@
 
 						<div class="flex gap-2 mt-2">
 							<div class="flex flex-col w-full">
-								<label for="select-bearer-or-session" class={`text-xs text-gray-500`}
+								<label for="select-bearer-or-session" class={`text-xs text-base-500`}
 									>{$i18n.t('Auth')}</label
 								>
 
@@ -461,6 +468,7 @@
 												<option value="session">{$i18n.t('Session')}</option>
 												<option value="system_oauth">{$i18n.t('OAuth')}</option>
 												<option value="microsoft_entra_id">{$i18n.t('Entra ID')}</option>
+												<option value="aws_sigv4">{$i18n.t('AWS SigV4')}</option>
 											{/if}
 										</select>
 									</div>
@@ -473,20 +481,24 @@
 												required={false}
 											/>
 										{:else if auth_type === 'none'}
-											<div class={`text-xs self-center translate-y-[1px] text-gray-500`}>
+											<div class={`text-xs self-center translate-y-[1px] text-base-500`}>
 												{$i18n.t('No authentication')}
 											</div>
 										{:else if auth_type === 'session'}
-											<div class={`text-xs self-center translate-y-[1px] text-gray-500`}>
+											<div class={`text-xs self-center translate-y-[1px] text-base-500`}>
 												{$i18n.t('Forwards system user session credentials to authenticate')}
 											</div>
 										{:else if auth_type === 'system_oauth'}
-											<div class={`text-xs self-center translate-y-[1px] text-gray-500`}>
+											<div class={`text-xs self-center translate-y-[1px] text-base-500`}>
 												{$i18n.t('Forwards system user OAuth access token to authenticate')}
 											</div>
 										{:else if ['azure_ad', 'microsoft_entra_id'].includes(auth_type)}
-											<div class={`text-xs self-center translate-y-[1px] text-gray-500`}>
+											<div class={`text-xs self-center translate-y-[1px] text-base-500`}>
 												{$i18n.t('Uses DefaultAzureCredential to authenticate')}
+											</div>
+										{:else if auth_type === 'aws_sigv4'}
+											<div class={`text-xs self-center translate-y-[1px] text-base-500`}>
+												{$i18n.t('Uses the default AWS credential chain to authenticate')}
 											</div>
 										{/if}
 									</div>
@@ -498,7 +510,7 @@
 							<div class="flex flex-row justify-between items-center w-full mt-1">
 								<label
 									for="api-type-toggle"
-									class={`mb-0.5 text-xs text-gray-500
+									class={`mb-0.5 text-xs text-base-500
 							`}>{$i18n.t('API Type')}</label
 								>
 
@@ -509,7 +521,7 @@
 										}}
 										type="button"
 										id="api-type-toggle"
-										class=" text-xs text-gray-700 dark:text-gray-300"
+										class=" text-xs text-base-700 dark:text-base-300"
 									>
 										{#if apiType === 'responses'}
 											{$i18n.t('Responses')}
@@ -524,7 +536,7 @@
 						<div class="flex items-center justify-between">
 							<button
 								type="button"
-								class="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition mt-2"
+								class="flex items-center gap-1 text-xs text-base-500 dark:text-base-400 hover:text-base-700 dark:hover:text-base-200 transition mt-2"
 								on:click={() => (showAdvanced = !showAdvanced)}
 							>
 								<svg
@@ -547,10 +559,10 @@
 							{#if !ollama}
 								<div class="flex items-center justify-between gap-3 mt-2">
 									<div>
-										<label for="forward-cookies" class="text-xs text-gray-500">
+										<label for="forward-cookies" class="text-xs text-base-500">
 											{$i18n.t('Forward cookies')}
 										</label>
-										<p class="text-xs text-gray-500">
+										<p class="text-xs text-base-500">
 											{$i18n.t('Forward cookies from your Open WebUI request to this server.')}
 										</p>
 									</div>
@@ -566,7 +578,7 @@
 								<div class="flex flex-col w-full">
 									<label
 										for="headers-input"
-										class={`mb-0.5 text-xs text-gray-500
+										class={`mb-0.5 text-xs text-base-500
 							`}>{$i18n.t('Headers')}</label
 									>
 
@@ -593,7 +605,7 @@
 									<div class="flex flex-col w-full">
 										<label
 											for="allowed-passthrough-params-input"
-											class={`mb-0.5 text-xs text-gray-500
+											class={`mb-0.5 text-xs text-base-500
 								`}>{$i18n.t('Passthrough params')}</label
 										>
 
@@ -621,7 +633,7 @@
 								<div class="flex flex-col w-full">
 									<label
 										for="prefix-id-input"
-										class={`mb-0.5 text-xs text-gray-500
+										class={`mb-0.5 text-xs text-base-500
 								`}>{$i18n.t('Prefix ID')}</label
 									>
 
@@ -648,7 +660,7 @@
 								<div class="flex flex-row justify-between items-center w-full mt-2">
 									<label
 										for="provider-select"
-										class={`mb-0.5 text-xs text-gray-500
+										class={`mb-0.5 text-xs text-base-500
 								`}>{$i18n.t('Provider')}</label
 									>
 
@@ -656,13 +668,15 @@
 										<select
 											id="provider-select"
 											bind:value={provider}
-											class="text-xs text-gray-700 dark:text-gray-300 bg-transparent pr-5 outline-hidden"
+											class="text-xs text-base-700 dark:text-base-300 bg-transparent pr-5 outline-hidden"
 										>
 											<option value="">{$i18n.t('Default')}</option>
 											<option value="azure">{$i18n.t('Azure OpenAI')}</option>
 											<option value="llama.cpp">{$i18n.t('llama.cpp')}</option>
 											<option value="lmstudio">{$i18n.t('LM Studio')}</option>
 											<option value="litellm">{$i18n.t('LiteLLM')}</option>
+											<option value="vllm">{$i18n.t('vLLM')}</option>
+											<option value="openrouter">{$i18n.t('OpenRouter')}</option>
 										</select>
 									</div>
 								</div>
@@ -673,7 +687,7 @@
 									<div class="flex flex-col w-full">
 										<label
 											for="api-version-input"
-											class={`mb-0.5 text-xs text-gray-500
+											class={`mb-0.5 text-xs text-base-500
 										`}>{$i18n.t('API Version')}</label
 										>
 
@@ -695,7 +709,7 @@
 							<div class="flex flex-col w-full mt-2">
 								<div class="mb-1 flex justify-between">
 									<div
-										class={`mb-0.5 text-xs text-gray-500
+										class={`mb-0.5 text-xs text-base-500
 								`}
 									>
 										{$i18n.t('Model IDs')}
@@ -727,7 +741,7 @@
 									</ul>
 								{:else}
 									<div
-										class={`text-gray-500 text-xs text-center py-2 px-10
+										class={`text-base-500 text-xs text-center py-2 px-10
 								`}
 									>
 										{#if ollama}
@@ -754,7 +768,7 @@
 							<div class="flex items-center">
 								<label class="sr-only" for="add-model-id-input">{$i18n.t('Add a model ID')}</label>
 								<input
-									class={`w-full text-sm ${inputClass} ${modelId ? '' : 'text-gray-500'}`}
+									class={`w-full text-sm ${inputClass} ${modelId ? '' : 'text-base-500'}`}
 									bind:value={modelId}
 									id="add-model-id-input"
 									placeholder={$i18n.t('Add a model ID')}
@@ -787,7 +801,7 @@
 							<div class="flex gap-2 mt-2">
 								<div class="flex flex-col w-full">
 									<div
-										class={`mb-0.5 text-xs text-gray-500
+										class={`mb-0.5 text-xs text-base-500
 								`}
 									>
 										{$i18n.t('Tags')}
@@ -814,11 +828,11 @@
 						{/if}
 					</div>
 
-					<div class="flex justify-between items-center pt-3 text-sm font-medium">
+					<div class="flex justify-between items-center pt-3 text-xs">
 						<div>
 							{#if edit}
 								<button
-									class="px-1 py-1.5 text-sm font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:underline transition"
+									class="px-1 py-1.5 text-xs text-base-500 hover:text-base-700 dark:text-base-400 dark:hover:text-base-200 hover:underline transition"
 									type="button"
 									on:click={() => {
 										showDeleteConfirmDialog = true;
@@ -830,7 +844,7 @@
 						</div>
 
 						<button
-							class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white disabled:cursor-not-allowed"
+							class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-base-0 transition hover:bg-base-1000 disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-base-0 disabled:cursor-not-allowed"
 							type="submit"
 							disabled={loading}
 						>

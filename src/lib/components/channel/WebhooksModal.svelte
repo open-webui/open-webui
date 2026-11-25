@@ -99,16 +99,16 @@
 {#if channel}
 	<Modal ariaLabel={$i18n.t('Webhooks')} size="sm" bind:show>
 		<div>
-			<div class="flex justify-between dark:text-gray-100 px-4 pt-3 mb-1">
+			<div class="flex justify-between dark:text-base-100 px-4 pt-3 mb-1">
 				<div class="flex w-full justify-between items-center mr-3">
-					<div class="self-center text-base flex gap-1.5 items-center">
+					<div class="text-sm font-medium self-center flex gap-1.5 items-center">
 						<div>{$i18n.t('Webhooks')}</div>
-						<span class="text-sm text-gray-500">{webhooks.length}</span>
+						<span class="text-sm text-base-500">{webhooks.length}</span>
 					</div>
 
 					<button
 						type="button"
-						class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-100 px-2.5 text-xs font-normal text-gray-800 transition hover:bg-gray-100/70 disabled:opacity-60 dark:bg-gray-850 dark:text-white dark:hover:bg-gray-850/60"
+						class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-100 px-2.5 text-xs font-normal text-base-800 transition hover:bg-base-100/70 disabled:opacity-60 dark:bg-base-850 dark:text-base-0 dark:hover:bg-base-850/60"
 						on:click={createHandler}
 						disabled={isSaving}
 					>
@@ -119,14 +119,14 @@
 
 				<button
 					aria-label={$i18n.t('Close')}
-					class="self-center rounded-lg py-1 text-gray-500 transition hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 px-0"
+					class="self-center rounded-lg py-1 text-base-500 transition hover:text-base-700 dark:text-base-400 dark:hover:text-base-200 px-0"
 					on:click={() => (show = false)}
 				>
 					<XMark className="size-4" />
 				</button>
 			</div>
 
-			<div class="flex flex-col w-full px-4 pb-4 dark:text-gray-200">
+			<div class="flex flex-col w-full px-4 pb-4 dark:text-base-200">
 				<form
 					class="flex flex-col w-full"
 					on:submit={(e) => {
@@ -157,14 +157,14 @@
 							{/each}
 						</div>
 					{:else}
-						<div class="text-gray-500 text-xs text-center py-8 px-10">
+						<div class="text-base-500 text-xs text-center py-8 px-10">
 							{$i18n.t('No webhooks yet')}
 						</div>
 					{/if}
 
 					<div class="flex justify-end text-sm font-normal gap-1.5">
 						<button
-							class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-2.5 text-xs font-normal text-white transition hover:bg-black disabled:opacity-60 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white disabled:cursor-not-allowed"
+							class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-base-0 transition hover:bg-base-1000 disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-base-0 disabled:cursor-not-allowed"
 							type="submit"
 							disabled={isSaving}
 						>
