@@ -38,10 +38,7 @@
 	export const select = async (item: InboxItem) => {
 		const current = await inboxRequest<InboxItem>(`/${encodeURIComponent(item.id)}`, 'PATCH');
 		if (!alive) return;
-		if (!current.resource_type) {
-			panel?.refresh();
-			return;
-		}
+		if (!current.resource_type) return;
 		const state = { inbox: $page.state.inbox, inboxUserId: $page.state.inboxUserId };
 		if ($mobile) showSidebar.set(false);
 		if (current.object_type === 'comment' && current.resource_type === 'chat') {
@@ -78,7 +75,6 @@
 			);
 		else if (current.resource_type === 'calendar')
 			await goto(`/calendar?event=${encodeURIComponent(current.object_id!)}`, { state });
-		void refresh();
 	};
 	onMount(() => {
 		if ($page.state.inbox && $page.state.inboxUserId !== $user?.id)
