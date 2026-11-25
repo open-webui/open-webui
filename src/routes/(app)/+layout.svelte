@@ -56,9 +56,8 @@
 	import UserProfileModal from '$lib/components/UserProfileModal.svelte';
 	import AccountPending from '$lib/components/layout/Overlay/AccountPending.svelte';
 	import UpdateInfoToast from '$lib/components/layout/UpdateInfoToast.svelte';
-	import Modal from '$lib/components/common/Modal.svelte';
+	import SettingsModal from '$lib/components/chat/SettingsModal.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
-	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
 	import { loadKeybindings, matchKeybinding, Shortcut } from '$lib/shortcuts';
 	import { canUseTemporaryChats } from '$lib/utils/settings-access';
 
@@ -70,7 +69,7 @@
 	});
 
 	let loaded = false;
-	// Settings (including the admin panels) load on first open, then stay mounted.
+	// Settings (including the admin panels) mount on first open, then stay mounted.
 	let settingsRequested = false;
 	$: if ($showSettings) settingsRequested = true;
 	$: routeHasTabs = ['/(app)', '/(app)/c/[id]', '/(app)/folders/[folderId]'].includes(
@@ -469,37 +468,7 @@
 </script>
 
 {#if settingsRequested}
-	{#await import('$lib/components/chat/SettingsModal.svelte')}
-		<Modal
-			show={!!$showSettings}
-			size="full"
-			containerClassName="p-3 sm:p-4 lg:p-6"
-			className="h-[calc(100dvh-1.5rem)] sm:h-[calc(100dvh-2rem)] lg:h-[calc(100dvh-3rem)] flex flex-col md:flex-row bg-base-0 dark:bg-base-900 rounded-4xl overflow-hidden"
-			ariaLabel={$i18n.t('Settings')}
-			onRequestClose={() => showSettings.set(false)}
-		>
-			<!-- Laid out like SettingsModal so the spinner stays in place when a panel takes over. -->
-			<div
-				class="shrink-0 border-b md:border-b-0 md:border-r border-base-100/30 dark:border-base-0/[0.02] md:w-[15rem]"
-			>
-				<div class="flex m-1 md:mb-0">
-					<button
-						type="button"
-						class="flex flex-1 items-center gap-1.5 h-7 px-2 rounded-lg text-xs text-base-600 dark:text-base-500 hover:text-base-700 dark:hover:text-base-300 transition-colors duration-75"
-						on:click={() => showSettings.set(false)}
-					>
-						<ChevronLeft className="size-3" strokeWidth="2" />
-						<span>{$i18n.t('Back')}</span>
-					</button>
-				</div>
-			</div>
-			<div class="flex flex-1 items-center justify-center pb-4 pr-1.5">
-				<Spinner className="size-6" />
-			</div>
-		</Modal>
-	{:then { default: SettingsModal }}
-		<SettingsModal bind:show={$showSettings} />
-	{/await}
+	<SettingsModal bind:show={$showSettings} />
 {/if}
 <ChangelogModal bind:show={$showChangelog} />
 <UserProfileModal bind:userId={profileUserId} />
