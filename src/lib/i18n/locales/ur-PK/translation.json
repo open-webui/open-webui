@@ -84,7 +84,7 @@
 	"{{percent}}% full": "{{percent}}% بھرا ہوا",
 	"{{percent}}% used": "{{percent}}% استعمال ہو گیا",
 	"{{tokens}} tokens": "{{tokens}} ٹوکن",
-	"{{user}}'s Chats": "{{ user }} کی بات چیت",
+	"{{user}}'s Chats": "{{user}} کی بات چیت",
 	"{{webUIName}} Backend Required": "{{webUIName}} بیک اینڈ درکار ہے",
 	"* (all domains)": "* (تمام ڈومینز)",
 	"*Prompt node ID(s) are required for image generation": "تصویر کی تخلیق کے لیے *پرومپٹ نوڈ آئی ڈی(ز) کی ضرورت ہے",
