@@ -1961,12 +1961,7 @@ class ChatTable:
                 chat = result.first()
         if not chat:
             return False
-        if (
-            chat.user_id == user.id
-            or user.role == 'admin'
-            and permission == 'read'
-            and ENABLE_ADMIN_CHAT_ACCESS
-        ):
+        if chat.user_id == user.id or user.role == 'admin' and permission == 'read' and ENABLE_ADMIN_CHAT_ACCESS:
             return True
         from open_webui.models.shared_chats import SharedChats
 
