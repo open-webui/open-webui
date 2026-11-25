@@ -959,6 +959,8 @@ async def delegate(
                 'subagent_chat_id': chat_id,
                 'mode': 'background',
                 'task': task,
+                'note': 'Its report starts your next reply. Finish any other work, then end this one. '
+                'Do not check on it, ask for it or set a timer.',
             },
             ensure_ascii=False,
         )
