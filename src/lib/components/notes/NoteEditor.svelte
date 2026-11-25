@@ -1706,8 +1706,14 @@ ${content}
 														onInsertToNote={note?.write_access ? insertHandler : null}
 														onNewEmbeddedChat={createNoteChat}
 														onCreateEmbeddedChat={createNoteChatOnFirstMessage}
-														onSelectEmbeddedChat={(chatId) => {
+														onSelectEmbeddedChat={async (chatId) => {
 															if (!chatId || chatId === noteChatId) return;
+															if (!noteChats.some((chat) => chat.id === chatId)) {
+																noteChats =
+																	(await getNoteChatsById(localStorage.token, note.id).catch(
+																		() => null
+																	)) ?? noteChats;
+															}
 															noteChatId = chatId;
 															noteChatDraftKey = '';
 														}}

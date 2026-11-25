@@ -4550,8 +4550,8 @@
 				if (!embedded) {
 					await goto(`/c/${result.id}`);
 					await refreshChatList(localStorage.token, { refreshPinned: true });
-				} else if (tabbed) {
-					await onSelectEmbeddedChat?.(result.id);
+				} else if (onSelectEmbeddedChat) {
+					await onSelectEmbeddedChat(result.id);
 					await refreshChatList(localStorage.token, { refreshPinned: true });
 				}
 				toast.success($i18n.t('Chat forked'), { id: toastId });
