@@ -137,7 +137,7 @@
 				} else {
 					status = $i18n.t('Reconnecting…');
 					retry = setTimeout(connect, retryDelay);
-				retryDelay = Math.min(retryDelay * 2, 5000);
+					retryDelay = Math.min(retryDelay * 2, 5000);
 				}
 			});
 		} catch (reason) {
