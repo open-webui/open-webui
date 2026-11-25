@@ -430,7 +430,7 @@ async def _write_tts_cache(
             await f.write(content_type)
     async with aiofiles.open(file_path, 'wb') as f:
         await f.write(audio)
-    async with aiofiles.open(body_path, 'w') as f:
+    async with aiofiles.open(body_path, 'w', encoding='utf-8') as f:
         await f.write(JSONCodec.dumps(payload))
 
 
@@ -472,7 +472,7 @@ async def _tts_openai(request, payload, file_path, file_body_path, user):
             async with aiofiles.open(file_path, 'wb') as f:
                 await f.write(audio_data)
 
-        async with aiofiles.open(file_body_path, 'w') as f:
+        async with aiofiles.open(file_body_path, 'w', encoding='utf-8') as f:
             await f.write(JSONCodec.dumps(payload))
 
         return FileResponse(file_path)
@@ -704,7 +704,7 @@ async def _tts_transformers(request, payload, file_path, file_body_path, user):
     await asyncio.to_thread(_run_pipeline)
 
     # Audio file already written by sf.write; just persist the request metadata.
-    async with aiofiles.open(file_body_path, 'w') as f:
+    async with aiofiles.open(file_body_path, 'w', encoding='utf-8') as f:
         await f.write(JSONCodec.dumps(payload))
     return FileResponse(file_path)
 
@@ -887,7 +887,7 @@ async def _transcribe_whisper(request, file_path, languages, file_dir, id):
     transcript = await asyncio.to_thread(_run)
     data = {'text': transcript.strip()}
 
-    async with aiofiles.open(os.path.join(file_dir, f'{id}.json'), 'w') as f:
+    async with aiofiles.open(os.path.join(file_dir, f'{id}.json'), 'w', encoding='utf-8') as f:
         await f.write(JSONCodec.dumps(data))
 
     log.debug(data)
@@ -952,7 +952,7 @@ async def _transcribe_openai(request, file_path, filename, languages, file_dir, 
         r.raise_for_status()
         data = await r.json()
 
-        async with aiofiles.open(os.path.join(file_dir, f'{id}.json'), 'w') as f:
+        async with aiofiles.open(os.path.join(file_dir, f'{id}.json'), 'w', encoding='utf-8') as f:
             await f.write(JSONCodec.dumps(data))
         return data
     except Exception as e:
@@ -1015,7 +1015,7 @@ async def _transcribe_deepgram(request, file_path, languages, file_dir, id):
             raise Exception('Failed to parse Deepgram response') from exc
 
         data = {'text': transcript}
-        async with aiofiles.open(os.path.join(file_dir, f'{id}.json'), 'w') as f:
+        async with aiofiles.open(os.path.join(file_dir, f'{id}.json'), 'w', encoding='utf-8') as f:
             await f.write(JSONCodec.dumps(data))
         return data
 
@@ -1123,7 +1123,7 @@ async def _transcribe_azure(request, file_path, filename, file_dir, id):
 
         data = {'text': transcript}
 
-        async with aiofiles.open(os.path.join(file_dir, f'{id}.json'), 'w') as f:
+        async with aiofiles.open(os.path.join(file_dir, f'{id}.json'), 'w', encoding='utf-8') as f:
             await f.write(JSONCodec.dumps(data))
 
         log.debug(data)
@@ -1307,7 +1307,7 @@ async def _transcribe_mistral(request, file_path, filename, metadata, file_dir, 
                 raise ValueError('Empty transcript in response')
             data = {'text': transcript}
 
-        async with aiofiles.open(os.path.join(file_dir, f'{id}.json'), 'w') as f:
+        async with aiofiles.open(os.path.join(file_dir, f'{id}.json'), 'w', encoding='utf-8') as f:
             await f.write(JSONCodec.dumps(data))
 
         log.debug(data)
