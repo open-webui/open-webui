@@ -35,6 +35,7 @@ from open_webui.models.knowledge import (
 from open_webui.models.models import ModelForm, Models
 from open_webui.retrieval.external import (
     get_vector_store_ids,
+    is_virtual_knowledge_id,
     list_openai_vector_stores,
     retrieve_external_knowledge,
     retrieve_external_knowledge_for_connection,
@@ -1798,6 +1799,8 @@ async def delete_knowledge_by_id(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.NOT_FOUND,
         )
+    if is_virtual_knowledge_id(id):
+        external_knowledge_error()
 
     if (
         knowledge.user_id != user.id
