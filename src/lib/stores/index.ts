@@ -237,7 +237,7 @@ export const openEmbeddedChatIds = writable<Set<string>>(new Set());
 /** The saved chat whose tab is in front, when it is not the main chat. */
 export const activeChatTabId = writable<string | null>(null);
 export const chatTabRequest = writable<
-	{ parentChatId: string; prompt: string } | { folderId: string } | null
+	{ parentChatId: string; prompt: string } | { folderId: string; chatId?: string } | null
 >(null);
 
 export type QueryData = {

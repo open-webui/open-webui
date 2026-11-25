@@ -211,8 +211,18 @@
 		'folderId' in $chatTabRequest &&
 		$chatTabRequest.folderId === mainTabFolder?.id
 	) {
+		const savedId = $chatTabRequest.chatId;
 		chatTabRequest.set(null);
-		if (mainTabFolder?.canEdit) openFeatureTab('chat');
+		if (savedId) {
+			// A chat in this folder opens among the folder's tabs, or shows the tab it already has.
+			const existing = tabs.tabs.find((tab) => tab.kind === 'chat' && tab.chatId === savedId);
+			openPanel({
+				id: existing?.id ?? uuidv4(),
+				kind: 'chat',
+				label: $i18n.t('Chat'),
+				chatId: savedId
+			});
+		} else if (mainTabFolder?.canEdit) openFeatureTab('chat');
 	}
 	export let mainChatHref = '/';
 	export let tabTitleEditor: import('svelte').Snippet | undefined = undefined;

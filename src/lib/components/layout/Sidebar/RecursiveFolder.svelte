@@ -1057,6 +1057,7 @@
 									<ChatItem
 										id={chat.id}
 										title={chat.title}
+										{folderId}
 										createdAt={chat.created_at}
 										updatedAt={chat.updated_at}
 										lastReadAt={chat.last_read_at}

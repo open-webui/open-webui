@@ -40,6 +40,7 @@
 	} from '$lib/apis/chats';
 	import {
 		activeChatTabId,
+		chatTabRequest,
 		openEmbeddedChatIds,
 		selectedFolder,
 		chatId,
@@ -98,6 +99,8 @@
 
 	export let id;
 	export let title;
+	/** The folder the chat is in, when it is listed under one. */
+	export let folderId: string | null = null;
 	export let createdAt: number | null = null;
 	export let updatedAt: number | null = null;
 	export let lastReadAt: number | null = null;
@@ -223,6 +226,18 @@
 			event?.preventDefault();
 			void goto(`/c/${id}`);
 			showSidebar.set(false);
+		} else if (
+			// On its folder's page, the chat opens as a tab there instead of leaving the folder.
+			folderId &&
+			!$chatId &&
+			$selectedFolder?.id === folderId &&
+			!event?.metaKey &&
+			!event?.ctrlKey &&
+			!event?.altKey &&
+			!event?.shiftKey
+		) {
+			event?.preventDefault();
+			chatTabRequest.set({ folderId, chatId: id });
 		}
 	};
 
