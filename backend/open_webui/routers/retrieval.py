@@ -1894,11 +1894,12 @@ async def index_file(
 
         except Exception as e:
             log.exception(e)
+            error = ERROR_MESSAGES.PANDOC_NOT_INSTALLED if 'No pandoc was found' in str(e) else str(e)
             # Fresh session for error status update.
             async with get_async_db() as session:
                 await Files.update_file_data_by_id(
                     file.id,
-                    {'status': 'failed', 'error': str(e)},
+                    {'status': 'failed', 'error': error},
                     db=session,
                 )
                 # Clear the hash so the file can be re-uploaded after fixing the issue
@@ -1917,16 +1918,10 @@ async def index_file(
                 },
             )
 
-            if 'No pandoc was found' in str(e):
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=ERROR_MESSAGES.PANDOC_NOT_INSTALLED,
-                )
-            else:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=str(e),
-                )
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=error,
+            )
 
     else:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
