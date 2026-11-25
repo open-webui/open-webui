@@ -104,6 +104,7 @@
 
 	// Schedule dropdown ref
 	let scheduleDropdown: ScheduleDropdown;
+	let savedRrule = '';
 	$: allowWebhook = !!$config?.features?.enable_automation_webhooks;
 
 	const submitHandler = async () => {
@@ -128,13 +129,16 @@
 		}
 		loading = true;
 		try {
+			const rrule = scheduleDropdown.buildRrule();
+			const sourceRrule = (automation ?? cloneFrom)?.data.rrule;
 			const form: AutomationForm = {
 				name: name.trim(),
 				folder_id: target_type === 'channel' ? null : folder_id || null,
 				data: {
 					prompt: prompt.trim(),
 					model_id: model_id.trim(),
-					rrule: scheduleDropdown.buildRrule(),
+					// An untouched schedule keeps its stored start date.
+					rrule: sourceRrule && rrule === savedRrule ? sourceRrule : rrule,
 					webhook: webhookEnabled ? { allow_get: webhookAllowGet } : null,
 					machine: machineServerId
 						? { server_id: machineServerId, cwd: machineCwd.trim() || undefined }
@@ -227,6 +231,7 @@
 			webhookEnabled = false;
 			webhookAllowGet = false;
 		}
+		savedRrule = scheduleDropdown?.buildRrule?.() ?? '';
 		initialized = true;
 	};
 
