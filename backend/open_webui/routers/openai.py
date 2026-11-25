@@ -43,6 +43,7 @@ from open_webui.utils.access_control import check_model_access, has_connection_a
 from open_webui.utils.anthropic import ANTHROPIC_VERSION, get_anthropic_models, is_anthropic_url
 from open_webui.utils.audit import set_audit_model
 from open_webui.utils.auth import get_admin_user, get_verified_user
+from open_webui.utils.aws import sign_aws_request
 from open_webui.utils.headers import bearer_auth_header, get_headers_and_cookies, include_user_info_headers
 from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.misc import convert_logit_bias_input_to_json, get_provider_function, merge_tool_call_batches
@@ -92,7 +93,9 @@ async def send_get_request(
     config=None,
 ):
     try:
-        async with aiohttp.ClientSession(timeout=_MODEL_LIST_TIMEOUT, trust_env=True) as session:
+        async with aiohttp.ClientSession(
+            timeout=_MODEL_LIST_TIMEOUT, trust_env=True, middlewares=(sign_aws_request,)
+        ) as session:
             if request and config:
                 headers, cookies = await get_headers_and_cookies(request, url, key, config, user=user)
             else:
@@ -845,6 +848,7 @@ async def get_models(request: Request, url_idx: int | None = None, user=Depends(
         async with aiohttp.ClientSession(
             trust_env=True,
             timeout=_MODEL_LIST_TIMEOUT,
+            middlewares=(sign_aws_request,),
         ) as session:
             try:
                 headers, cookies = await get_headers_and_cookies(request, url, key, api_config, user=user)
@@ -1039,6 +1043,7 @@ async def verify_connection(
     async with aiohttp.ClientSession(
         trust_env=True,
         timeout=_MODEL_LIST_TIMEOUT,
+        middlewares=(sign_aws_request,),
     ) as session:
         try:
             headers, cookies = await get_headers_and_cookies(request, url, key, api_config, user=user)

@@ -19,6 +19,7 @@ from open_webui.env import (
     FORWARD_USER_INFO_HEADER_USER_ROLE,
 )
 from open_webui.models.groups import Groups
+from open_webui.utils.aws import AWS_SIGV4
 from open_webui.utils.oauth import get_system_oauth_token
 
 log = logging.getLogger(__name__)
@@ -219,6 +220,9 @@ async def get_headers_and_cookies(
 
     elif auth_type in ('azure_ad', 'microsoft_entra_id'):
         token = get_microsoft_entra_id_access_token()
+
+    elif auth_type == 'aws_sigv4':
+        headers['Authorization'] = AWS_SIGV4
 
     if token:
         headers['Authorization'] = f'Bearer {token}'

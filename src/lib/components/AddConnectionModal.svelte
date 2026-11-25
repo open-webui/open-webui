@@ -468,6 +468,7 @@
 												<option value="session">{$i18n.t('Session')}</option>
 												<option value="system_oauth">{$i18n.t('OAuth')}</option>
 												<option value="microsoft_entra_id">{$i18n.t('Entra ID')}</option>
+												<option value="aws_sigv4">{$i18n.t('AWS SigV4')}</option>
 											{/if}
 										</select>
 									</div>
@@ -494,6 +495,10 @@
 										{:else if ['azure_ad', 'microsoft_entra_id'].includes(auth_type)}
 											<div class={`text-xs self-center translate-y-[1px] text-base-500`}>
 												{$i18n.t('Uses DefaultAzureCredential to authenticate')}
+											</div>
+										{:else if auth_type === 'aws_sigv4'}
+											<div class={`text-xs self-center translate-y-[1px] text-base-500`}>
+												{$i18n.t('Uses the default AWS credential chain to authenticate')}
 											</div>
 										{/if}
 									</div>
