@@ -320,6 +320,8 @@
 
 	let currentFolderId = '';
 	let section: HTMLElement;
+	// Rows are costly; a folder page behind a chat tab draws them when first looked at.
+	let seen = false;
 	let searchInput: HTMLInputElement;
 	let searchOpen = false;
 
@@ -1008,7 +1010,13 @@
 		};
 		connection?.on('events', events);
 		connection?.on('connect', reconnect);
+		seen = !!section.offsetParent;
+		const observer = new IntersectionObserver(([entry]) => {
+			if (entry.isIntersecting) seen = true;
+		});
+		observer.observe(section);
 		return () => {
+			observer.disconnect();
 			++generation;
 			++optionsGeneration;
 			clearTimeout(timer);
@@ -1808,7 +1816,7 @@
 					>
 				{/if}
 			</div>
-		{:else if view === 'board'}
+		{:else if view === 'board' && seen}
 			<FolderBoard
 				onAddStatus={readOnly || columnsBy !== 'status' ? null : () => (showStatuses = true)}
 				columns={boardColumns}
@@ -1825,7 +1833,7 @@
 				onDrop={update}
 				onTagsChange={changed}
 			/>
-		{:else}
+		{:else if seen}
 			<ChatList
 				groups={listGroups}
 				{showPriority}
