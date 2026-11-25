@@ -6,6 +6,15 @@ from open_webui.models.notifications import Notification, insert_notifications
 from sqlalchemy import and_, case, false, or_, select, true, union
 from sqlalchemy.orm import load_only
 
+INBOX_CONFIG_KEYS = (
+    'comments.enable',
+    'notes.enable',
+    'channels.enable',
+    'calendar.enable',
+    'automations.enable',
+    'user.permissions',
+)
+
 
 def source_models():
     from open_webui.models.automations import Automation, AutomationRun
@@ -80,7 +89,7 @@ async def validate_source(event_type, resource_type, resource_id, object_type, o
         raise ValueError('Notification object does not belong to resource')
 
 
-async def resource_queries(user, db):
+async def resource_queries(user, db, user_group_ids: set[str] | None = None, config: dict | None = None):
     """One set of indexed permission subqueries, shared by listing, counts and writes."""
     from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
     from open_webui.env import ENABLE_ADMIN_CHAT_ACCESS
@@ -94,20 +103,16 @@ async def resource_queries(user, db):
 
     if user.role not in {'user', 'admin'}:
         return {}
-    groups = [g.id for g in await Groups.get_groups_by_member_id(user.id, db=db, include_inherited=True)]
-    config = await Config.get_many(
-        'comments.enable',
-        'notes.enable',
-        'channels.enable',
-        'calendar.enable',
-        'automations.enable',
-        'user.permissions',
-        db=db,
-    )
+    if user_group_ids is None:
+        user_group_ids = {
+            group.id for group in await Groups.get_groups_by_member_id(user.id, db=db, include_inherited=True)
+        }
+    if config is None:
+        config = await Config.get_many(*INBOX_CONFIG_KEYS, db=db)
     admin = user.role == 'admin'
 
     def grant(kind, column):
-        return AccessGrants.has_grant_expression(user.id, kind, column, user_group_ids=groups)
+        return AccessGrants.has_grant_expression(user.id, kind, column, user_group_ids=user_group_ids)
 
     async def enabled(feature):
         return config.get(f'{feature}.enable') and (
@@ -183,11 +188,16 @@ async def resource_queries(user, db):
 async def eligible_recipients(recipients, resource_type, resource_id, actor_id, db):
     from open_webui.models.chats import Chats
     from open_webui.models.config import Config
+    from open_webui.models.groups import Groups
     from open_webui.models.users import User, UserModel
 
-    if not await Config.get('comments.enable'):
+    config = await Config.get_many(*INBOX_CONFIG_KEYS, db=db)
+    if not config.get('comments.enable'):
         recipients = {id: kind for id, kind in recipients.items() if not kind.startswith('comment.')}
     users = (await db.scalars(select(User).where(User.id.in_(recipients), User.role.in_(['user', 'admin'])))).all()
+    groups_by_user = await Groups.get_groups_by_member_ids(
+        [row.id for row in users if recipients[row.id] != 'chat.mentioned'], db=db, include_inherited=True
+    )
     eligible = {}
     for row in users:
         kind = recipients[row.id]
@@ -198,7 +208,12 @@ async def eligible_recipients(recipients, resource_type, resource_id, actor_id, 
                 eligible[row.id] = kind
             continue
         if resource_type is not None:
-            queries = await resource_queries(UserModel.model_validate(row), db=db)
+            queries = await resource_queries(
+                UserModel.model_validate(row),
+                db=db,
+                user_group_ids={group.id for group in groups_by_user[row.id]},
+                config=config,
+            )
             query = queries.get(resource_type)
             if query is None or not await db.scalar(
                 select(query.where(query.selected_columns.id == resource_id).exists())
