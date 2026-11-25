@@ -1,6 +1,9 @@
 <script lang="ts">
-	import { getContext } from 'svelte';
-	import { chatId } from '$lib/stores';
+	import { getContext, tick } from 'svelte';
+	import { toast } from 'svelte-sonner';
+	import { chatId, chatTitle } from '$lib/stores';
+	import { updateChatById } from '$lib/apis/chats';
+	import { refreshChatList, setChatTitle } from '$lib/stores/chatList';
 	import type { AppLayoutContext } from '$lib/types';
 	import { openFolderChat } from './folderChat';
 	import type { Readable } from 'svelte/store';
@@ -19,6 +22,7 @@
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import ChevronRight from '$lib/components/icons/ChevronRight.svelte';
 	import FolderTags from './FolderTags.svelte';
+	import FolderChatMenu from './FolderChatMenu.svelte';
 	import FolderChatLink from './FolderChatLink.svelte';
 	import Icon from '$lib/components/chat/FileNav/Icon.svelte';
 	import FolderStatusControl from './FolderStatus.svelte';
@@ -65,6 +69,37 @@
 	let dragged: WorkspaceChat | null = null;
 	let over = '';
 	let collapsed: Record<string, boolean> = {};
+	let menuOpen: Record<string, boolean> = {};
+
+	// Inline rename, like the list rows.
+	let renaming = '';
+	let renameValue = '';
+	let container: HTMLDivElement;
+	async function startRename(chat: WorkspaceChat) {
+		renaming = chat.id;
+		renameValue = chat.title;
+		await tick();
+		const input = container?.querySelector<HTMLInputElement>('[data-rename-input]');
+		input?.focus();
+		input?.select();
+	}
+	async function saveRename(chat: WorkspaceChat) {
+		if (renaming !== chat.id) return;
+		const title = renameValue.trim();
+		renaming = '';
+		if (!title || title === chat.title) return;
+		try {
+			await updateChatById(localStorage.token, chat.id, { title });
+			setChatTitle(chat.id, title);
+			if (chat.id === $chatId) chatTitle.set(title);
+			await Promise.all([
+				refreshChatList(localStorage.token, { refreshPinned: true }),
+				onTagsChange()
+			]);
+		} catch (error) {
+			toast.error(`${error}`);
+		}
+	}
 
 	const cellKey = (column: string, row: string | null) => `${column}\u0000${row ?? ''}`;
 	const valueOf = (chat: WorkspaceChat, field: Field): string =>
@@ -168,7 +203,7 @@
 			chat.id || dragged?.id === chat.id
 			? 'opacity-40'
 			: ''}"
-		draggable={draggableBoard && $canEdit?.(chat) && !saving && !loading}
+		draggable={draggableBoard && $canEdit?.(chat) && !saving && !loading && renaming !== chat.id}
 		on:click={(event) => open(event, chat)}
 		on:dragstart={(event) => {
 			dragged = chat;
@@ -215,16 +250,36 @@
 					{/if}
 				</span>
 			{/if}
-			<FolderChatLink
-				chatId={chat.id}
-				title={chat.title}
-				side="right"
-				disabled={!!dragged}
-				className="min-w-0 flex-1 line-clamp-2 text-[0.8125rem] leading-5 outline-none focus-visible:underline {unread
-					? 'text-base-900 dark:text-base-0'
-					: 'text-base-700 dark:text-base-200'}"
-				onclick={(event) => openFolderChat(chat, appLayout, event)}
-			/>
+			{#if renaming === chat.id}
+				<input
+					data-rename-input
+					class="min-w-0 flex-1 bg-transparent text-[0.8125rem] leading-5 text-base-900 outline-none dark:text-base-0"
+					aria-label={$i18n.t('Rename')}
+					bind:value={renameValue}
+					on:blur={() => saveRename(chat)}
+					on:keydown={(event) => {
+						if (event.isComposing || event.keyCode === 229) return;
+						if (event.key === 'Enter') {
+							event.preventDefault();
+							void saveRename(chat);
+						} else if (event.key === 'Escape') {
+							event.preventDefault();
+							renaming = '';
+						}
+					}}
+				/>
+			{:else}
+				<FolderChatLink
+					chatId={chat.id}
+					title={chat.title}
+					side="right"
+					disabled={!!dragged || !!menuOpen[chat.id]}
+					className="min-w-0 flex-1 line-clamp-2 text-[0.8125rem] leading-5 outline-none focus-visible:underline {unread
+						? 'text-base-900 dark:text-base-0'
+						: 'text-base-700 dark:text-base-200'}"
+					onclick={(event) => openFolderChat(chat, appLayout, event)}
+				/>
+			{/if}
 			{#if chat.automation_id}
 				<span
 					class="mt-1 flex shrink-0 text-base-400 dark:text-base-500"
@@ -265,6 +320,20 @@
 					>{formatShortDate(chat.updated_at, $i18n.language)}</time
 				>
 			</Tooltip>
+			{#if $canEdit?.(chat)}
+				<div
+					class="flex shrink-0 {menuOpen[chat.id]
+						? ''
+						: '[@media(hover:hover)]:opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'}"
+				>
+					<FolderChatMenu
+						{chat}
+						bind:open={menuOpen[chat.id]}
+						onRename={() => startRename(chat)}
+						onChange={onTagsChange}
+					/>
+				</div>
+			{/if}
 		</div>
 	</article>
 {/snippet}
@@ -295,6 +364,7 @@
 {#if !rows}
 	<!-- Columns only: each column runs full height and scrolls on its own. -->
 	<div
+		bind:this={container}
 		class="scrollbar-hidden flex h-full min-h-0 gap-2 overflow-x-auto px-3 pt-1 pb-2"
 		aria-label={$i18n.t('Conversation board')}
 	>
@@ -331,6 +401,7 @@
 {:else}
 	<!-- Swimlanes: the board scrolls as one; column headers stick to the top. -->
 	<div
+		bind:this={container}
 		class="scrollbar-hidden h-full min-h-0 overflow-auto px-3 pt-1"
 		style="padding-bottom: calc(var(--folder-composer-space, 0px) + 0.5rem)"
 		aria-label={$i18n.t('Conversation board')}
