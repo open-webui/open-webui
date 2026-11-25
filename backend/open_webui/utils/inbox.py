@@ -1,6 +1,7 @@
 """Resource-aware producers and reads for the general inbox."""
 
 from collections import defaultdict
+from copy import deepcopy
 
 from open_webui.models.notifications import Notification, insert_notifications
 from sqlalchemy import and_, false, or_, select, true
@@ -82,7 +83,7 @@ async def validate_source(event_type, resource_type, resource_id, object_type, o
 
 async def resource_queries(user, db):
     """One set of indexed permission subqueries, shared by listing, counts and writes."""
-    from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
+    from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL, DEFAULT_USER_PERMISSIONS
     from open_webui.env import ENABLE_ADMIN_CHAT_ACCESS
     from open_webui.models.access_grants import AccessGrants
     from open_webui.models.channels import ChannelMember
@@ -90,11 +91,12 @@ async def resource_queries(user, db):
     from open_webui.models.folders import Folder
     from open_webui.models.groups import Groups
     from open_webui.models.shared_chats import SharedChat
-    from open_webui.utils.access_control import has_permission
+    from open_webui.utils.access_control import combine_permissions, fill_missing_permissions
 
     if user.role not in {'user', 'admin'}:
         return {}
-    groups = [g.id for g in await Groups.get_groups_by_member_id(user.id, db=db, include_inherited=True)]
+    user_groups = await Groups.get_groups_by_member_id(user.id, db=db, include_inherited=True)
+    groups = [group.id for group in user_groups]
     config = await Config.get_many(
         'comments.enable',
         'notes.enable',
@@ -105,14 +107,15 @@ async def resource_queries(user, db):
         db=db,
     )
     admin = user.role == 'admin'
+    permissions = fill_missing_permissions(deepcopy(config.get('user.permissions') or {}), DEFAULT_USER_PERMISSIONS)
+    for group in user_groups:
+        combine_permissions(permissions, group.permissions or {})
 
     def grant(kind, column):
         return AccessGrants.has_grant_expression(user.id, kind, column, user_group_ids=groups)
 
-    async def enabled(feature):
-        return config.get(f'{feature}.enable') and (
-            admin or await has_permission(user.id, f'features.{feature}', config.get('user.permissions'), db=db)
-        )
+    def enabled(feature):
+        return config.get(f'{feature}.enable') and (admin or permissions.get('features', {}).get(feature))
 
     models = source_models()
     # UNION (not UNION ALL) terminates even if legacy folder data contains a cycle.
@@ -124,7 +127,7 @@ async def resource_queries(user, db):
     folders = folders.union(select(Folder.id).join(folders, Folder.parent_id == folders.c.id))
     queries = {}
     for kind in ('model', 'knowledge', 'prompt', 'skill', 'tool', 'note'):
-        if not config.get('comments.enable') or (kind == 'note' and not await enabled('notes')):
+        if not config.get('comments.enable') or (kind == 'note' and not enabled('notes')):
             continue
         model = models[kind]
         allowed = (
@@ -148,7 +151,7 @@ async def resource_queries(user, db):
             chat.folder_id.in_(select(folders.c.id)),
         )
     )
-    if await enabled('channels'):
+    if enabled('channels'):
         channel = models['channel']
         member = (
             select(ChannelMember.id)
@@ -169,12 +172,12 @@ async def resource_queries(user, db):
                 ),
             ),
         )
-    if await enabled('calendar'):
+    if enabled('calendar'):
         model = models['calendar']
         queries['calendar'] = select(model.id).where(
             true() if admin else or_(model.user_id == user.id, grant('calendar', model.id))
         )
-    if await enabled('automations'):
+    if enabled('automations'):
         model = models['automation']
         queries['automation'] = select(model.id).where(model.user_id == user.id)
     return queries
