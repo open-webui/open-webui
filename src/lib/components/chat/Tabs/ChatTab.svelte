@@ -8,6 +8,7 @@
 	let chatView: Chat | undefined;
 	export const startRename = () => chatView?.startRename();
 	export const getOverview = () => chatView?.getOverview();
+	export const getCallPanel = () => chatView?.getCallPanel();
 	export let tabTitleEditor: import('svelte').Snippet | undefined = undefined;
 	export let tabActions: import('svelte').Snippet | undefined = undefined;
 
@@ -26,6 +27,7 @@
 	export let onChatUpdate: (chat: { id: string; title?: string }) => void = () => {};
 	export let parentChatId = '';
 	export let parentFolderId: string | null = null;
+	export let inCall = false;
 	export let history;
 	export let modelId: string | null = null;
 	export let systemPrompt = '';
@@ -124,6 +126,7 @@
 		{onOpenArtifacts}
 		draftTitle={title}
 		draftFolderId={parentFolderId}
+		{inCall}
 		onSelectEmbeddedChat={(id) => onChatUpdate({ id, title })}
 		onEmbeddedChatTitle={(id, chatTitle) => onChatUpdate({ id, title: chatTitle })}
 	/>

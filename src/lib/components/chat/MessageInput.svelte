@@ -3107,7 +3107,7 @@
 											{/if}
 										{/if}
 
-										{#if callEnabled && !embedded && prompt === '' && files.length === 0 && showCallButton}
+										{#if callEnabled && prompt === '' && files.length === 0 && showCallButton}
 											<div class=" flex items-center">
 												<!-- {$i18n.t('Call')} -->
 												<Tooltip

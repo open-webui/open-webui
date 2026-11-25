@@ -168,6 +168,7 @@
 	export let mainChatActive = false;
 	export let mainChatStyle = '';
 	export let mainChatGroupId = '';
+	export let mainChatInCall = true;
 	let paneCanvas: HTMLDivElement;
 	export let title = '';
 	export let mainTabFolder: {
@@ -317,6 +318,7 @@
 		stopTerminalChoice = null;
 		captureView();
 		if (viewEntry) void flushChatView(viewEntry);
+		if (callSourceTabId) voiceCall.set(false);
 	};
 	export function resetForChatSwitch() {
 		leaveChatView();
@@ -1034,7 +1036,8 @@
 			);
 			return true;
 		}
-		openPanel({ id: kind, kind, label: view.label }, inSplit);
+		const sourceTabId = kind === 'voice' ? focusedChatTabId : undefined;
+		openPanel({ id: kind, kind, label: view.label, sourceTabId }, inSplit);
 	};
 	const openPreview = () => {
 		const sourceTabId = embedSourceTab?.id;
@@ -1352,6 +1355,7 @@
 				bridge?.end();
 				voiceCall.set(false);
 			}
+			if (id === callSourceTabId) voiceCall.set(false);
 			if (tab.kind === 'preview') showEmbeds.set(false);
 			chatView.drafts.delete(id);
 			const previousPanels = chatView.state.panels;
@@ -1582,13 +1586,13 @@
 					...commentAnchor
 				}
 			: null;
-	// A chat's artifacts or Overview tab names the chat it belongs to.
+	// A chat's artifacts, Overview or Voice tab names the chat it belongs to.
 	$: tabLabel = (tab: Tab) => {
 		if (tab.kind === 'terminal') return terminalTitles[tab.sessionId ?? ''] || tab.label;
 		// A cited file or web page names its own tab.
 		if (tab.kind === 'preview') return tab.embed?.title || tab.label;
 		const source =
-			(tab.kind === 'artifacts' || tab.kind === 'overview') &&
+			(tab.kind === 'artifacts' || tab.kind === 'overview' || tab.kind === 'voice') &&
 			tab.sourceTabId &&
 			tab.sourceTabId !== mainChatTabId
 				? tabs.tabs.find((item) => item.id === tab.sourceTabId)
@@ -1957,6 +1961,13 @@
 	$: if ([...visibleTabIds].some((id) => !seenTabIds.has(id)))
 		seenTabIds = new Set([...seenTabIds, ...visibleTabIds]);
 	$: mainChatActive = fullWidth && visibleTabIds.has(mainChatTabId);
+	$: focusedChatTabId =
+		fullWidth && activeTab?.kind === 'chat' && activeTab.id !== mainChatTabId
+			? activeTab.id
+			: undefined;
+	$: voiceTab = tabs.tabs.find((tab) => tab.kind === 'voice');
+	$: callSourceTabId = voiceTab ? voiceTab.sourceTabId : focusedChatTabId;
+	$: mainChatInCall = !callSourceTabId;
 	$: if (isMounted && viewReady && !chatLoading) {
 		const active = tabs.tabs.find((tab) => tab.id === tabs.activeId);
 		const href =
@@ -2241,6 +2252,8 @@
 								updateViewTab(chatView, tab.id, { label });
 						}}
 					/>
+				{:else if tab.kind === 'voice' && tab.sourceTabId}
+					{@render chatViews[tab.sourceTabId]?.getCallPanel()?.(() => closeTab(tab.id))}
 				{:else if tab.kind === 'voice' && bridge}
 					<CallPanel
 						{bridge}
@@ -2312,6 +2325,7 @@
 							})}
 						parentChatId={tab.parentChatId ?? ''}
 						parentFolderId={tab.href ? null : folderId}
+						inCall={tab.id === callSourceTabId}
 						history={chatHistory}
 						modelId={tab.href
 							? (new URL(tab.href, location.origin).searchParams.get('models') ??

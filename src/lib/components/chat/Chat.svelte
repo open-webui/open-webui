@@ -169,6 +169,7 @@
 	import ChatStatus from './ChatStatus.svelte';
 	import Sparkles from '$lib/components/layout/Sidebar/icons/Sparkles.svelte';
 	import Tabs from './Tabs.svelte';
+	import CallPanel from './MessageInput/CallPanel.svelte';
 	import EventConfirmDialog from '../common/ConfirmDialog.svelte';
 	import ElicitationDialog from './ElicitationDialog.svelte';
 	import DeleteConfirmDialog from '../common/ConfirmDialog.svelte';
@@ -205,6 +206,7 @@
 	$: if (isSavedChatId($chatId)) mainChatHref = `/c/${$chatId}`;
 	export let embedded = false;
 	export let tabbed = false;
+	export let inCall = !embedded;
 	const chatId = embedded ? writable('') : _chatId;
 	const chatTitle = embedded ? writable('') : _chatTitle;
 	const audioQueue = embedded ? writable<AudioQueue | null>(null) : _audioQueue;
@@ -216,8 +218,8 @@
 		!!$user?.permissions?.chat?.temporary_enforced;
 	const selectedFolder = embedded ? writable<FolderDetails | null>(null) : _selectedFolder;
 	const showTabs = embedded ? writable(get(_showTabs)) : _showTabs;
-	// the call lives in the main chat's voice tab, so a side chat is never in it
-	const voiceCall = embedded ? writable(false) : _voiceCall;
+	// a call goes to the focused chat tab and stays with the chat that started it
+	$: voiceCall = inCall ? _voiceCall : writable(false);
 	const showEmbeds = embedded ? writable(false) : _showEmbeds;
 	const selectedMachineId = tabbed ? writable(get(_selectedMachineId)) : _selectedMachineId;
 	const machineSkills = tabbed ? writable<any[]>([]) : _machineSkills;
@@ -594,6 +596,9 @@
 	// Non-owners may reply when the sharing mode allows it, but cannot save chat edits.
 	$: isShared = chat != null && chat.user_id !== $user?.id;
 	$: if (isShared && $voiceCall) voiceCall.set(false);
+	$: if (!$voiceCall && (bridge?.connected || bridge?.connecting)) bridge.end();
+	$: callActive = $_voiceCall || !!(bridge?.connected || bridge?.connecting);
+	$: callEnabled = !isShared && (!embedded || (tabbed && !$mobile));
 	$: canClone = isShared && ($user?.role === 'admin' || ($user?.permissions?.chat?.import ?? true));
 	$: canOpenChatTab =
 		$user?.role === 'admin' ||
@@ -2983,7 +2988,7 @@
 	});
 	beforeNavigate(() => {
 		if (!loading && !$temporaryChat) void saveDraft(getChatInputDraft(), getDraftChatId(), false);
-		bridge?.end();
+		if (!embedded) bridge?.end();
 		pendingUrlActions = null;
 	});
 	$: if (!$user && (bridge?.connected || bridge?.connecting)) bridge.end();
@@ -4606,6 +4611,7 @@
 	$: if (embedded && tabbed) tabActions = chatMenu;
 
 	export const getOverview = () => ({ history, chatUser: chatOwner, showMessage });
+	export const getCallPanel = () => renderCallPanel;
 
 	export const startRename = async () => {
 		if (
@@ -6134,6 +6140,20 @@
 	/>
 {/snippet}
 
+{#snippet renderCallPanel(onClose: () => void)}
+	<CallPanel
+		{bridge}
+		bind:callMode
+		bind:files
+		submitPrompt={submitHandler}
+		{stopResponse}
+		modelId={selectedModelIds?.at(0) ?? ''}
+		chatId={$chatId}
+		{eventTarget}
+		on:close={onClose}
+	/>
+{/snippet}
+
 {#snippet renderTitleEditor()}
 	<input
 		bind:this={titleInput}
@@ -6588,8 +6608,8 @@
 										bind:machineContext
 										{typingUsers}
 										on:typing={(event) => emitTyping(event.detail)}
-										callActive={!!(bridge?.connected || bridge?.connecting)}
-										callEnabled={!isShared}
+										{callActive}
+										{callEnabled}
 										bind:this={messageInput}
 										history={inputHistory}
 										{taskIds}
@@ -6726,8 +6746,8 @@
 										bind:machineContext
 										{typingUsers}
 										on:typing={(event) => emitTyping(event.detail)}
-										callActive={!!(bridge?.connected || bridge?.connecting)}
-										callEnabled={!isShared}
+										{callActive}
+										{callEnabled}
 										bind:this={messageInput}
 										history={inputHistory}
 										{taskIds}
@@ -6814,8 +6834,8 @@
 									chatId={$chatId}
 									{onTemporaryChange}
 									bind:machineContext
-									callActive={!!(bridge?.connected || bridge?.connecting)}
-									callEnabled={!isShared}
+									{callActive}
+									{callEnabled}
 									bind:selectedModelIdx
 									{history}
 									bind:selectedModels
@@ -6887,6 +6907,7 @@
 					bind:mainChatActive
 					bind:mainChatStyle
 					bind:mainChatGroupId
+					bind:mainChatInCall={inCall}
 					title={$chatTitle || $i18n.t('New Chat')}
 					mainTabFolder={!$chatId && $selectedFolder
 						? {
