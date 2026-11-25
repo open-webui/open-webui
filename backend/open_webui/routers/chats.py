@@ -838,11 +838,13 @@ async def delete_all_user_chats(
             detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
         )
 
-    for chat_id in await Chats.get_chat_ids_by_user_id(user.id, db=db):
-        await stop_item_tasks(request.app.state.redis, chat_id)
-
+    chat_ids = await Chats.get_chat_ids_by_user_id(user.id, db=db)
     result = await Chats.delete_chats_by_user_id(user.id, db=db)
     if result:
+        # Delete first so stopped sub-agents have no chat to report back to.
+        for chat_id in chat_ids:
+            await stop_item_tasks(request.app.state.redis, chat_id)
+
         await publish_event(
             request,
             EVENTS.CHAT_DELETED_ALL,

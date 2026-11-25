@@ -1116,12 +1116,14 @@ async def delete_user_by_id(
         )
 
     if user.id != user_id:
-        for chat_id in await Chats.get_chat_ids_by_user_id(user_id, db=db):
-            await stop_item_tasks(request.app.state.redis, chat_id)
-
+        chat_ids = await Chats.get_chat_ids_by_user_id(user_id, db=db)
         result = await Auths.delete_auth_by_id(user_id, db=db)
 
         if result:
+            # Delete first so stopped sub-agents have no chat to report back to.
+            for chat_id in chat_ids:
+                await stop_item_tasks(request.app.state.redis, chat_id)
+
             await publish_event(
                 request,
                 EVENTS.USER_DELETED,

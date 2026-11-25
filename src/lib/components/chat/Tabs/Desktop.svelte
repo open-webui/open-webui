@@ -32,6 +32,7 @@
 	let generation = 0;
 	let connecting = false;
 	let retry: ReturnType<typeof setTimeout>;
+	let retryDelay = 250;
 
 	const syncFullscreenCursor = () => {
 		const cursor = viewer?._cursor._canvas;
@@ -91,6 +92,7 @@
 						await framePending;
 						if (version !== generation) return;
 						send({ type: 'frameAck', window: 3 });
+						retryDelay = 250;
 						status = '';
 					} catch (reason) {
 						if (version === generation)
@@ -116,6 +118,7 @@
 					viewer.qualityLevel = 6;
 					viewer.addEventListener('connect', () => {
 						status = '';
+						retryDelay = 250;
 						syncFullscreenCursor();
 					});
 					viewer.addEventListener('securityfailure', () => {
@@ -133,7 +136,8 @@
 					status = '';
 				} else {
 					status = $i18n.t('Reconnecting…');
-					retry = setTimeout(connect, 2000);
+					retry = setTimeout(connect, retryDelay);
+				retryDelay = Math.min(retryDelay * 2, 5000);
 				}
 			});
 		} catch (reason) {

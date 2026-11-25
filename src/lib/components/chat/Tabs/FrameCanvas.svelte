@@ -8,14 +8,16 @@
 		);
 		if (!width || !height || width > 8192 || height > 8192 || x + w > width || y + h > height)
 			throw new Error('Invalid screen dimensions');
-		const image = await createImageBitmap(new Blob([packet.slice(12)], { type: 'image/jpeg' }));
+		const image = await createImageBitmap(
+			new Blob([new Uint8Array(packet, 12)], { type: 'image/jpeg' })
+		);
 		try {
 			if (!canvas) return;
 			if (canvas.width !== width || canvas.height !== height) {
 				canvas.width = width;
 				canvas.height = height;
 			}
-			canvas.getContext('2d')?.drawImage(image, x, y, w, h);
+			canvas.getContext('2d', { alpha: false })?.drawImage(image, x, y, w, h);
 		} finally {
 			image.close();
 		}

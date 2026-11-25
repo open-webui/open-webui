@@ -1115,13 +1115,15 @@ async def delete_folder_by_id(
 
                 for folder_id in folder_ids:
                     if delete_contents:
-                        for chat_id in await Chats.get_chat_ids_by_user_id_and_folder_id(
+                        chat_ids = await Chats.get_chat_ids_by_user_id_and_folder_id(
                             folder_owner_id, folder_id, db=db
-                        ):
-                            await stop_item_tasks(request.app.state.redis, chat_id)
-                            for child_id in await Chats.get_internal_chat_ids_by_parent_id(chat_id, folder_owner_id):
-                                await stop_item_tasks(request.app.state.redis, child_id)
+                        )
+                        for chat_id in list(chat_ids):
+                            chat_ids += await Chats.get_internal_chat_ids_by_parent_id(chat_id, folder_owner_id)
+                        # Delete first so stopped sub-agents have no chat to report back to.
                         await Chats.delete_chats_by_user_id_and_folder_id(folder_owner_id, folder_id, db=db)
+                        for chat_id in chat_ids:
+                            await stop_item_tasks(request.app.state.redis, chat_id)
                         for note in await Notes.get_notes_by_folder_id_and_user_id(folder_id, folder_owner_id, db=db):
                             await Notes.delete_note_by_id(note.id, db=db)
                             for chat_id in await Chats.get_internal_chat_ids_by_note_id(note.id, db=db):
