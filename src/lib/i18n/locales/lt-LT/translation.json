@@ -4775,6 +4775,7 @@
 	"This is an experimental feature, it may not function as expected and is subject to change at any time.": "Tai eksperimentinė funkcija ir gali veikti nevisada.",
 	"This knowledge base retrieves from a connected source. Open WebUI can query it, but cannot upload, sync, edit, delete, reset, or reindex its source data.": "Ši žinių bazė duomenis išgauna iš prijungto šaltinio. Open WebUI gali jai siųsti užklausas, bet negali įkelti, sinchronizuoti, redaguoti, ištrinti, išvalyti ar perindeksuoti jos šaltinio duomenų.",
 	"This machine is deleted.": "Šis kompiuteris bus ištrintas.",
+	"This machine is offline or not shared with you": "",
 	"This model is not publicly available. Please select another model.": "Šis modelis nėra viešai prieinamas. Pasirinkite kitą modelį.",
 	"This option controls how long the model will stay loaded into memory following the request (default: 5m)": "Ši parinktis nustato, kiek laiko modelis liks įkeltas į atmintį po užklausos (numatytasis: 5m)",
 	"This option controls how many tokens are preserved when refreshing the context. For example, if set to 2, the last 2 tokens of the conversation context will be retained. Preserving context can help maintain the continuity of a conversation, but it may reduce the ability to respond to new topics.": "Ši parinktis nustato, kiek žetonų išsaugoma atnaujinant kontekstą. Pavyzdžiui, nustačius 2, bus išsaugoti paskutiniai 2 pokalbio konteksto žetonai. Konteksto išsaugojimas gali padėti išlaikyti pokalbio tęstinumą, tačiau gali sumažinti gebėjimą reaguoti į naujas temas.",

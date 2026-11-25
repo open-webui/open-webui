@@ -4746,6 +4746,7 @@
 	"This is an experimental feature, it may not function as expected and is subject to change at any time.": "זוהי תכונה ניסיונית, ייתכן שלא תפעל כמצופה והיא עשויה להשתנות בכל עת.",
 	"This knowledge base retrieves from a connected source. Open WebUI can query it, but cannot upload, sync, edit, delete, reset, or reindex its source data.": "מאגר ידע זה מאחזר מידע ממקור מחובר. Open WebUI יכול לשלוח אליו שאילתות, אך אינו יכול להעלות, לסנכרן, לערוך, למחוק, לאפס או לאנדקס מחדש את נתוני המקור שלו.",
 	"This machine is deleted.": "פעולה זו תמחק את המכונה.",
+	"This machine is offline or not shared with you": "",
 	"This model is not publicly available. Please select another model.": "מודל זה אינו זמין לציבור. יש לבחור מודל אחר.",
 	"This option controls how long the model will stay loaded into memory following the request (default: 5m)": "אפשרות זו קובעת כמה זמן המודל יישאר טעון בזיכרון לאחר הבקשה (ברירת מחדל: 5m)",
 	"This option controls how many tokens are preserved when refreshing the context. For example, if set to 2, the last 2 tokens of the conversation context will be retained. Preserving context can help maintain the continuity of a conversation, but it may reduce the ability to respond to new topics.": "אפשרות זו קובעת כמה אסימונים נשמרים בעת רענון ההקשר. לדוגמה, אם הערך הוא 2, יישמרו 2 האסימונים האחרונים של הקשר השיחה. שמירת ההקשר יכולה לעזור לשמור על רציפות השיחה, אך היא עלולה לפגוע ביכולת להגיב לנושאים חדשים.",

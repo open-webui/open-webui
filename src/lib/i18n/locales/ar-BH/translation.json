@@ -4833,6 +4833,7 @@
 	"This is an experimental feature, it may not function as expected and is subject to change at any time.": "هذه ميزة تجريبية، وقد لا تعمل كما هو متوقع وقد تتغير في أي وقت.",
 	"This knowledge base retrieves from a connected source. Open WebUI can query it, but cannot upload, sync, edit, delete, reset, or reindex its source data.": "تسترجع قاعدة المعرفة هذه المعلومات من مصدر متصل. يمكن لـ Open WebUI الاستعلام عنه، لكنه لا يستطيع رفع بيانات المصدر أو مزامنتها أو تعديلها أو حذفها أو إعادة تعيينها أو إعادة فهرستها.",
 	"This machine is deleted.": "",
+	"This machine is offline or not shared with you": "",
 	"This model is not publicly available. Please select another model.": "هذا النموذج غير متاح للعامة. يُرجى اختيار نموذج آخر.",
 	"This option controls how long the model will stay loaded into memory following the request (default: 5m)": "يتحكم هذا الخيار في مدة بقاء النموذج محمّلًا في الذاكرة بعد الطلب (الافتراضي: 5m)",
 	"This option controls how many tokens are preserved when refreshing the context. For example, if set to 2, the last 2 tokens of the conversation context will be retained. Preserving context can help maintain the continuity of a conversation, but it may reduce the ability to respond to new topics.": "هذا الخيار يحدد عدد الرموز التي يتم الاحتفاظ بها عند تحديث السياق. مثلاً، إذا تم ضبطه على 2، سيتم الاحتفاظ بآخر رمزين من السياق. الحفاظ على السياق يساعد في استمرارية المحادثة، لكنه قد يحد من التفاعل مع مواضيع جديدة.",

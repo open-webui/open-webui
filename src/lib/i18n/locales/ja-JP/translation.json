@@ -4704,6 +4704,7 @@
 	"This is an experimental feature, it may not function as expected and is subject to change at any time.": "実験的機能であり正常動作しない場合があります。",
 	"This knowledge base retrieves from a connected source. Open WebUI can query it, but cannot upload, sync, edit, delete, reset, or reindex its source data.": "このナレッジベースは接続されたソースから情報を取得します。Open WebUIから検索できますが、ソースデータのアップロード、同期、編集、削除、リセット、インデックスの再作成はできません。",
 	"This machine is deleted.": "このマシンは削除されます。",
+	"This machine is offline or not shared with you": "",
 	"This model is not publicly available. Please select another model.": "このモデルは公開されていません。別のモデルを選択してください。",
 	"This option controls how long the model will stay loaded into memory following the request (default: 5m)": "このオプションは、モデルがリクエスト後メモリにどれくらい長く残るか設定します。 (デフォルト: 5m)",
 	"This option controls how many tokens are preserved when refreshing the context. For example, if set to 2, the last 2 tokens of the conversation context will be retained. Preserving context can help maintain the continuity of a conversation, but it may reduce the ability to respond to new topics.": "このオプションは、コンテキストをリフレッシュする際に保持するトークンの数を制御します。例えば、2に設定すると、会話のコンテキストの最後の2つのトークンが保持されます。コンテキストを保持することで、会話の継続性を維持できますが、新しいトピックに応答する能力を低下させる可能性があります。",

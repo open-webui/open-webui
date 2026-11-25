@@ -4775,6 +4775,7 @@
 	"This is an experimental feature, it may not function as expected and is subject to change at any time.": "To funkcja eksperymentalna, może nie działać poprawnie.",
 	"This knowledge base retrieves from a connected source. Open WebUI can query it, but cannot upload, sync, edit, delete, reset, or reindex its source data.": "Ta baza wiedzy pobiera dane z połączonego źródła. Open WebUI może ją odpytywać, ale nie może przesyłać, synchronizować, edytować, usuwać, resetować ani ponownie indeksować jej danych źródłowych.",
 	"This machine is deleted.": "Ta maszyna zostanie usunięta.",
+	"This machine is offline or not shared with you": "",
 	"This model is not publicly available. Please select another model.": "Ten model nie jest publicznie dostępny. Wybierz inny.",
 	"This option controls how long the model will stay loaded into memory following the request (default: 5m)": "Kontroluje jak długo model zostaje w pamięci po żądaniu (domyślnie: 5m).",
 	"This option controls how many tokens are preserved when refreshing the context. For example, if set to 2, the last 2 tokens of the conversation context will be retained. Preserving context can help maintain the continuity of a conversation, but it may reduce the ability to respond to new topics.": "Kontroluje ile tokenów jest zachowywanych przy odświeżaniu kontekstu.",

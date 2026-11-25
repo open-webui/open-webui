@@ -4717,6 +4717,7 @@
 	"This is an experimental feature, it may not function as expected and is subject to change at any time.": "এটি পরীক্ষামূলক ফিচার; প্রত্যাশামতো কাজ নাও করতে পারে এবং যেকোনো সময় পরিবর্তিত হতে পারে।",
 	"This knowledge base retrieves from a connected source. Open WebUI can query it, but cannot upload, sync, edit, delete, reset, or reindex its source data.": "এই জ্ঞানভান্ডার সংযুক্ত উৎস থেকে তথ্য উদ্ধার করে। Open WebUI এতে কোয়েরি করতে পারে, কিন্তু উৎসের ডেটা আপলোড, সিঙ্ক, সম্পাদনা, মুছে ফেলা, রিসেট বা পুনরায় ইনডেক্স করতে পারে না।",
 	"This machine is deleted.": "এই মেশিনটি মুছে ফেলা হবে।",
+	"This machine is offline or not shared with you": "",
 	"This model is not publicly available. Please select another model.": "এই মডেল সবার জন্য উপলব্ধ নয়। অন্য মডেল নির্বাচন করুন।",
 	"This option controls how long the model will stay loaded into memory following the request (default: 5m)": "অনুরোধের পর মডেল কতক্ষণ মেমোরিতে লোড থাকবে এই বিকল্প তা নিয়ন্ত্রণ করে (ডিফল্ট: 5m)",
 	"This option controls how many tokens are preserved when refreshing the context. For example, if set to 2, the last 2 tokens of the conversation context will be retained. Preserving context can help maintain the continuity of a conversation, but it may reduce the ability to respond to new topics.": "কনটেক্সট রিফ্রেশ করার সময় কতটি টোকেন রাখা হবে এই বিকল্প তা নিয়ন্ত্রণ করে। যেমন, 2 সেট করলে কথোপকথনের কনটেক্সটের শেষ 2টি টোকেন রাখা হবে। কনটেক্সট রাখলে কথোপকথনের ধারাবাহিকতা বজায় রাখতে সুবিধা হয়, তবে নতুন বিষয়ে উত্তর দেওয়ার ক্ষমতা কমতে পারে।",

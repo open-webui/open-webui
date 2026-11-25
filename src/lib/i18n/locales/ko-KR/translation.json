@@ -4691,6 +4691,7 @@
 	"This is an experimental feature, it may not function as expected and is subject to change at any time.": "이것은 실험적 기능으로, 예상대로 작동하지 않을 수 있으며 언제든지 변경될 수 있습니다.",
 	"This knowledge base retrieves from a connected source. Open WebUI can query it, but cannot upload, sync, edit, delete, reset, or reindex its source data.": "이 지식 기반은 연결된 소스에서 검색합니다. Open WebUI는 이 소스에 쿼리할 수 있지만, 소스 데이터를 업로드, 동기화, 편집, 삭제, 초기화하거나 재색인할 수는 없습니다.",
 	"This machine is deleted.": "이 컴퓨터가 삭제됩니다.",
+	"This machine is offline or not shared with you": "",
 	"This model is not publicly available. Please select another model.": "이 모델은 공개적으로 사용할 수 없습니다. 다른 모델을 선택해주세요.",
 	"This option controls how long the model will stay loaded into memory following the request (default: 5m)": "이 옵션은 요청 처리 후 모델이 메모리에 유지하는 시간을 제어합니다. (기본값: 5분)",
 	"This option controls how many tokens are preserved when refreshing the context. For example, if set to 2, the last 2 tokens of the conversation context will be retained. Preserving context can help maintain the continuity of a conversation, but it may reduce the ability to respond to new topics.": "이 옵션은 컨텍스트를 새로 고칠 때 보존되는 토큰의 수를 제어합니다. 예를 들어 2로 설정하면 대화 컨텍스트의 마지막 2개 토큰이 유지됩니다. 컨텍스트를 보존하면 대화의 연속성을 유지하는 데 도움이 될 수 있지만 새로운 주제에 대한 응답 능력이 감소할 수 있습니다.",

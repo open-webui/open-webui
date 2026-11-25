@@ -4688,6 +4688,7 @@
 	"This is an experimental feature, it may not function as expected and is subject to change at any time.": "นี่เป็นฟีเจอร์ทดลอง อาจไม่ทำงานตามที่คาดไว้และอาจมีการเปลี่ยนแปลงได้ตลอดเวลา",
 	"This knowledge base retrieves from a connected source. Open WebUI can query it, but cannot upload, sync, edit, delete, reset, or reindex its source data.": "ฐานความรู้นี้ดึงข้อมูลจากแหล่งที่มาที่เชื่อมต่ออยู่ Open WebUI สามารถค้นหาข้อมูลจากแหล่งที่มานี้ได้ แต่ไม่สามารถอัปโหลด ซิงค์ แก้ไข ลบ รีเซ็ต หรือสร้างดัชนีใหม่ให้กับข้อมูลต้นทางได้",
 	"This machine is deleted.": "การดำเนินการนี้จะลบเครื่องคอมพิวเตอร์นี้",
+	"This machine is offline or not shared with you": "",
 	"This model is not publicly available. Please select another model.": "โมเดลนี้ไม่เปิดให้ใช้งานสาธารณะ โปรดเลือกโมเดลอื่น",
 	"This option controls how long the model will stay loaded into memory following the request (default: 5m)": "ตัวเลือกนี้ควบคุมระยะเวลาที่โมเดลจะถูกโหลดค้างอยู่ในหน่วยความจำหลังจากคำขอ (ค่าเริ่มต้น: 5 นาที)",
 	"This option controls how many tokens are preserved when refreshing the context. For example, if set to 2, the last 2 tokens of the conversation context will be retained. Preserving context can help maintain the continuity of a conversation, but it may reduce the ability to respond to new topics.": "ตัวเลือกนี้ใช้กำหนดจำนวนโทเค็นที่จะถูกเก็บไว้เมื่อมีการรีเฟรชบริบท ยกตัวอย่างเช่น หากตั้งค่าเป็น 2 โทเค็น 2 ตัวสุดท้ายของบริบทการสนทนาจะถูกเก็บไว้ การเก็บรักษาบริบทสามารถช่วยให้การสนทนาต่อเนื่องมากขึ้น แต่อาจทำให้ความสามารถในการตอบสนองต่อหัวข้อใหม่ลดลง",

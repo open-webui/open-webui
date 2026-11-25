@@ -4688,6 +4688,7 @@
 	"This is an experimental feature, it may not function as expected and is subject to change at any time.": "這是一個實驗性功能，它可能無法如預期運作，並且可能會隨時變更。",
 	"This knowledge base retrieves from a connected source. Open WebUI can query it, but cannot upload, sync, edit, delete, reset, or reindex its source data.": "此知識庫自連線來源擷取資料。Open WebUI 可進行查詢，但無法上傳、同步、編輯、刪除、重設或重建其來源資料的索引。",
 	"This machine is deleted.": "",
+	"This machine is offline or not shared with you": "",
 	"This model is not publicly available. Please select another model.": "此模型未開放公眾使用，請選擇其他模型。",
 	"This option controls how long the model will stay loaded into memory following the request (default: 5m)": "此選項控制模型請求後在記憶體中保持載入狀態的時長（預設：5 分鐘）",
 	"This option controls how many tokens are preserved when refreshing the context. For example, if set to 2, the last 2 tokens of the conversation context will be retained. Preserving context can help maintain the continuity of a conversation, but it may reduce the ability to respond to new topics.": "此選項控制在重新整理上下文時保留多少 Token。例如，如果設定為 2，則會保留對話上下文的最後 2 個 Token。保留上下文有助於保持對話的連貫性，但也可能降低對新主題的回應能力。",

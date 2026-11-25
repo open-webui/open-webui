@@ -4717,6 +4717,7 @@
 	"This is an experimental feature, it may not function as expected and is subject to change at any time.": "यह प्रायोगिक सुविधा है, संभव है यह अपेक्षा के अनुसार काम न करे और किसी भी समय बदल सकती है.",
 	"This knowledge base retrieves from a connected source. Open WebUI can query it, but cannot upload, sync, edit, delete, reset, or reindex its source data.": "यह ज्ञान आधार कनेक्ट किए गए स्रोत से जानकारी प्राप्त करता है. Open WebUI इसमें क्वेरी कर सकता है, लेकिन इसके स्रोत डेटा को अपलोड, सिंक, संपादित, हटा, रीसेट या फिर इंडेक्स नहीं कर सकता.",
 	"This machine is deleted.": "इससे यह मशीन हट जाती है.",
+	"This machine is offline or not shared with you": "",
 	"This model is not publicly available. Please select another model.": "यह मॉडल सार्वजनिक रूप से उपलब्ध नहीं है. कृपया दूसरा मॉडल चुनें.",
 	"This option controls how long the model will stay loaded into memory following the request (default: 5m)": "यह विकल्प नियंत्रित करता है कि अनुरोध के बाद मॉडल कितनी देर मेमोरी में लोड रहेगा (डिफ़ॉल्ट: 5m)",
 	"This option controls how many tokens are preserved when refreshing the context. For example, if set to 2, the last 2 tokens of the conversation context will be retained. Preserving context can help maintain the continuity of a conversation, but it may reduce the ability to respond to new topics.": "यह विकल्प नियंत्रित करता है कि संदर्भ रीफ़्रेश करते समय कितने टोकन बचाए जाएँ. उदाहरण के लिए, 2 सेट करने पर बातचीत के संदर्भ के अंतिम 2 टोकन रखे जाएँगे. संदर्भ बनाए रखने से बातचीत की निरंतरता बनी रह सकती है, लेकिन नए विषयों पर उत्तर देने की क्षमता घट सकती है.",
