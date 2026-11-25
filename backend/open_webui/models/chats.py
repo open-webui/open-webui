@@ -803,6 +803,17 @@ class ChatTable:
             )
             return [ChatModel.model_validate(chat) for chat in result.scalars().all()]
 
+    async def get_internal_chat_ids_by_note_id(self, note_id: str, db: AsyncSession | None = None) -> list[str]:
+        async with get_async_db_context(db) as session:
+            result = await session.execute(
+                select(Chat.id).where(
+                    Chat.meta['internal'].as_boolean().is_(True),
+                    Chat.meta['type'].as_string() == 'note',
+                    Chat.meta['note_id'].as_string() == note_id,
+                )
+            )
+            return list(result.scalars().all())
+
     def _chat_import_form_to_chat_model(self, user_id: str, form_data: ChatImportForm) -> ChatModel:
         id = str(uuid.uuid4())
         chat = ChatModel(
