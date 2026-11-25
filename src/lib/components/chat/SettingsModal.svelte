@@ -15,17 +15,6 @@
 	import { getBackendConfig, getModels as _getModels } from '$lib/apis';
 
 	import Modal from '../common/Modal.svelte';
-	import Account from './Settings/Account.svelte';
-	import About from './Settings/About.svelte';
-	import General from './Settings/General.svelte';
-	import Interface from './Settings/Interface.svelte';
-	import Notifications from './Settings/Notifications.svelte';
-	import Shortcuts from './Settings/Shortcuts.svelte';
-	import Audio from './Settings/Audio.svelte';
-	import DataControls from './Settings/DataControls.svelte';
-	import Usage from './Settings/Usage.svelte';
-	import ArchivedChats from './Settings/ArchivedChats.svelte';
-	import Personalization from './Settings/Personalization.svelte';
 	import Search from '../icons/Search.svelte';
 	import ChevronRight from '../icons/ChevronRight.svelte';
 	import DatabaseSettings from '../icons/DatabaseSettings.svelte';
@@ -41,21 +30,6 @@
 	import Keyboard from '../icons/Keyboard.svelte';
 	import UsageIcon from '../icons/UsageIcon.svelte';
 	import AdminTabIcon from '$lib/components/admin/Settings/AdminTabIcon.svelte';
-	import AdminGeneral from '$lib/components/admin/Settings/General.svelte';
-	import AdminAuthentication from '$lib/components/admin/Settings/Authentication.svelte';
-	import AdminConnections from '$lib/components/admin/Settings/Connections.svelte';
-	import AdminModels from '$lib/components/admin/Settings/Models.svelte';
-	import AdminSubagents from '$lib/components/admin/Settings/Subagents.svelte';
-	import AdminAnalytics from '$lib/components/admin/Analytics.svelte';
-	import AdminIntegrations from '$lib/components/admin/Settings/Integrations.svelte';
-	import AdminDocuments from '$lib/components/admin/Settings/Documents.svelte';
-	import AdminWebSearch from '$lib/components/admin/Settings/WebSearch.svelte';
-	import AdminCodeExecution from '$lib/components/admin/Settings/CodeExecution.svelte';
-	import AdminPipelines from '$lib/components/admin/Settings/Pipelines.svelte';
-	import AdminInterface from '$lib/components/admin/Settings/Interface.svelte';
-	import AdminAudio from '$lib/components/admin/Settings/Audio.svelte';
-	import AdminImages from '$lib/components/admin/Settings/Images.svelte';
-	import AdminDatabase from '$lib/components/admin/Settings/Database.svelte';
 
 	const i18n: Writable<any> = getContext('i18n');
 
@@ -801,107 +775,159 @@
 			id={isAdminTab(selectedTab) ? adminTabPanelId(selectedTab) : undefined}
 		>
 			{#if selectedTab === 'general'}
-				<General
-					{getModels}
-					{saveSettings}
-					on:save={() => {
-						toast.success($i18n.t('Settings saved successfully!'));
-					}}
-				/>
+				{#await import('./Settings/General.svelte') then { default: General }}
+					<General
+						{getModels}
+						{saveSettings}
+						on:save={() => {
+							toast.success($i18n.t('Settings saved successfully!'));
+						}}
+					/>
+				{/await}
 			{:else if selectedTab === 'interface'}
-				<Interface
-					{saveSettings}
-					personalSettingsValue={personalUiSettings}
-					on:save={() => {
-						toast.success($i18n.t('Settings saved successfully!'));
-					}}
-				/>
+				{#await import('./Settings/Interface.svelte') then { default: Interface }}
+					<Interface
+						{saveSettings}
+						personalSettingsValue={personalUiSettings}
+						on:save={() => {
+							toast.success($i18n.t('Settings saved successfully!'));
+						}}
+					/>
+				{/await}
 			{:else if selectedTab === 'notifications'}
-				<Notifications {saveSettings} />
+				{#await import('./Settings/Notifications.svelte') then { default: Notifications }}
+					<Notifications {saveSettings} />
+				{/await}
 			{:else if selectedTab === 'shortcuts'}
-				<Shortcuts {saveSettings} />
+				{#await import('./Settings/Shortcuts.svelte') then { default: Shortcuts }}
+					<Shortcuts {saveSettings} />
+				{/await}
 			{:else if selectedTab === 'personalization'}
-				<Personalization
-					{saveSettings}
-					on:save={() => {
-						toast.success($i18n.t('Settings saved successfully!'));
-					}}
-				/>
+				{#await import('./Settings/Personalization.svelte') then { default: Personalization }}
+					<Personalization
+						{saveSettings}
+						on:save={() => {
+							toast.success($i18n.t('Settings saved successfully!'));
+						}}
+					/>
+				{/await}
 			{:else if selectedTab === 'audio'}
-				<Audio
-					{saveSettings}
-					on:save={() => {
-						toast.success($i18n.t('Settings saved successfully!'));
-					}}
-				/>
+				{#await import('./Settings/Audio.svelte') then { default: Audio }}
+					<Audio
+						{saveSettings}
+						on:save={() => {
+							toast.success($i18n.t('Settings saved successfully!'));
+						}}
+					/>
+				{/await}
 			{:else if selectedTab === 'data_controls'}
-				<DataControls {saveSettings} />
+				{#await import('./Settings/DataControls.svelte') then { default: DataControls }}
+					<DataControls {saveSettings} />
+				{/await}
 			{:else if selectedTab === 'usage'}
-				<Usage />
+				{#await import('./Settings/Usage.svelte') then { default: Usage }}
+					<Usage />
+				{/await}
 			{:else if selectedTab === 'archived_chats'}
-				<ArchivedChats />
+				{#await import('./Settings/ArchivedChats.svelte') then { default: ArchivedChats }}
+					<ArchivedChats />
+				{/await}
 			{:else if selectedTab === 'account'}
-				<Account
-					saveHandler={() => {
-						toast.success($i18n.t('Settings saved successfully!'));
-					}}
-				/>
+				{#await import('./Settings/Account.svelte') then { default: Account }}
+					<Account
+						saveHandler={() => {
+							toast.success($i18n.t('Settings saved successfully!'));
+						}}
+					/>
+				{/await}
 			{:else if selectedTab === 'about'}
-				<About />
+				{#await import('./Settings/About.svelte') then { default: About }}
+					<About />
+				{/await}
 			{:else if selectedTab === 'admin:general'}
-				<AdminGeneral saveHandler={adminConfigSaveHandler} />
+				{#await import('$lib/components/admin/Settings/General.svelte') then { default: AdminGeneral }}
+					<AdminGeneral saveHandler={adminConfigSaveHandler} />
+				{/await}
 			{:else if selectedTab === 'admin:authentication'}
-				<AdminAuthentication />
+				{#await import('$lib/components/admin/Settings/Authentication.svelte') then { default: AdminAuthentication }}
+					<AdminAuthentication />
+				{/await}
 			{:else if selectedTab === 'admin:connections'}
-				<AdminConnections
-					on:save={() => {
-						toast.success($i18n.t('Settings saved successfully!'));
-					}}
-				/>
+				{#await import('$lib/components/admin/Settings/Connections.svelte') then { default: AdminConnections }}
+					<AdminConnections
+						on:save={() => {
+							toast.success($i18n.t('Settings saved successfully!'));
+						}}
+					/>
+				{/await}
 			{:else if selectedTab === 'admin:models'}
-				<AdminModels bind:tabState />
+				{#await import('$lib/components/admin/Settings/Models.svelte') then { default: AdminModels }}
+					<AdminModels bind:tabState />
+				{/await}
 			{:else if selectedTab === 'admin:subagents'}
-				<AdminSubagents />
+				{#await import('$lib/components/admin/Settings/Subagents.svelte') then { default: AdminSubagents }}
+					<AdminSubagents />
+				{/await}
 			{:else if selectedTab === 'admin:analytics'}
-				<AdminAnalytics />
+				{#await import('$lib/components/admin/Analytics.svelte') then { default: AdminAnalytics }}
+					<AdminAnalytics />
+				{/await}
 			{:else if selectedTab === 'admin:integrations'}
-				<AdminIntegrations {saveSettings} />
+				{#await import('$lib/components/admin/Settings/Integrations.svelte') then { default: AdminIntegrations }}
+					<AdminIntegrations {saveSettings} />
+				{/await}
 			{:else if selectedTab === 'admin:documents'}
-				<AdminDocuments on:save={adminConfigSaveHandler} />
+				{#await import('$lib/components/admin/Settings/Documents.svelte') then { default: AdminDocuments }}
+					<AdminDocuments on:save={adminConfigSaveHandler} />
+				{/await}
 			{:else if selectedTab === 'admin:web'}
-				<AdminWebSearch saveHandler={adminConfigSaveHandler} />
+				{#await import('$lib/components/admin/Settings/WebSearch.svelte') then { default: AdminWebSearch }}
+					<AdminWebSearch saveHandler={adminConfigSaveHandler} />
+				{/await}
 			{:else if selectedTab === 'admin:code-execution'}
-				<AdminCodeExecution saveHandler={adminConfigSaveHandler} />
+				{#await import('$lib/components/admin/Settings/CodeExecution.svelte') then { default: AdminCodeExecution }}
+					<AdminCodeExecution saveHandler={adminConfigSaveHandler} />
+				{/await}
 			{:else if selectedTab === 'admin:pipelines'}
-				<AdminPipelines
-					saveHandler={() => {
-						toast.success($i18n.t('Settings saved successfully!'));
-					}}
-				/>
+				{#await import('$lib/components/admin/Settings/Pipelines.svelte') then { default: AdminPipelines }}
+					<AdminPipelines
+						saveHandler={() => {
+							toast.success($i18n.t('Settings saved successfully!'));
+						}}
+					/>
+				{/await}
 			{:else if selectedTab === 'admin:interface'}
-				<AdminInterface
-					saveHandler={() => {
-						toast.success($i18n.t('Settings saved successfully!'));
-					}}
-				/>
+				{#await import('$lib/components/admin/Settings/Interface.svelte') then { default: AdminInterface }}
+					<AdminInterface
+						saveHandler={() => {
+							toast.success($i18n.t('Settings saved successfully!'));
+						}}
+					/>
+				{/await}
 			{:else if selectedTab === 'admin:audio'}
-				<AdminAudio
-					saveHandler={() => {
-						toast.success($i18n.t('Settings saved successfully!'));
-					}}
-				/>
+				{#await import('$lib/components/admin/Settings/Audio.svelte') then { default: AdminAudio }}
+					<AdminAudio
+						saveHandler={() => {
+							toast.success($i18n.t('Settings saved successfully!'));
+						}}
+					/>
+				{/await}
 			{:else if selectedTab === 'admin:images'}
-				<AdminImages
-					on:save={() => {
-						toast.success($i18n.t('Settings saved successfully!'));
-					}}
-				/>
+				{#await import('$lib/components/admin/Settings/Images.svelte') then { default: AdminImages }}
+					<AdminImages
+						on:save={() => {
+							toast.success($i18n.t('Settings saved successfully!'));
+						}}
+					/>
+				{/await}
 			{:else if selectedTab === 'admin:db'}
-				<AdminDatabase
-					saveHandler={() => {
-						toast.success($i18n.t('Settings saved successfully!'));
-					}}
-				/>
+				{#await import('$lib/components/admin/Settings/Database.svelte') then { default: AdminDatabase }}
+					<AdminDatabase
+						saveHandler={() => {
+							toast.success($i18n.t('Settings saved successfully!'));
+						}}
+					/>
+				{/await}
 			{/if}
 		</div>
 	</div>
