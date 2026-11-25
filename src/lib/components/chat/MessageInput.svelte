@@ -167,7 +167,7 @@
 	export let stopResponse: Function;
 	export let compactHandler: Function = () => {};
 	export let statusHandler: Function = () => {};
-	export let forkHandler: Function = () => {};
+	export let forkHandler: Function | null = null;
 	export let chatId = '';
 	export let inputId = 'chat-input';
 	export let messagesContainerId = 'messages-container';
@@ -1770,6 +1770,7 @@
 					canComments: () => canComments,
 					canSide: () => canSide,
 					canFork: () =>
+						!!forkHandler &&
 						!!history?.currentId &&
 						!$temporary &&
 						($_user?.role === 'admin' || ($_user?.permissions?.chat?.import ?? true)),
@@ -1788,7 +1789,7 @@
 						chatTabRequest.set({ parentChatId: chatId, prompt: '' });
 						showTabs.set('chat');
 					},
-					onFork: forkHandler,
+					onFork: () => forkHandler?.(),
 					onModel: () => modelSelector?.open(),
 					onCompare: openComparison,
 					onSettings: () => showSettings.set(true),

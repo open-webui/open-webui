@@ -4565,6 +4565,9 @@
 		}
 	};
 
+	// Note chats can't be forked.
+	const forkHandler = embedded && !tabbed ? null : handleForkChat;
+
 	const clearCommandInput = () => {
 		messageInput?.setText('');
 		prompt = '';
@@ -4838,9 +4841,9 @@
 			showTabs.set('chat');
 			return { status: 'rejected' };
 		}
-		if (String(userPrompt).trim() === '/fork') {
+		if (forkHandler && String(userPrompt).trim() === '/fork') {
 			clearCommandInput();
-			await handleForkChat();
+			await forkHandler();
 			return { status: 'rejected' };
 		}
 		const modelCommandMatch = String(userPrompt)
@@ -6545,7 +6548,7 @@
 										{addMessages}
 										{onToolCallResolved}
 										allowDelete={!(generating || taskIds?.length)}
-										forkHandler={$temporaryChat ? null : handleForkChat}
+										forkHandler={$temporaryChat ? null : forkHandler}
 										topPadding={!embedded && !fullWidthTabs}
 										bottomPadding={files.length > 0}
 										{onSelect}
@@ -6624,7 +6627,7 @@
 										{onRecordedAudio}
 										compactHandler={handleManualCompact}
 										statusHandler={handleStatusCommand}
-										forkHandler={handleForkChat}
+										{forkHandler}
 										{toolApprovalMode}
 										onToolApprovalModeChange={handleToolApprovalModeChange}
 										{generating}
@@ -6762,7 +6765,7 @@
 										{onRecordedAudio}
 										compactHandler={handleManualCompact}
 										statusHandler={handleStatusCommand}
-										forkHandler={handleForkChat}
+										{forkHandler}
 										{toolApprovalMode}
 										onToolApprovalModeChange={handleToolApprovalModeChange}
 										{generating}
