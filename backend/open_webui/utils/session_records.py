@@ -49,14 +49,11 @@ def normalize_tool_output(output):
     items = [dict(item) for item in output if isinstance(item, dict)]
     normalized = []
     indices = {}
-    start = 0
     for item in items:
         item_type = item.get('type')
-        # A new assistant item after tool results starts a new round.
+        # Providers can reuse call IDs after emitting results. Keep those snapshots distinct.
         if normalized and normalized[-1].get('type') == 'function_call_output' and item_type != 'function_call_output':
-            pair_results(normalized[start:])
             indices.clear()
-            start = len(normalized)
         call_id = item.get('call_id') or item.get('id')
         if item_type in {'function_call', 'function_call_output'} and call_id:
             key = (item_type, call_id)
@@ -65,16 +62,19 @@ def normalize_tool_output(output):
                 continue
             indices[key] = len(normalized)
         normalized.append(item)
-    pair_results(normalized[start:])
-    return normalized
+    return pair_results(normalized)
 
 
 def pair_results(output):
-    results = {item.get('call_id'): item for item in output if item.get('type') == 'function_call_output'}
-    for item in output:
+    # Each result belongs to the nearest preceding call with that ID.
+    results = {}
+    for item in reversed(output):
+        if item.get('type') == 'function_call_output' and item.get('call_id'):
+            results[item['call_id']] = item
+            continue
         if item.get('type') != 'function_call':
             continue
-        result = results.get(item.get('call_id'))
+        result = results.pop(item.get('call_id') or item.get('id'), None)
         if result:
             for key in ('started_at', 'ended_at', 'duration', 'error_type'):
                 if key in result and key not in item:
