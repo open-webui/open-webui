@@ -34,7 +34,7 @@ from open_webui.models.shared_chats import ChatShareMode
 from open_webui.models.users import Users
 from open_webui.routers.notes import check_notes_access, truncate_note_data
 from open_webui.socket.main import close_note
-from open_webui.tasks import has_active_tasks
+from open_webui.tasks import has_active_tasks, stop_item_tasks
 from open_webui.utils.access_control import (
     has_permission,
     validate_access_grants,
@@ -1115,6 +1115,12 @@ async def delete_folder_by_id(
 
                 for folder_id in folder_ids:
                     if delete_contents:
+                        for chat_id in await Chats.get_chat_ids_by_user_id_and_folder_id(
+                            folder_owner_id, folder_id, db=db
+                        ):
+                            await stop_item_tasks(request.app.state.redis, chat_id)
+                            for child_id in await Chats.get_internal_chat_ids_by_parent_id(chat_id, folder_owner_id):
+                                await stop_item_tasks(request.app.state.redis, child_id)
                         await Chats.delete_chats_by_user_id_and_folder_id(folder_owner_id, folder_id, db=db)
                         for note in await Notes.get_notes_by_folder_id_and_user_id(folder_id, folder_owner_id, db=db):
                             await Notes.delete_note_by_id(note.id, db=db)
