@@ -26,6 +26,7 @@
 		chatId,
 		chatTabRequest,
 		config,
+		machines,
 		mobile,
 		selectedFolder,
 		settings,
@@ -920,6 +921,16 @@
 								<div class="min-w-0 truncate">
 									{folders[folderId].name}
 								</div>
+
+								{#if folders[folderId]?.machine_id}
+									<div
+										class="min-w-0 shrink-[2] truncate text-xs text-base-400 dark:text-base-500"
+										title={folders[folderId].directory || undefined}
+									>
+										{($machines ?? []).find(({ id }) => id === folders[folderId].machine_id)
+											?.name || $i18n.t('Machine')}
+									</div>
+								{/if}
 
 								{#if !folders[folderId]?.shared && (folders[folderId]?.unread_count ?? 0) > 0}
 									<div

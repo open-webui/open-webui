@@ -8,7 +8,7 @@
 		loadFolderChatPage,
 		type FolderDetails
 	} from '$lib/stores/folderStates';
-	import { models } from '$lib/stores';
+	import { machines, models } from '$lib/stores';
 	import Emoji from '$lib/components/common/Emoji.svelte';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import FolderIcon from '$lib/components/icons/Folder.svelte';
@@ -16,6 +16,7 @@
 	import ChatBubble from '$lib/components/icons/ChatBubble.svelte';
 	import Document from '$lib/components/icons/Document.svelte';
 	import Sparkles from '$lib/components/icons/Sparkles.svelte';
+	import Server from '$lib/components/icons/Server.svelte';
 
 	const i18n: any = getContext('i18n');
 
@@ -33,6 +34,9 @@
 		(id) => ($models ?? []).find((model) => model.id === id)?.name ?? id
 	);
 	$: files = details?.data?.files ?? [];
+	$: machineName = folder.machine_id
+		? ($machines ?? []).find(({ id }) => id === folder.machine_id)?.name || $i18n.t('Machine')
+		: '';
 
 	onMount(async () => {
 		await Promise.all([
@@ -80,11 +84,22 @@
 			</div>
 		</div>
 
-		{#if modelNames.length || files.length || folder.shared}
+		{#if machineName || modelNames.length || files.length || folder.shared}
 			<div class="space-y-1.5 border-t border-base-50/60 px-3 py-2 dark:border-base-800/25">
 				{#if folder.shared}
 					<div class="text-xs text-base-500 dark:text-base-400">
 						{$i18n.t('Shared')}{folder.owner_name ? ` · ${folder.owner_name}` : ''}
+					</div>
+				{/if}
+				{#if machineName}
+					<div class="flex items-center gap-2" title={folder.directory || undefined}>
+						<Server className="size-3.5 shrink-0 text-base-500 dark:text-base-400" />
+						<span class="shrink-0">{machineName}</span>
+						{#if folder.directory}
+							<span class="min-w-0 truncate font-mono text-xs text-base-500 dark:text-base-400"
+								>{folder.directory}</span
+							>
+						{/if}
 					</div>
 				{/if}
 				{#if modelNames.length}
