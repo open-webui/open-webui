@@ -97,9 +97,25 @@
 		return { destroy: () => window.removeEventListener('keydown', keydownHandler, true) };
 	};
 
+	let marker: HTMLElement;
+
+	// The answer text this marker follows, back to the marker before it or the start of its block
+	const getClaim = () => {
+		const block = marker?.closest('p, li, td, th, blockquote, h1, h2, h3, h4, h5, h6');
+		if (!block) return '';
+		const range = document.createRange();
+		range.selectNodeContents(block);
+		const previous = [...block.querySelectorAll('[data-citation]')]
+			.filter((node) => node.compareDocumentPosition(marker) & Node.DOCUMENT_POSITION_FOLLOWING)
+			.pop();
+		if (previous) range.setStartAfter(previous);
+		range.setEndBefore(marker);
+		return range.toString();
+	};
+
 	const openSource = (id: string) => {
 		openPreview = false;
-		onClick(id);
+		onClick(id, getClaim());
 	};
 </script>
 
@@ -109,6 +125,8 @@
 			{#snippet child({ props })}
 				<button
 					{...props}
+					bind:this={marker}
+					data-citation
 					aria-label={sources.length === 1
 						? $i18n.t('View source: {{title}}', { title: label })
 						: `${getDisplayTitle(label)} +${sources.length - 1} more sources`}

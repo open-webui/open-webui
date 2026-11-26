@@ -987,11 +987,11 @@
 										console.log(e);
 									}}
 									{onToolCallResolved}
-									onSourceClick={async (id) => {
+									onSourceClick={async (id, claim) => {
 										console.log(id);
 
 										if (citationsElement) {
-											citationsElement?.showSourceModal(id);
+											citationsElement?.showSourceModal(id, claim);
 										}
 									}}
 									onSetInputText={(text) => {

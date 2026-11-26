@@ -610,13 +610,18 @@ def get_response_completion_event_data(event: dict) -> dict:
     }
 
 
+# The key in source_ids for the last paragraph numbers. No source has it: an empty id becomes 'N/A'
+PARAGRAPH_IDS_KEY = ''
+
+
 def get_citation_ids(source: dict, source_ids: dict) -> list[int]:
     """
     Number a source's documents for citation and save the numbers with it.
 
     source_ids holds the numbers the chat has used so far, so a document keeps its
     number across turns and a new one takes the next. A number saved earlier wins:
-    it is the one the model was shown.
+    it is the one the model was shown. It also holds the last paragraph number used
+    for each citation, so a paragraph number is never given twice in a chat.
     """
     saved_ids = source.get('citation_ids')
     saved_ids = saved_ids if isinstance(saved_ids, list) else []
@@ -627,9 +632,15 @@ def get_citation_ids(source: dict, source_ids: dict) -> list[int]:
         if type(saved_id) is int and saved_id > 0:
             source_ids[source_id] = saved_id
         elif source_id not in source_ids:
-            source_ids[source_id] = max(source_ids.values(), default=0) + 1
+            source_ids[source_id] = max((n for n in source_ids.values() if type(n) is int), default=0) + 1
         citation_ids.append(source_ids[source_id])
     source['citation_ids'] = citation_ids
+
+    last_paragraphs = source_ids.setdefault(PARAGRAPH_IDS_KEY, {})
+    for citation_id, doc_paragraphs in zip(citation_ids, source.get('paragraphs') or []):
+        for paragraph in doc_paragraphs or []:
+            if isinstance(paragraph, dict) and type(paragraph.get('id')) is int:
+                last_paragraphs[citation_id] = max(last_paragraphs.get(citation_id, 0), paragraph['id'])
     return citation_ids
 
 
@@ -698,13 +709,16 @@ def cut_block(text: str, start: int, end: int, max_size: int) -> list[tuple[int,
     return pieces
 
 
-def get_source_paragraphs(sources: list, max_size: int | None = None) -> list[list[list[tuple[int, int, int]]]]:
+def get_source_paragraphs(
+    sources: list, max_size: int | None = None, source_ids: dict | None = None
+) -> list[list[list[tuple[int, int, int]]]]:
     """
     Number the paragraphs of each source document for citation as [N#P].
 
-    Numbering runs through every document cited by the same N. A source with a single
-    paragraph gets none, so it is cited as [N]. Each source saves its paragraphs, so a
-    citation like [1#3] can be shown from the message later.
+    Numbering runs through every document cited by the same N, and on from the numbers
+    source_ids says the chat has used. A source with a single paragraph gets none, so it
+    is cited as [N]. Each source saves its paragraphs, so a citation like [1#3] can be
+    shown from the message later.
     """
     spans = [
         [split_paragraphs(doc, max_size) if isinstance(doc, str) else [] for doc in source.get('document', [])]
@@ -715,7 +729,7 @@ def get_source_paragraphs(sources: list, max_size: int | None = None) -> list[li
         for citation_id, doc_spans in zip(source['citation_ids'], source_spans):
             totals[citation_id] = totals.get(citation_id, 0) + len(doc_spans)
 
-    numbers = {}
+    numbers = source_ids.setdefault(PARAGRAPH_IDS_KEY, {}) if source_ids is not None else {}
     numbered = []
     for source, source_spans in zip(sources, spans):
         source_numbered = []
@@ -738,6 +752,11 @@ def get_source_paragraphs(sources: list, max_size: int | None = None) -> list[li
     return numbered
 
 
+def mark_paragraphs(doc: str, citation_id: int, doc_paragraphs: list[tuple[int, int, int]]) -> str:
+    """Write a document as its numbered paragraphs, each after its [N#P] marker."""
+    return '\n\n'.join(f'[{citation_id}#{number}] {doc[start:end]}' for number, start, end in doc_paragraphs)
+
+
 def get_source_context(
     sources: list, source_ids: dict = None, include_content: bool = True, paragraph_size: int | None = None
 ) -> str:
@@ -752,7 +771,9 @@ def get_source_context(
         source_ids = {}
     for source in sources:
         get_citation_ids(source, source_ids)
-    paragraphs = get_source_paragraphs(sources, paragraph_size) if include_content else [[] for _ in sources]
+    paragraphs = (
+        get_source_paragraphs(sources, paragraph_size, source_ids) if include_content else [[] for _ in sources]
+    )
     for source, source_paragraphs in zip(sources, paragraphs):
         for index, (doc, meta, citation_id) in enumerate(
             zip(source.get('document', []), source.get('metadata', []), source['citation_ids'])
@@ -764,9 +785,7 @@ def get_source_context(
             if not include_content:
                 body = ''
             elif doc_paragraphs:
-                body = '\n\n'.join(
-                    f'[{citation_id}#{number}] {doc[start:end]}' for number, start, end in doc_paragraphs
-                )
+                body = mark_paragraphs(doc, citation_id, doc_paragraphs)
             else:
                 body = doc
             extra_attrs = ''
@@ -829,6 +848,28 @@ async def apply_source_context_to_messages(
         )
 
 
+def mark_tool_result(content: str, sources: list, source_ids: dict, paragraph_size: int | None) -> str:
+    """Number the paragraphs of a file tool's sources and mark them in the 'content' fields of its result."""
+    marked = {}
+    for source, source_paragraphs in zip(sources, get_source_paragraphs(sources, paragraph_size, source_ids)):
+        for doc, citation_id, doc_paragraphs in zip(source['document'], source['citation_ids'], source_paragraphs):
+            if doc_paragraphs:
+                marked[doc] = mark_paragraphs(doc, citation_id, doc_paragraphs)
+    if not marked:
+        return content
+    try:
+        data = JSONCodec.loads(content)
+    except (JSONCodec.JSONDecodeError, TypeError):
+        # Paragraphs the model never saw cannot be cited
+        for source in sources:
+            source.pop('paragraphs', None)
+        return content
+    for item in data if isinstance(data, list) else [data]:
+        if isinstance(item, dict) and isinstance(item.get('content'), str) and item['content'] in marked:
+            item['content'] = marked[item['content']]
+    return JSONCodec.dumps(data, ensure_ascii=False)
+
+
 async def tool_result_with_citations(name, params, result, tool, model, source_ids, user_message, event_emitter) -> str:
     content = tool_result_content(result)
     capabilities = model.get('info', {}).get('meta', {}).get('capabilities') or {}
@@ -841,6 +882,12 @@ async def tool_result_with_citations(name, params, result, tool, model, source_i
         return content
     if sources:
         # Number the sources before they are emitted, so the saved message keeps the numbers.
+        for source in sources:
+            get_citation_ids(source, source_ids)
+        # A file's text is the document itself, so its paragraphs are marked where the model reads them.
+        # fetch_url keeps only a snippet of the page as its document.
+        if name != 'fetch_url':
+            content = mark_tool_result(content, sources, source_ids, await Config.get('rag.chunk_size'))
         context = get_source_context(sources, source_ids, include_content=False).strip()
         if event_emitter:
             for source in sources:

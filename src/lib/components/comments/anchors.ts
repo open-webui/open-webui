@@ -2,6 +2,7 @@ import { isSavedChatId } from '$lib/utils/chatId';
 import { sha256 } from 'js-sha256';
 import { writable } from 'svelte/store';
 import type { CommentAnchor, CommentResource, CommentTarget } from '$lib/apis/comments';
+import { QUOTE_CONTEXT_LENGTH } from '$lib/utils/comments/highlights';
 
 export type CommentSurface = CommentResource &
 	CommentTarget & {
@@ -150,8 +151,8 @@ export function selectedComment() {
 			quote,
 			start: from,
 			end: to,
-			prefix: chars.slice(Math.max(0, from - 64), from).join(''),
-			suffix: chars.slice(to, to + 64).join(''),
+			prefix: chars.slice(Math.max(0, from - QUOTE_CONTEXT_LENGTH), from).join(''),
+			suffix: chars.slice(to, to + QUOTE_CONTEXT_LENGTH).join(''),
 			surface_id: options.surface_id,
 			source: sha256(text),
 			content_hash: options.content_hash

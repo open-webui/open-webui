@@ -1,4 +1,5 @@
 import { decodeString, isValidHttpUrl } from '$lib/utils';
+import { QUOTE_CONTEXT_LENGTH, type TextQuoteSelector } from '$lib/utils/comments/highlights';
 
 // A cited document is identified by its metadata source, falling back to the source id.
 const getDocumentId = (source: any, index: number): string =>
@@ -92,15 +93,26 @@ export const getParagraphIds = (identifiers: string[]): number[] => [
 	)
 ];
 
-/** The paragraphs a citation such as [1#3][1#4] points at, each with its document's metadata. */
+/** A stretch of a cited document, by offsets, with that document's metadata and relevance. */
+export type CitedSpan = {
+	document: string;
+	start: number;
+	end: number;
+	metadata: any;
+	distance: any;
+};
+
+/** The paragraphs a citation such as [1#3][1#4] points at, in order. */
 export const getCitedPassages = (citation: any, paragraphIds: number[]) => {
-	const passages: { id: number; text: string; metadata: any; distance: any }[] = [];
+	const passages: (CitedSpan & { id: number })[] = [];
 	(citation?.document ?? []).forEach((document: string, index: number) => {
 		for (const paragraph of citation.paragraphs?.[index] ?? []) {
 			if (typeof document === 'string' && paragraphIds.includes(paragraph?.id)) {
 				passages.push({
 					id: paragraph.id,
-					text: document.slice(paragraph.start, paragraph.end),
+					document,
+					start: paragraph.start,
+					end: paragraph.end,
 					metadata: citation.metadata?.[index],
 					distance: citation.distances?.[index]
 				});
@@ -108,6 +120,87 @@ export const getCitedPassages = (citation: any, paragraphIds: number[]) => {
 		}
 	});
 	return passages.sort((a, b) => a.id - b.id);
+};
+
+/** The W3C quote selector for a span, with the context on either side that comment anchors keep. */
+export const getQuoteSelector = ({ document, start, end }: CitedSpan): TextQuoteSelector => ({
+	type: 'TextQuoteSelector',
+	exact: document.slice(start, end),
+	prefix: document.slice(Math.max(0, start - QUOTE_CONTEXT_LENGTH), start),
+	suffix: document.slice(end, end + QUOTE_CONTEXT_LENGTH)
+});
+
+const getWords = (text: string): string[] =>
+	text
+		.normalize('NFKC')
+		.toLowerCase()
+		.match(/[\p{L}\p{N}]+/gu) ?? [];
+
+const countWords = (words: string[]) =>
+	words.reduce(
+		(counts, word) => counts.set(word, (counts.get(word) ?? 0) + 1),
+		new Map<string, number>()
+	);
+
+/**
+ * The sentences of the cited spans that support a claim, the answer text a citation follows,
+ * in the order they appear. The claim is split into its sentences and clauses, and each part
+ * takes the sentence most like it. Sentences follow Unicode sentence boundaries and are ranked
+ * by cosine similarity of TF-IDF vectors, weighted as scikit-learn's TfidfVectorizer does by
+ * default (smoothed idf, L2 norm). A part that shares no word with any sentence takes none, and
+ * a sentence that holds no word of the claim the other sentences lack is left out, weakest first.
+ */
+export const getClaimSpans = (claim: string, spans: CitedSpan[]): CitedSpan[] => {
+	const segmenter = new Intl.Segmenter(undefined, { granularity: 'sentence' });
+	const sentences = spans.flatMap((span) =>
+		[...segmenter.segment(span.document.slice(span.start, span.end))]
+			.filter(({ segment }) => segment.trim())
+			.map(({ segment, index }) => {
+				const start = span.start + index + segment.length - segment.trimStart().length;
+				const end = start + segment.trim().length;
+				return { span: { ...span, start, end }, counts: countWords(getWords(segment)) };
+			})
+	);
+	const frequency = new Map<string, number>();
+	for (const { counts } of sentences) {
+		for (const word of counts.keys()) frequency.set(word, (frequency.get(word) ?? 0) + 1);
+	}
+	const idf = (word: string) =>
+		Math.log((1 + sentences.length) / (1 + (frequency.get(word) ?? 0))) + 1;
+
+	// A part's own length is the same for every sentence, so it is left out of the cosine
+	const matches = new Map<(typeof sentences)[number], number>();
+	// Clauses end at a comma, semicolon or colon followed by a space, so 90,000 stays whole
+	for (const { segment } of segmenter.segment(claim)) {
+		for (const part of segment.split(/[,;:]\s/)) {
+			const counts = countWords(getWords(part));
+			let best: (typeof sentences)[number] | null = null;
+			let bestScore = 0;
+			for (const sentence of sentences) {
+				let dot = 0;
+				let norm = 0;
+				for (const [word, count] of sentence.counts) {
+					const weight = count * idf(word);
+					norm += weight ** 2;
+					dot += weight * (counts.get(word) ?? 0) * idf(word);
+				}
+				const score = norm ? dot / Math.sqrt(norm) : 0;
+				if (score > bestScore) [best, bestScore] = [sentence, score];
+			}
+			if (best) matches.set(best, Math.max(matches.get(best) ?? 0, bestScore));
+		}
+	}
+
+	const claimWords = new Set(getWords(claim));
+	let kept = [...matches.keys()];
+	for (const sentence of [...kept].sort((a, b) => matches.get(a)! - matches.get(b)!)) {
+		const others = kept.filter((other) => other !== sentence);
+		const words = [...sentence.counts.keys()].filter((word) => claimWords.has(word));
+		if (others.length && words.every((word) => others.some((other) => other.counts.has(word)))) {
+			kept = others;
+		}
+	}
+	return sentences.filter((sentence) => kept.includes(sentence)).map(({ span }) => span);
 };
 
 /**
@@ -133,7 +226,10 @@ export const getCitationPreview = (citation: any, paragraphIds: number[] = []) =
 			: name,
 		url,
 		page: Number.isInteger(passageMetadata?.page) ? passageMetadata.page + 1 : null,
-		passage: getPassagePreview(cited ? cited.text : document[index], !!passageMetadata?.html)
+		passage: getPassagePreview(
+			cited ? cited.document.slice(cited.start, cited.end) : document[index],
+			!!passageMetadata?.html
+		)
 	};
 };
 

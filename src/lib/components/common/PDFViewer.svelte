@@ -13,7 +13,8 @@
 		markAt,
 		rangeOf,
 		textIndex,
-		commentPin
+		commentPin,
+		type TextQuoteSelector
 	} from '$lib/utils/comments/highlights';
 	import type { FileComment, CommentResult } from '$lib/utils/comments/types';
 
@@ -32,7 +33,7 @@
 	export let selectedComment: FileComment | null = null;
 	export let sourceComments: FileComment[] | null = null;
 	/** Text to mark on whichever rendered pages contain it, such as a cited passage. */
-	export let highlightQuotes: string[] | null = null;
+	export let highlightQuotes: TextQuoteSelector[] | null = null;
 	/** Called with the index of the quote under the pointer and where its mark sits, or null. */
 	export let onQuoteHover: ((index: number | null, rect: DOMRect | null) => void) | null = null;
 	export let onAnchors: ((ids: string[]) => void) | null = null;
@@ -122,7 +123,7 @@
 			});
 			const text = textIndex(wrapper);
 			highlightQuotes.forEach((quote, index) => {
-				// A quote found more than once on the page is left unmarked
+				// A repeated quote whose context cannot tell the repeats apart is left unmarked
 				const range = rangeOf(text, quote);
 				if (range) markRange(wrapper, layer, range, String(index));
 			});
@@ -379,8 +380,8 @@
 	};
 
 	/** The page holding the most of the quotes, the first such page on a tie. */
-	const findQuotePage = async (doc: PdfDocument, quotes: string[]) => {
-		const needles = quotes.map((quote) => quote.normalize('NFKC').replace(/\s/g, ''));
+	const findQuotePage = async (doc: PdfDocument, quotes: TextQuoteSelector[]) => {
+		const needles = quotes.map((quote) => quote.exact.normalize('NFKC').replace(/\s/g, ''));
 		let best: { page: number; count: number } | null = null;
 		for (let number = 1; number <= doc.numPages; number++) {
 			const content = await (await doc.getPage(number)).getTextContent();
