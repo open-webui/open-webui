@@ -162,6 +162,19 @@ class PgvectorClient(VectorDBBase):
                     'CREATE INDEX IF NOT EXISTS idx_document_chunk_collection_name ON document_chunk (collection_name);'
                 )
             )
+            if not PGVECTOR_PGCRYPTO:
+                self.session.execute(
+                    text(
+                        'CREATE INDEX IF NOT EXISTS idx_document_chunk_file_id '
+                        "ON document_chunk (collection_name, (vmetadata ->> 'file_id'));"
+                    )
+                )
+                self.session.execute(
+                    text(
+                        'CREATE INDEX IF NOT EXISTS idx_document_chunk_hash '
+                        "ON document_chunk (collection_name, (vmetadata ->> 'hash'));"
+                    )
+                )
             self.session.commit()
             log.info('Initialization complete.')
         except Exception as e:
