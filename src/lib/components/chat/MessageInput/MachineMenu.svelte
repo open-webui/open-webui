@@ -8,6 +8,7 @@
 	import { toast } from 'svelte-sonner';
 	import MachineSystemInfoModal from '../MachineSystemInfoModal.svelte';
 	import MachineFilesModal from '../MachineFilesModal.svelte';
+	import MachineSessionsModal from '../MachineSessionsModal.svelte';
 	import WorkingDirectoryMenu from './WorkingDirectoryMenu.svelte';
 	import type { MachineContext } from '$lib/types';
 
@@ -155,7 +156,12 @@
 	};
 	let info: { target: MachineTarget; label: string } | null = null;
 	let files: { target: MachineTarget; label: string } | null = null;
-	const openFiles = async (selector: string, label: string) => {
+	let sessions: { target: MachineTarget; label: string } | null = null;
+	const openTargetModal = async (
+		selector: string,
+		label: string,
+		show: (opened: { target: MachineTarget; label: string }) => void
+	) => {
 		const target = resolveMachineTarget(selector, systemMachines, localStorage.token ?? '', {
 			chatId: $activeChatId || null,
 			modelId: modelId
@@ -163,8 +169,12 @@
 		if (!target) return;
 		closeMenu();
 		await tick();
-		files = { target, label };
+		show({ target, label });
 	};
+	const openFiles = (selector: string, label: string) =>
+		openTargetModal(selector, label, (opened) => (files = opened));
+	const openSessions = (selector: string, label: string) =>
+		openTargetModal(selector, label, (opened) => (sessions = opened));
 	const openInfo = async (selector: string, label: string) => {
 		if (
 			systemMachines.find((t) => !!selector && t.id === selector)?.scope === 'chat' &&
@@ -294,6 +304,7 @@
 						onStart={() => runLifecycle(machine.id, label, 'start')}
 						onInfo={reachable ? () => openInfo(machine.id, label) : null}
 						onFiles={reachable ? () => openFiles(machine.id, label) : null}
+						onSessions={reachable ? () => openSessions(machine.id, label) : null}
 						onSettings={owned ? () => openMachineDialog(machine.id) : null}
 					/>
 				</div>
@@ -436,6 +447,16 @@
 {#if files}
 	{#key files}
 		<MachineFilesModal target={files.target} label={files.label} onClose={() => (files = null)} />
+	{/key}
+{/if}
+
+{#if sessions}
+	{#key sessions}
+		<MachineSessionsModal
+			target={sessions.target}
+			label={sessions.label}
+			onClose={() => (sessions = null)}
+		/>
 	{/key}
 {/if}
 
