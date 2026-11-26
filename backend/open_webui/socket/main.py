@@ -172,6 +172,18 @@ if WEBSOCKET_MANAGER == 'redis':
         redis_sentinels=ws_sentinels,
         redis_cluster=WEBSOCKET_REDIS_CLUSTER,
     )
+    OPENAI_MODELS = CachedRedisDict(
+        f'{REDIS_KEY_PREFIX}:openai_models',
+        redis_url=WEBSOCKET_REDIS_URL,
+        redis_sentinels=ws_sentinels,
+        redis_cluster=WEBSOCKET_REDIS_CLUSTER,
+    )
+    OLLAMA_MODELS = CachedRedisDict(
+        f'{REDIS_KEY_PREFIX}:ollama_models',
+        redis_url=WEBSOCKET_REDIS_URL,
+        redis_sentinels=ws_sentinels,
+        redis_cluster=WEBSOCKET_REDIS_CLUSTER,
+    )
 
     SESSION_POOL = RedisDict(
         f'{REDIS_KEY_PREFIX}:session_pool',
@@ -209,6 +221,8 @@ if WEBSOCKET_MANAGER == 'redis':
     session_release_func = session_cleanup_lock.release_lock
 else:
     MODELS = {}
+    OPENAI_MODELS = {}
+    OLLAMA_MODELS = {}
 
     SESSION_POOL = {}
     USAGE_POOL = {}

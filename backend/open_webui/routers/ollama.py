@@ -32,6 +32,7 @@ from open_webui.models.config import Config
 from open_webui.models.groups import Groups
 from open_webui.models.models import Models
 from open_webui.models.users import UserModel
+from open_webui.socket.utils import RedisDict
 from open_webui.utils.access_control import check_model_access
 from open_webui.utils.audit import set_audit_model
 from open_webui.utils.auth import get_admin_user, get_verified_user
@@ -294,7 +295,7 @@ async def clear_models_cache(request: Request):
     if redis is not None:
         await redis.delete(BASE_MODELS_CACHE_KEY)
     request.app.state.BASE_MODELS = []
-    request.app.state.OLLAMA_MODELS = {}
+    request.app.state.OLLAMA_MODELS.clear()
     models = getattr(request.app.state, 'MODELS', None)
     if hasattr(models, 'clear'):
         models.clear()
@@ -382,7 +383,7 @@ async def get_all_models(request: Request, user: UserModel | None = None):
 
     if not await Config.get('ollama.enable'):
         models_dict: dict = {'models': []}
-        request.app.state.OLLAMA_MODELS = {}
+        request.app.state.OLLAMA_MODELS.clear()
         return models_dict
 
     # Fan-out tag requests to every backend
@@ -444,7 +445,12 @@ async def get_all_models(request: Request, user: UserModel | None = None):
     except Exception as exc:
         log.debug('Failed to get loaded models: %s', exc)
 
-    request.app.state.OLLAMA_MODELS = {m['model']: m for m in models_dict['models']}
+    # Keep the moving expiry in the API response, outside the shared map's signature.
+    models = {m['model']: {k: v for k, v in m.items() if k != 'expires_at'} for m in models_dict['models']}
+    if isinstance(request.app.state.OLLAMA_MODELS, RedisDict):
+        request.app.state.OLLAMA_MODELS.set(models)
+    else:
+        request.app.state.OLLAMA_MODELS = models
     return models_dict
 
 

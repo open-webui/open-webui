@@ -196,6 +196,8 @@ from open_webui.routers.retrieval import (
 )
 from open_webui.socket.main import (
     MODELS,
+    OLLAMA_MODELS,
+    OPENAI_MODELS,
     get_event_emitter,
     get_models_in_use,
     get_user_id_from_session_pool,
@@ -611,12 +613,12 @@ if ENABLE_OTEL:
 # Ollama
 
 
-app.state.OLLAMA_MODELS = {}
+app.state.OLLAMA_MODELS = OLLAMA_MODELS
 
 # OpenAI
 
 
-app.state.OPENAI_MODELS = {}
+app.state.OPENAI_MODELS = OPENAI_MODELS
 
 # Tool servers
 
