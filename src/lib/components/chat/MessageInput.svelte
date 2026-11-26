@@ -2690,8 +2690,7 @@
 													bind:tab={inputMenuTab}
 													{chatId}
 													bind:machineContext
-													disabled={!machineSelectionEnabled}
-													locked={isActive}
+													locked={isActive || !machineSelectionEnabled}
 												/>
 												{#if inputMenuTab === ''}
 													<div class="h-px mx-1 my-1 bg-base-100 dark:bg-base-800"></div>
@@ -2994,8 +2993,7 @@
 													bind:show={showMachineMenu}
 													{chatId}
 													bind:machineContext
-													disabled={!machineSelectionEnabled}
-													locked={isActive}
+													locked={isActive || !machineSelectionEnabled}
 												/>
 											</div>
 										{/if}
