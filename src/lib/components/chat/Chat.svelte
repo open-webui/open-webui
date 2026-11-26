@@ -2929,7 +2929,7 @@
 			await tick();
 			if ($page.params.id !== id) return true;
 		}
-		tabs?.openPageTab({ href: `/c/${id}`, label: found?.title ?? '' });
+		tabs?.openPageTab({ href: `/c/${id}`, label: found?.title ?? '', replace: true });
 		void tabs?.joinChatSessions(id);
 		return true;
 	};
@@ -2959,7 +2959,7 @@
 		} else if (initialPage) {
 			if (!preserveTabs) await initNewChat();
 			loading = false;
-			tabs?.openPageTab({ href: initialPage, label: '' });
+			tabs?.openPageTab({ href: initialPage, label: '', replace: true });
 		}
 	};
 	// Set-up checks its choices against the model list, so a page is followed once the list is in.

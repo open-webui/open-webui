@@ -35,6 +35,7 @@ declare global {
 		interface PageState {
 			inbox?: boolean;
 			inboxUserId?: string;
+			tab?: string;
 		}
 		// interface Error {}
 		// interface Locals {}
