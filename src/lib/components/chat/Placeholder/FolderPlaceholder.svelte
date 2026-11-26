@@ -98,7 +98,7 @@
 					}
 				)
 			: null;
-	$: if (folderSection === 'files' && $machines && !filesTarget) folderSection = 'chats';
+	$: if (folderSection === 'files' && !filesTarget) folderSection = 'chats';
 
 	let notes: any[] = [];
 	let notesTotal = 0;
@@ -1094,7 +1094,8 @@
 		optionsReady = !!state.tags;
 		optionsError = '';
 		clearTimeout(timer);
-		folderSection = machineIdOf(folder.data) && !readOnly ? 'files' : 'chats';
+		// Only someone who can reach the folder's machine lands on its files.
+		folderSection = filesTarget ? 'files' : 'chats';
 		automations = state.automations ?? [];
 		notes = state.notes?.items ?? [];
 		notesTotal = state.notes?.total ?? 0;
