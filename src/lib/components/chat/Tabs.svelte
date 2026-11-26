@@ -1964,7 +1964,13 @@
 		if (from?.url.pathname === to?.url.pathname) {
 			if (type === 'popstate') showAddressed();
 			// The router stays on the main chat while other tabs are in front; going there uncovers it.
-			else if (to && location.pathname !== to.url.pathname) {
+			else if (
+				to &&
+				(location.pathname !== to.url.pathname ||
+					tabs.tabs.some(
+						(tab) => tab.id === tabs.activeId && tab.id !== mainChatTabId && tab.kind === 'chat'
+					))
+			) {
 				// A folder's chats are tabs, opened again by the route.
 				if (!mainTabFolder || !to.url.pathname.startsWith('/c/')) focusMainChat();
 				if (!isLargeScreen) showTabs.set(false);
@@ -2066,10 +2072,11 @@
 	$: mainChatActive = fullWidth && visibleTabIds.has(mainChatTabId);
 	$: if (isMounted && viewReady && !chatLoading) {
 		const active = tabs.tabs.find((tab) => tab.id === tabs.activeId);
+		const main = active?.id === mainChatTabId || (active?.kind === 'chat' && isSavedChatId(chatId));
 		const href =
 			active?.kind === 'page'
 				? active.href
-				: active?.id === mainChatTabId
+				: main
 					? mainChatHref
 					: active?.kind === 'chat'
 						? active.chatId
@@ -2083,7 +2090,7 @@
 				if ($temporaryChat !== ($settings?.temporaryChatByDefault ?? false))
 					url.searchParams.set('temporary-chat', String($temporaryChat));
 				else if (url.searchParams.has('temporary-chat')) url.searchParams.delete('temporary-chat');
-			} else if (active?.id === mainChatTabId && url.pathname === get(page).url.pathname) {
+			} else if (main && url.pathname === get(page).url.pathname) {
 				// Keep the query, such as ?message=, so a reload lands there again.
 				url.search = get(page).url.search;
 			}
