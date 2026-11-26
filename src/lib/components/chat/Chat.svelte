@@ -4594,6 +4594,8 @@
 	$: tabTitleEditor = editingTitle ? renderTitleEditor : undefined;
 	/** A chat's actions on its tab: the Navbar's for the main chat, the chat menu for a side chat. */
 	export let tabActions: import('svelte').Snippet | undefined = undefined;
+	/** The tab bar's actions while this chat is focused: the Navbar's for the main chat, the status for a side chat. */
+	export let tabBarActions: import('svelte').Snippet | undefined = undefined;
 	let showShareModal = false;
 	$: showChatMenu =
 		!loading &&
@@ -4607,6 +4609,7 @@
 	$: chatMenu = showChatMenu && !editingTitle ? renderChatMenu : undefined;
 	$: chatStatus = showChatMenu && !$temporaryChat && !isShared ? renderChatStatus : undefined;
 	$: if (embedded && tabbed) tabActions = chatMenu;
+	$: if (embedded && tabbed) tabBarActions = chatStatus;
 
 	export const getOverview = () => ({ history, chatUser: chatOwner, showMessage });
 
@@ -4699,8 +4702,6 @@
 			toast.error(String(error));
 		}
 	};
-
-	let tabBarActions: import('svelte').Snippet | undefined;
 
 	let initializedMachineChatId: string | null = null;
 	const initializeMachineDirectory = async (id: string, context: MachineContext | null) => {

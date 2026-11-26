@@ -256,6 +256,7 @@
 	let chatViews: Record<string, ChatTab> = {};
 	let chatTitleEditors: Record<string, import('svelte').Snippet | undefined> = {};
 	let chatTabActions: Record<string, import('svelte').Snippet | undefined> = {};
+	let chatTabBarActions: Record<string, import('svelte').Snippet | undefined> = {};
 	let chatStreamingStates: Record<string, boolean> = {};
 	// Each chat writes its artifacts here; its artifacts tab reads them.
 	const chatArtifacts: Record<string, Writable<{ type: string; content: string }[]>> = {};
@@ -335,6 +336,7 @@
 		chatStreamingStates = {};
 		chatTitleEditors = {};
 		chatTabActions = {};
+		chatTabBarActions = {};
 		queuedArtifactCode = null;
 	}
 	/** Starts a new chat that keeps the open pages; everything else stays with the chat being left. */
@@ -353,6 +355,7 @@
 		chatStreamingStates = {};
 		chatTitleEditors = {};
 		chatTabActions = {};
+		chatTabBarActions = {};
 		queuedArtifactCode = null;
 		const entry = chatViewEntry($user.id, null, $temporaryChat);
 		entry.state = {
@@ -425,6 +428,7 @@
 		chatStreamingStates = {};
 		chatTitleEditors = {};
 		chatTabActions = {};
+		chatTabBarActions = {};
 		const entry = chatViewEntry($user.id, id, $temporaryChat);
 		const loading: ViewState = { status: 'loading', entry, chatId: id };
 		setView(loading);
@@ -527,6 +531,7 @@
 		chatStreamingStates = {};
 		chatTitleEditors = {};
 		chatTabActions = {};
+		chatTabBarActions = {};
 		clearChatViews();
 	}
 	const forgetDraftsForUnreachableMachines = (..._connections: unknown[]) => {
@@ -1376,6 +1381,7 @@
 				delete chatStreamingStates[id];
 				delete chatTitleEditors[id];
 				delete chatTabActions[id];
+				delete chatTabBarActions[id];
 				delete artifactSelections[id];
 				if (tab.kind === 'chat') {
 					delete chatArtifacts[id];
@@ -2311,6 +2317,7 @@
 						bind:streaming={chatStreamingStates[tab.id]}
 						bind:tabTitleEditor={chatTitleEditors[tab.id]}
 						bind:tabActions={chatTabActions[tab.id]}
+						bind:tabBarActions={chatTabBarActions[tab.id]}
 						artifacts={getChatArtifacts(tab.id)}
 						onOpenArtifacts={(code) => openArtifacts(code, tab.id)}
 						initialView={chatView.transient[`chat:${tab.id}`]}
@@ -2792,6 +2799,10 @@
 		{#if group.activeId === mainChatTabId}
 			<div class="flex shrink-0 items-center gap-2">
 				{@render tabBarActions?.()}
+			</div>
+		{:else if chatTabBarActions[group.activeId]}
+			<div class="flex shrink-0 items-center gap-2">
+				{@render chatTabBarActions[group.activeId]?.()}
 			</div>
 		{/if}
 		{#if !fullWidth && (!isLargeScreen || group.id === tabs.groups[0].id)}

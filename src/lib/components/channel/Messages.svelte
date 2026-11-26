@@ -18,6 +18,7 @@
 	import DateSeparator from '../common/DateSeparator.svelte';
 	import Loader from '../common/Loader.svelte';
 	import Spinner from '../common/Spinner.svelte';
+	import Tooltip from '../common/Tooltip.svelte';
 	import Grid from '$lib/components/icons/Grid.svelte';
 	import {
 		addReaction,
@@ -105,53 +106,45 @@
 		{:else if !thread}
 			<div class="px-4 max-w-full mx-auto">
 				{#if channel}
-					<div class="flex flex-col gap-1.5 pb-4 pt-8">
+					<div class="flex flex-col items-center text-center gap-1 pt-10 pb-4">
 						{#if channel?.type === 'dm'}
-							<div class="flex ml-[0.0625rem] mr-0.5">
+							<div class="flex mb-1.5">
 								{#each channel.users.filter((u) => u.id !== $user?.id).slice(0, 2) as u, index}
 									<img
 										src={`${WEBUI_API_BASE_URL}/users/${u.id}/profile/image`}
-										alt={u.name}
-										class=" size-7 rounded-full object-cover border-2 border-base-0 dark:border-base-900 {index ===
+										alt=""
+										class="size-10 rounded-full object-cover border-2 border-base-0 dark:border-base-900 {index ===
 										1
-											? '-ml-2.5'
+											? '-ml-3'
 											: ''}"
 									/>
 								{/each}
 							</div>
 						{/if}
 
-						<div class="text-lg font-medium leading-6">
-							{#if channel?.name}
-								{channel.name}
-							{:else}
-								{channel?.users
-									?.filter((u) => u.id !== $user?.id)
-									.map((u) => u.name)
-									.join(', ')}
-							{/if}
-						</div>
-
-						<div class="text-xs leading-5 text-base-500 dark:text-base-400">
-							{$i18n.t(
-								'This channel was created on {{createdAt}}. This is the very beginning of the {{channelName}} channel.',
-								{
-									createdAt: dayjs(channel.created_at / 1000000)
-										.locale($i18n.language)
-										.format('MMMM D, YYYY'),
-									channelName: channel.name
-								}
-							)}
-						</div>
+						<Tooltip
+							content={$i18n.t('Created {{date}}', {
+								date: dayjs(channel.created_at / 1000000)
+									.locale($i18n.language)
+									.format('MMMM D, YYYY')
+							})}
+						>
+							<div class="text-sm font-medium line-clamp-1">
+								{#if channel?.name}
+									{channel.name}
+								{:else}
+									{channel?.users
+										?.filter((u) => u.id !== $user?.id)
+										.map((u) => u.name)
+										.join(', ')}
+								{/if}
+							</div>
+						</Tooltip>
 					</div>
 				{:else}
-					<div class="flex justify-center text-xs items-center gap-2 py-5">
-						<div class=" ">{$i18n.t('Start of the channel')}</div>
+					<div class="flex justify-center text-xs text-base-500 dark:text-base-400 py-5">
+						{$i18n.t('Start of the channel')}
 					</div>
-				{/if}
-
-				{#if messageList.length > 0}
-					<hr class=" border-base-100/60 dark:border-base-800/40 mb-2 w-full" />
 				{/if}
 			</div>
 		{/if}
