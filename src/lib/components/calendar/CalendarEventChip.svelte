@@ -7,6 +7,7 @@
 
 	export let event: CalendarEventModel;
 	export let calendarColor: string | null = null;
+	export let draggable = false;
 
 	const dispatch = createEventDispatcher();
 </script>
@@ -16,6 +17,9 @@
 		class="pointer-events-auto w-full text-left text-xs flex items-start gap-1.5 py-[0.0625rem] px-0.5 rounded-md
 			{event.meta?.automation_id ? 'opacity-60' : ''}
 			hover:bg-base-50 dark:hover:bg-base-800/50 transition truncate"
+		{draggable}
+		on:dragstart
+		on:dragend
 		on:click|stopPropagation={() => dispatch('click', event)}
 	>
 		<span

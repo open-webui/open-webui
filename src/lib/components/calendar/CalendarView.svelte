@@ -110,17 +110,147 @@
 		});
 	}
 
-	function getEventsForHour(
-		day: Date,
-		hour: number,
-		eventsList: CalendarEventModel[] = filteredEvents
-	): CalendarEventModel[] {
-		const hourStartMs = new Date(day.getFullYear(), day.getMonth(), day.getDate(), hour).getTime();
-		const hourEndMs = hourStartMs + 3_600_000;
-		return eventsList.filter((e) => {
-			const startMs = e.start_at / NS;
-			return startMs >= hourStartMs && startMs < hourEndMs;
-		});
+	// Week and day views draw events on a time grid, one hour per HOUR_REM.
+	const HOUR_REM = 3.25;
+	// Shortest drawn event: one line of text plus padding.
+	const MIN_EVENT_REM = 1.25;
+
+	$: timeColumns = view === 'week' ? weekDays : [currentDate];
+	$: tzLabel =
+		new Intl.DateTimeFormat($i18n.language, { timeZoneName: 'shortOffset' })
+			.formatToParts(new Date())
+			.find((p) => p.type === 'timeZoneName')?.value ?? '';
+
+	function dayKey(d: Date): string {
+		return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime().toString();
+	}
+
+	type PlacedEvent = {
+		event: CalendarEventModel;
+		start: number;
+		end: number;
+		col: number;
+		cols: number;
+	};
+
+	// Timed events for one day, clipped to the day, with overlapping events placed side by side.
+	function layoutDay(day: Date, list: CalendarEventModel[]) {
+		const dayStart = new Date(day.getFullYear(), day.getMonth(), day.getDate()).getTime();
+		const dayEnd = new Date(day.getFullYear(), day.getMonth(), day.getDate() + 1).getTime();
+		const minMs = (MIN_EVENT_REM / HOUR_REM) * 3_600_000;
+
+		const items: PlacedEvent[] = list
+			.filter((e) => {
+				if (e.all_day) return false;
+				const s = e.start_at / NS;
+				const en = (e.end_at ?? e.start_at) / NS;
+				return s < dayEnd && (en > dayStart || s >= dayStart);
+			})
+			.map((e) => {
+				const start = Math.max(e.start_at / NS, dayStart);
+				const end = Math.min(Math.max((e.end_at ?? e.start_at) / NS, start + minMs), dayEnd);
+				return { event: e, start, end, col: 0, cols: 1 };
+			})
+			.sort((a, b) => a.start - b.start || b.end - a.end);
+
+		let cluster: PlacedEvent[] = [];
+		let colEnds: number[] = [];
+		let clusterEnd = -Infinity;
+		const flush = () => {
+			for (const item of cluster) item.cols = colEnds.length;
+			cluster = [];
+			colEnds = [];
+		};
+		for (const item of items) {
+			if (item.start >= clusterEnd) flush();
+			let col = colEnds.findIndex((end) => end <= item.start);
+			if (col === -1) col = colEnds.push(item.end) - 1;
+			colEnds[col] = item.end;
+			item.col = col;
+			cluster.push(item);
+			clusterEnd = Math.max(clusterEnd, item.end);
+		}
+		flush();
+
+		return items.map((item) => ({
+			...item,
+			top: ((item.start - dayStart) / 3_600_000) * HOUR_REM,
+			height: ((item.end - item.start) / 3_600_000) * HOUR_REM
+		}));
+	}
+
+	function formatTime(ms: number): string {
+		return new Date(ms)
+			.toLocaleTimeString($i18n.language, { hour: 'numeric', minute: '2-digit' })
+			.replace(' ', '');
+	}
+
+	// Open week and day views scrolled to the current hour.
+	let scroller: HTMLElement;
+	$: if (scroller) {
+		const remPx = parseFloat(getComputedStyle(document.documentElement).fontSize);
+		scroller.scrollTop = Math.max(0, new Date().getHours() - 1) * HOUR_REM * remPx;
+	}
+
+	// Drag an event to another day (month, all-day row) or day and time (time grid).
+	const SNAP_MINUTES = 15;
+	let dragged: CalendarEventModel | null = null;
+	let dropTarget: string | null = null;
+	let dropMinute: number | null = null;
+	// How far below the event's top it was grabbed, so it lands where it is drawn.
+	let grabOffsetPx = 0;
+
+	function canMove(e: CalendarEventModel): boolean {
+		return !e.rrule && !e.instance_id && !e.meta?.automation_id;
+	}
+
+	function startDrag(e: DragEvent, event: CalendarEventModel) {
+		if (!canMove(event)) {
+			e.preventDefault();
+			return;
+		}
+		dragged = event;
+		const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+		grabOffsetPx = event.all_day ? 0 : e.clientY - rect.top;
+		e.dataTransfer?.setData('text/plain', event.id);
+		if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move';
+	}
+
+	function endDrag() {
+		dragged = null;
+		dropTarget = null;
+		dropMinute = null;
+	}
+
+	function allowDrop(e: DragEvent, target: string) {
+		if (!dragged) return;
+		e.preventDefault();
+		dropTarget = target;
+	}
+
+	function minuteAt(e: DragEvent): number {
+		const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+		const minutes = ((e.clientY - grabOffsetPx - rect.top) / rect.height) * 24 * 60;
+		const snapped = Math.round(minutes / SNAP_MINUTES) * SNAP_MINUTES;
+		return Math.min(24 * 60 - SNAP_MINUTES, Math.max(0, snapped));
+	}
+
+	function allowTimeDrop(e: DragEvent, key: string) {
+		allowDrop(e, `time-${key}`);
+		if (dragged) dropMinute = minuteAt(e);
+	}
+
+	function dropOn(day: Date, minute?: number) {
+		const event = dragged;
+		endDrag();
+		if (!event) return;
+		const start = new Date(event.start_at / NS);
+		start.setFullYear(day.getFullYear(), day.getMonth(), day.getDate());
+		if (minute !== undefined && !event.all_day) start.setHours(0, minute, 0, 0);
+		const start_at = start.getTime() * NS;
+		if (start_at === event.start_at) return;
+		const end_at = event.end_at === null ? null : event.end_at + (start_at - event.start_at);
+		dispatch('moveEvent', { event, start_at, end_at });
 	}
 
 	function formatHour(h: number): string {
@@ -147,9 +277,8 @@
 
 	function handleDayClick(day: Date) {
 		currentDate = day;
+		view = 'day';
 		onNavigate();
-		const ms = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 9).getTime();
-		dispatch('createEvent', { start_at: ms * NS });
 	}
 
 	export async function focusSlot(date: Date) {
@@ -192,23 +321,26 @@
 				class="flex-1 grid grid-cols-7 auto-rows-fr min-h-0 rounded-2xl overflow-hidden border border-base-100/30 dark:border-base-850/30"
 			>
 				{#each monthDays as day, i}
-					{@const dayKey = new Date(day.getFullYear(), day.getMonth(), day.getDate())
-						.getTime()
-						.toString()}
-					{@const dayEvents = eventsByDay[dayKey] || []}
+					{@const key = dayKey(day)}
+					{@const dayEvents = eventsByDay[key] || []}
 					{@const col = i % 7}
 					{@const row = Math.floor(i / 7)}
 					<div
 						class="relative p-1 min-h-0 text-left overflow-hidden transition cursor-pointer flex flex-col
 							{isCurrentMonth(day) ? '' : ($settings?.highContrastMode ?? false) ? 'opacity-80' : 'opacity-40'}
-							hover:bg-base-50/80 dark:hover:bg-base-850/30
+							{dropTarget === key
+							? 'bg-base-100/60 dark:bg-base-800/40'
+							: 'hover:bg-base-50/80 dark:hover:bg-base-850/30'}
 							{col > 0 ? 'border-l border-base-100/20 dark:border-base-850/20' : ''}
 							{row > 0 ? 'border-t border-base-100/20 dark:border-base-850/20' : ''}"
+						role="list"
+						on:dragover={(e) => allowDrop(e, key)}
+						on:drop|preventDefault={() => dropOn(day)}
 					>
 						<button
 							type="button"
 							class="absolute inset-0"
-							data-slot={dayKey}
+							data-slot={key}
 							aria-label={formatDay(day)}
 							on:click={() => handleDayClick(day)}
 						></button>
@@ -229,6 +361,9 @@
 								<CalendarEventChip
 									event={evt}
 									calendarColor={calColorMap[evt.calendar_id]}
+									draggable={canMove(evt)}
+									on:dragstart={(e) => startDrag(e, evt)}
+									on:dragend={endDrag}
 									on:click={() => handleEventClick(evt)}
 								/>
 							{/each}
@@ -247,139 +382,159 @@
 			</div>
 		</div>
 
-		<!-- Week View -->
-	{:else if view === 'week'}
+		<!-- Week and Day View -->
+	{:else}
+		{@const gridCols = `3.25rem repeat(${timeColumns.length}, minmax(0, 1fr))`}
 		<div class="flex-1 flex flex-col min-h-0 px-3 pb-3">
 			<div
-				class="flex-1 rounded-2xl border border-base-100/30 dark:border-base-850/30 overflow-hidden relative"
+				bind:this={scroller}
+				class="flex-1 overflow-auto rounded-2xl border border-base-100/30 dark:border-base-850/30"
 			>
-				<div class="absolute inset-0 overflow-x-auto flex flex-col">
-					<div class="min-w-[43.75rem] flex flex-col flex-1">
-						<div
-							class="grid grid-cols-[52px_repeat(7,1fr)] shrink-0 border-b border-base-100/30 dark:border-base-850/30"
-						>
-							<div></div>
-							{#each weekDays as day}
-								<div
-									class="text-center py-2.5 {day.getDay() > 0
-										? 'border-l border-base-100/20 dark:border-base-850/20'
-										: ''}"
+				<div class={view === 'week' ? 'min-w-[43.75rem]' : ''}>
+					<div
+						class="sticky top-0 z-20 bg-base-0 dark:bg-base-900 border-b border-base-100/30 dark:border-base-850/30"
+					>
+						<div class="grid" style="grid-template-columns: {gridCols};">
+							<div
+								class="self-center pr-2 text-right text-[0.625rem] text-base-400 dark:text-base-500 truncate"
+							>
+								{tzLabel}
+							</div>
+							{#each timeColumns as day}
+								<button
+									type="button"
+									class="flex items-center justify-center gap-1 py-1.5 text-xs text-base-500 dark:text-base-400 hover:bg-base-50/50 dark:hover:bg-base-850/20 transition"
+									aria-label={formatDay(day)}
+									on:click={() => handleDayClick(day)}
 								>
-									<div class="text-[0.6875rem] text-base-400 dark:text-base-500">
-										{DAY_NAMES[day.getDay()]}
-									</div>
-									<div
-										class="text-sm mt-0.5 w-7 h-7 flex items-center justify-center mx-auto rounded-full {isToday(
-											day
-										)
+									{DAY_NAMES[day.getDay()]}
+									<span
+										class="size-6 flex items-center justify-center rounded-full {isToday(day)
 											? ($settings?.highContrastMode ?? false)
 												? 'bg-blue-600 text-white'
 												: 'bg-blue-500 text-white'
 											: ''}"
 									>
 										{day.getDate()}
-									</div>
-								</div>
+									</span>
+								</button>
 							{/each}
 						</div>
 
-						<div class="flex-1 overflow-y-auto">
-							{#each hours as hour}
-								<div
-									class="grid grid-cols-[52px_repeat(7,1fr)] min-h-[3.25rem] {hour > 0
-										? 'border-t border-base-100/15 dark:border-base-850/15'
-										: ''}"
-								>
+						{#if timeColumns.some((d) => (eventsByDay[dayKey(d)] ?? []).some((e) => e.all_day))}
+							<div class="grid" style="grid-template-columns: {gridCols};">
+								<div></div>
+								{#each timeColumns as day}
+									{@const key = dayKey(day)}
 									<div
-										class="text-[0.625rem] text-base-400 dark:text-base-500 text-right pr-2 select-none -mt-1.5 z-10"
+										class="min-w-0 px-0.5 pb-1 border-l border-base-100/20 dark:border-base-850/20 {dropTarget ===
+										key
+											? 'bg-base-100/60 dark:bg-base-800/40'
+											: ''}"
+										role="list"
+										on:dragover={(e) => allowDrop(e, key)}
+										on:drop|preventDefault={() => dropOn(day)}
 									>
-										{hour > 0 ? formatHour(hour) : ''}
+										{#each (eventsByDay[key] ?? []).filter((e) => e.all_day) as evt (evt.instance_id || evt.id)}
+											<CalendarEventChip
+												event={evt}
+												calendarColor={calColorMap[evt.calendar_id]}
+												draggable={canMove(evt)}
+												on:dragstart={(e) => startDrag(e, evt)}
+												on:dragend={endDrag}
+												on:click={() => handleEventClick(evt)}
+											/>
+										{/each}
 									</div>
-									{#each weekDays as day}
-										{@const hourEvents = getEventsForHour(day, hour, filteredEvents)}
-										<div
-											class="relative px-0.5 py-0.5 {day.getDay() > 0
-												? 'border-l border-base-100/15 dark:border-base-850/15'
-												: ''} hover:bg-base-50/50 dark:hover:bg-base-850/20 transition cursor-pointer min-w-0 flex flex-col"
-										>
-											<button
-												type="button"
-												class="absolute inset-0"
-												data-slot={new Date(day).setHours(hour, 0, 0, 0)}
-												aria-label={formatDayHour(day, hour)}
-												on:click={() => handleHourClick(day, hour)}
-											></button>
-											<div
-												class="relative pointer-events-none flex flex-col gap-0.5 w-full min-h-0"
-											>
-												{#each hourEvents.slice(0, 3) as evt (evt.instance_id || evt.id)}
-													<CalendarEventChip
-														event={evt}
-														calendarColor={calColorMap[evt.calendar_id]}
-														on:click={() => handleEventClick(evt)}
-													/>
-												{/each}
-												{#if hourEvents.length > 3}
-													<button
-														type="button"
-														class="pointer-events-auto text-[0.625rem] text-base-400 dark:text-base-500 px-1 mt-auto hover:text-base-700 dark:hover:text-base-200 text-left w-full truncate z-10"
-														on:click={() => goToDayView(day, hourEvents[3])}
-													>
-														{$i18n.t('and {{COUNT}} more', { COUNT: hourEvents.length - 3 })}
-													</button>
-												{/if}
-											</div>
-										</div>
-									{/each}
-								</div>
-							{/each}
-						</div>
-					</div>
-				</div>
-			</div>
-		</div>
-
-		<!-- Day View -->
-	{:else}
-		<div class="flex-1 flex flex-col min-h-0 px-3 pb-3">
-			<div
-				class="flex-1 rounded-2xl overflow-hidden border border-base-100/30 dark:border-base-850/30 overflow-y-auto"
-			>
-				{#each hours as hour}
-					{@const hourEvents = getEventsForHour(currentDate, hour, filteredEvents)}
-					<div
-						class="flex min-h-[3.25rem] {hour > 0
-							? 'border-t border-base-100/15 dark:border-base-850/15'
-							: ''}"
-					>
-						<div
-							class="w-14 shrink-0 text-[0.625rem] text-base-400 dark:text-base-500 text-right pr-3 mt-1 select-none"
-						>
-							{formatHour(hour)}
-						</div>
-						<div
-							class="relative flex-1 border-l border-base-100/15 dark:border-base-850/15 px-1.5 py-0.5
-								hover:bg-base-50/50 dark:hover:bg-base-850/20 transition cursor-pointer flex flex-col text-left justify-start"
-						>
-							<button
-								type="button"
-								class="absolute inset-0"
-								data-slot={new Date(currentDate).setHours(hour, 0, 0, 0)}
-								aria-label={formatDayHour(currentDate, hour)}
-								on:click={() => handleHourClick(currentDate, hour)}
-							></button>
-							<div class="relative pointer-events-none flex flex-col gap-0.5 w-full">
-								{#each hourEvents as evt (evt.instance_id || evt.id)}
-									<CalendarEventChip
-										event={evt}
-										calendarColor={calColorMap[evt.calendar_id]}
-										on:click={() => handleEventClick(evt)}
-									/>
 								{/each}
 							</div>
-						</div>
+						{/if}
 					</div>
-				{/each}
+
+					<div class="grid" style="grid-template-columns: {gridCols}; height: {24 * HOUR_REM}rem;">
+						<div class="relative select-none">
+							{#each hours.slice(1) as hour}
+								<div
+									class="absolute right-2 -translate-y-1/2 text-[0.625rem] text-base-400 dark:text-base-500"
+									style="top: {hour * HOUR_REM}rem;"
+								>
+									{formatHour(hour)}
+								</div>
+							{/each}
+						</div>
+
+						{#each timeColumns as day}
+							{@const key = dayKey(day)}
+							<div
+								class="relative border-l border-base-100/20 dark:border-base-850/20"
+								role="list"
+								on:dragover={(e) => allowTimeDrop(e, key)}
+								on:drop|preventDefault={(e) => dropOn(day, minuteAt(e))}
+							>
+								{#each hours as hour}
+									<button
+										type="button"
+										class="absolute inset-x-0 transition hover:bg-base-50/50 dark:hover:bg-base-850/20 {hour >
+										0
+											? 'border-t border-base-100/15 dark:border-base-850/15'
+											: ''}"
+										style="top: {hour * HOUR_REM}rem; height: {HOUR_REM}rem;"
+										data-slot={new Date(day).setHours(hour, 0, 0, 0)}
+										aria-label={formatDayHour(day, hour)}
+										on:click={() => handleHourClick(day, hour)}
+									></button>
+								{/each}
+
+								{#if dragged && !dragged.all_day && dropTarget === `time-${key}` && dropMinute !== null}
+									<div
+										class="absolute inset-x-0.5 rounded-md bg-base-100/60 dark:bg-base-800/40 pointer-events-none"
+										style="top: {(dropMinute / 60) * HOUR_REM}rem; height: {Math.max(
+											MIN_EVENT_REM,
+											(((dragged.end_at ?? dragged.start_at) - dragged.start_at) / NS / 3_600_000) *
+												HOUR_REM
+										)}rem;"
+									></div>
+								{/if}
+
+								{#each layoutDay(day, filteredEvents) as p (p.event.instance_id || p.event.id)}
+									{@const color = p.event.color || calColorMap[p.event.calendar_id] || '#3b82f6'}
+									{@const tint = `color-mix(in srgb, ${color} 20%, transparent)`}
+									{@const oneLine = p.height < 2 * MIN_EVENT_REM}
+									<button
+										type="button"
+										class="absolute flex overflow-hidden rounded-md px-1.5 text-left {oneLine
+											? 'items-center gap-1'
+											: 'flex-col justify-start py-1'} text-[0.6875rem] leading-tight bg-base-0 dark:bg-base-900 hover:brightness-95 dark:hover:brightness-125 transition {p
+											.event.meta?.automation_id
+											? 'opacity-60'
+											: ''} {dragged === p.event ? 'opacity-50' : ''}"
+										style="top: {p.top}rem; height: {p.height}rem; left: calc({(p.col / p.cols) *
+											100}% + 2px); width: calc({100 /
+											p.cols}% - 4px); background-image: linear-gradient({tint}, {tint}); color: color-mix(in srgb, {color} 75%, currentColor);"
+										draggable={canMove(p.event)}
+										on:dragstart={(e) => startDrag(e, p.event)}
+										on:dragend={endDrag}
+										on:click={() => handleEventClick(p.event)}
+									>
+										{#if oneLine}
+											<span class="truncate">{p.event.title}</span>
+											<span class="shrink-0 text-[0.625rem] opacity-80"
+												>{formatTime(p.event.start_at / NS)}</span
+											>
+										{:else}
+											<div class="line-clamp-3 break-words">{p.event.title}</div>
+											<div class="truncate text-[0.625rem] opacity-80">
+												{formatTime(p.event.start_at / NS)}{p.event.end_at
+													? ` - ${formatTime(p.event.end_at / NS)}`
+													: ''}
+											</div>
+										{/if}
+									</button>
+								{/each}
+							</div>
+						{/each}
+					</div>
+				</div>
 			</div>
 		</div>
 	{/if}
