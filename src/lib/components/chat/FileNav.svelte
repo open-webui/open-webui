@@ -2065,6 +2065,9 @@
 	};
 
 	$: selectedCount = selectedEntries.size;
+	// On a folder page the list scrolls under the floating composer and the selection toolbar sits above it.
+	const composerSpace = 'var(--folder-composer-space, 0px)';
+	$: listPadding = `calc(${composerSpace} + ${!selectedFile && !isSearching && selectedCount > 0 ? '2rem' : '0px'})`;
 	$: comparisonEntries = [...selectedEntries]
 		.map((path) => visibleEntries.find((entry) => entry.fullPath === path))
 		.filter((entry) => entry !== undefined);
@@ -2802,8 +2805,8 @@
 		<div
 			bind:this={viewerRoot}
 			use:selectFilesByDrag
-			class:pb-8={!selectedFile && !isSearching && selectedCount > 0}
 			class="flex-1 overflow-y-auto min-h-0 min-w-0"
+			style:padding-bottom={listPadding}
 			on:scroll|capture={() => {
 				fileAsk = null;
 			}}
@@ -3169,7 +3172,7 @@
 		<!-- Float above the list footer without moving the rows. -->
 		{#if !selectedFile && !isSearching && (selectingFiles ? keepSelectionToolbar : selectedCount > 0)}
 			<div class="relative z-10 h-0 shrink-0">
-				<div class="absolute inset-x-0 bottom-0 bg-base-0 dark:bg-base-900">
+				<div class="absolute inset-x-0 bg-base-0 dark:bg-base-900" style:bottom={composerSpace}>
 					<BulkActionBar
 						count={selectedCount}
 						{canCompare}

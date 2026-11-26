@@ -105,8 +105,9 @@
 
 	// Height of the floating folder composer, so lists can scroll clear of it.
 	let composerHeight = 0;
-	// The composer only belongs with the folder's chats, not its notes or automations.
-	let folderSection: 'chats' | 'notes' | 'automations' | 'knowledge' = 'chats';
+	// The composer belongs with the folder's chats and files, not its notes or automations.
+	let folderSection: 'files' | 'chats' | 'notes' | 'automations' | 'knowledge' = 'chats';
+	$: folderComposer = folderSection === 'chats' || folderSection === 'files';
 
 	let models = [];
 	export let selectedModelIdx = 0;
@@ -231,9 +232,7 @@
 	{#if $selectedFolder}
 		<div
 			class="relative min-h-0 w-full flex-1"
-			style="--folder-composer-space: {folderReadOnly || folderSection !== 'chats'
-				? 0
-				: composerHeight}px"
+			style="--folder-composer-space: {folderReadOnly || !folderComposer ? 0 : composerHeight}px"
 		>
 			<FolderPlaceholder
 				folder={$selectedFolder}
@@ -249,7 +248,7 @@
 					class="pointer-events-none absolute inset-x-0 bottom-0 bg-linear-to-t from-base-0 from-40% to-transparent pt-8 pb-2 text-left dark:from-base-900 {dragged
 						? 'z-0'
 						: 'z-10'}"
-					class:hidden={folderSection !== 'chats'}
+					class:hidden={!folderComposer}
 					bind:clientHeight={composerHeight}
 				>
 					<div class="pointer-events-auto">

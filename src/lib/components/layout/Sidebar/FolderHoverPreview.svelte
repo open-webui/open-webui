@@ -17,6 +17,7 @@
 	import Document from '$lib/components/icons/Document.svelte';
 	import Sparkles from '$lib/components/icons/Sparkles.svelte';
 	import Server from '$lib/components/icons/Server.svelte';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
 
 	const i18n: any = getContext('i18n');
 
@@ -92,7 +93,12 @@
 					</div>
 				{/if}
 				{#if machineName}
-					<div class="flex items-center gap-2" title={folder.directory || undefined}>
+					<Tooltip
+						className="flex items-center gap-2"
+						content={[machineName, folder.directory].filter(Boolean).join(' · ')}
+						placement="top-start"
+						tippyOptions={{ zIndex: 10000 }}
+					>
 						<Server className="size-3.5 shrink-0 text-base-500 dark:text-base-400" />
 						<span class="shrink-0">{machineName}</span>
 						{#if folder.directory}
@@ -100,7 +106,7 @@
 								>{folder.directory}</span
 							>
 						{/if}
-					</div>
+					</Tooltip>
 				{/if}
 				{#if modelNames.length}
 					<div class="flex items-start gap-2">

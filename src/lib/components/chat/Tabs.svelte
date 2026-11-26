@@ -465,8 +465,6 @@
 			sessionAttempts = {};
 			lastFolderView = isFolderSessionId(id) ? id : null;
 			setView({ status: 'ready', entry, chatId: id, error: entry.error });
-			if (isFolderSessionId(id) && !entry.persisted && machineIdOf($selectedFolder?.data))
-				openFiles($selectedMachineId, $selectedFolder?.data?.working_directory || undefined);
 			hasExtraTabs = tabs.tabs.some((tab) => tab.id !== mainChatTabId);
 		} catch (error) {
 			if (viewState === loading)
