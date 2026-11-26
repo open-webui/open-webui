@@ -12,7 +12,7 @@
 	import Folder from '$lib/components/icons/Folder.svelte';
 	import Stop from '$lib/components/icons/Stop.svelte';
 	import Play from '$lib/components/icons/Play.svelte';
-	import TerminalPrompt from '$lib/components/icons/TerminalPrompt.svelte';
+	import Icon from '$lib/components/chat/FileNav/Icon.svelte';
 
 	const i18n = getContext<any>('i18n');
 
@@ -100,7 +100,7 @@
 					{/if}
 					{#if onSessions}
 						<button type="button" class={item} on:click={(e) => run(e, onSessions)}
-							><TerminalPrompt className="size-3.5" />{$i18n.t('Sessions')}</button
+							><Icon name="terminal" size={14} />{$i18n.t('Sessions')}</button
 						>
 					{/if}
 				{/if}

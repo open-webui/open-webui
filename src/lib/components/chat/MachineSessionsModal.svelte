@@ -13,7 +13,7 @@
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
 	import Stop from '$lib/components/icons/Stop.svelte';
-	import TerminalPrompt from '$lib/components/icons/TerminalPrompt.svelte';
+	import { terminalIconName } from '$lib/utils/terminal';
 
 	dayjs.extend(relativeTime);
 
@@ -93,8 +93,8 @@
 	$: shells = sessions.filter((session) => session.kind === 'shell').length;
 	$: commands = sessions.length - shells;
 
-	const nameOf = (session: Session) =>
-		session.kind === 'shell' ? $i18n.t('Shell') : (session.command ?? '');
+	// A shell shows its foreground program, as its terminal tab does.
+	const nameOf = (session: Session) => session.command || $i18n.t('Shell');
 
 	onMount(refresh);
 </script>
@@ -161,9 +161,12 @@
 								title={`${nameOf(session)} · PID ${session.pid} · ${new Date(session.created_at).toLocaleString()}`}
 								on:click={() => place?.href && open(place.href)}
 							>
-								{#if session.kind === 'shell'}<TerminalPrompt
-										className="size-3.5 shrink-0 text-base-500"
-									/>{/if}
+								<span class="shrink-0 text-base-500"
+									><Icon
+										name={terminalIconName((session.command ?? '').trim().split(/\s+/)[0])}
+										size={14}
+									/></span
+								>
 								<span
 									class="min-w-0 truncate text-base-800 dark:text-base-200 {session.kind ===
 									'command'
