@@ -180,9 +180,15 @@
 	}
 
 	function formatTime(ms: number): string {
-		return new Date(ms)
-			.toLocaleTimeString($i18n.language, { hour: 'numeric', minute: '2-digit' })
-			.replace(' ', '');
+		return new Date(ms).toLocaleTimeString($i18n.language, { hour: 'numeric', minute: '2-digit' });
+	}
+
+	function formatMinutes(minutes: number): string {
+		return new Intl.NumberFormat($i18n.language, {
+			style: 'unit',
+			unit: 'minute',
+			unitDisplay: 'narrow'
+		}).format(Math.round(minutes));
 	}
 
 	// Open week and day views scrolled to the current hour.
@@ -254,7 +260,10 @@
 	}
 
 	function formatHour(h: number): string {
-		return new Date(2000, 0, 1, h).toLocaleTimeString($i18n.language, { hour: 'numeric' });
+		return new Date(2000, 0, 1, h).toLocaleTimeString($i18n.language, {
+			hour: 'numeric',
+			minute: '2-digit'
+		});
 	}
 
 	function formatDay(d: Date): string {
@@ -384,7 +393,7 @@
 
 		<!-- Week and Day View -->
 	{:else}
-		{@const gridCols = `3.25rem repeat(${timeColumns.length}, minmax(0, 1fr))`}
+		{@const gridCols = `4rem repeat(${timeColumns.length}, minmax(0, 1fr))`}
 		<div class="flex-1 flex flex-col min-h-0 px-3 pb-3">
 			<div
 				bind:this={scroller}
@@ -403,17 +412,19 @@
 							{#each timeColumns as day}
 								<button
 									type="button"
-									class="flex items-center justify-center gap-1 py-1.5 text-xs text-base-500 dark:text-base-400 hover:bg-base-50/50 dark:hover:bg-base-850/20 transition"
+									class="flex items-center justify-center gap-1.5 py-2 text-xs border-l border-base-100/20 dark:border-base-850/20 hover:bg-base-50/50 dark:hover:bg-base-850/20 transition"
 									aria-label={formatDay(day)}
 									on:click={() => handleDayClick(day)}
 								>
-									{DAY_NAMES[day.getDay()]}
+									<span class="font-medium text-base-800 dark:text-base-100"
+										>{DAY_NAMES[day.getDay()]}</span
+									>
 									<span
-										class="size-6 flex items-center justify-center rounded-full {isToday(day)
+										class="size-5 flex items-center justify-center rounded-full {isToday(day)
 											? ($settings?.highContrastMode ?? false)
 												? 'bg-blue-600 text-white'
 												: 'bg-blue-500 text-white'
-											: ''}"
+											: 'text-base-400 dark:text-base-500'}"
 									>
 										{day.getDate()}
 									</span>
@@ -502,33 +513,34 @@
 									{@const oneLine = p.height < 2 * MIN_EVENT_REM}
 									<button
 										type="button"
-										class="absolute flex overflow-hidden rounded-md px-1.5 text-left {oneLine
-											? 'items-center gap-1'
-											: 'flex-col justify-start py-1'} text-[0.6875rem] leading-tight bg-base-0 dark:bg-base-900 hover:brightness-95 dark:hover:brightness-125 transition {p
-											.event.meta?.automation_id
-											? 'opacity-60'
-											: ''} {dragged === p.event ? 'opacity-50' : ''}"
+										class="absolute flex overflow-hidden rounded-md pl-3 pr-1.5 text-left {oneLine
+											? 'items-center gap-1.5'
+											: 'flex-col justify-start gap-0.5 py-1'} text-[0.6875rem] leading-tight text-base-800 dark:text-base-100 bg-base-0 dark:bg-base-900 hover:brightness-95 dark:hover:brightness-125 transition {dragged ===
+										p.event
+											? 'opacity-50'
+											: ''}"
 										style="top: {p.top}rem; height: {p.height}rem; left: calc({(p.col / p.cols) *
 											100}% + 2px); width: calc({100 /
-											p.cols}% - 4px); background-image: linear-gradient({tint}, {tint}); color: color-mix(in srgb, {color} 75%, currentColor);"
+											p.cols}% - 4px); background-image: linear-gradient({tint}, {tint});"
 										draggable={canMove(p.event)}
 										on:dragstart={(e) => startDrag(e, p.event)}
 										on:dragend={endDrag}
 										on:click={() => handleEventClick(p.event)}
 									>
-										{#if oneLine}
-											<span class="truncate">{p.event.title}</span>
-											<span class="shrink-0 text-[0.625rem] opacity-80"
-												>{formatTime(p.event.start_at / NS)}</span
-											>
-										{:else}
-											<div class="line-clamp-3 break-words">{p.event.title}</div>
-											<div class="truncate text-[0.625rem] opacity-80">
-												{formatTime(p.event.start_at / NS)}{p.event.end_at
-													? ` - ${formatTime(p.event.end_at / NS)}`
-													: ''}
-											</div>
-										{/if}
+										<span
+											class="absolute left-1 top-1 bottom-1 w-[3px] rounded-full"
+											style="background-color: {color};"
+										></span>
+										<div class="{oneLine ? 'truncate' : 'line-clamp-3 break-words'} font-medium">
+											{p.event.title}
+										</div>
+										<div class="shrink-0 truncate text-[0.625rem] text-base-500 dark:text-base-400">
+											{formatTime(p.event.start_at / NS)}{!oneLine &&
+											p.event.end_at &&
+											p.event.end_at > p.event.start_at
+												? ` · ${formatMinutes((p.event.end_at - p.event.start_at) / NS / 60_000)}`
+												: ''}
+										</div>
 									</button>
 								{/each}
 							</div>
