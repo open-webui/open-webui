@@ -378,6 +378,23 @@
 		}
 	};
 
+	/** The page holding the most of the quotes, the first such page on a tie. */
+	const findQuotePage = async (doc: PdfDocument, quotes: string[]) => {
+		const needles = quotes.map((quote) => quote.normalize('NFKC').replace(/\s/g, ''));
+		let best: { page: number; count: number } | null = null;
+		for (let number = 1; number <= doc.numPages; number++) {
+			const content = await (await doc.getPage(number)).getTextContent();
+			const text = content.items
+				.map((item) => ('str' in item ? item.str : ''))
+				.join('')
+				.normalize('NFKC')
+				.replace(/\s/g, '');
+			const count = needles.filter((needle) => needle && text.includes(needle)).length;
+			if (count > (best?.count ?? 0)) best = { page: number, count };
+		}
+		return best?.page ?? null;
+	};
+
 	export const scrollToPage = async (page: number | null) => {
 		targetPage = page;
 		if (singlePage) {
@@ -719,9 +736,17 @@
 						if (token === loadToken) onCommentsError?.();
 					});
 			}
+			const quotePageWanted = !targetPage && !!highlightQuotes?.length;
 			activePage = clampDocumentTargetPage(targetPage, pageCount) ?? 1;
 			targetPage = clampDocumentTargetPage(targetPage, pageCount) ?? 1;
 			await renderAllPages();
+			// Text cited without its page, as a paragraph of a whole document is, opens where it is
+			if (quotePageWanted && highlightQuotes) {
+				const doc = pdfDoc;
+				void findQuotePage(doc, highlightQuotes).then((page) => {
+					if (token === loadToken && page && activePage === 1) void scrollToPage(page);
+				});
+			}
 		} catch (e) {
 			if (token === loadToken) {
 				console.error('PDF render error:', e);

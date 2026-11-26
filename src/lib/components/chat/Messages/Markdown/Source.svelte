@@ -5,9 +5,11 @@
 	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
 	export let citation: any;
+	/** The cited paragraphs of the source, when the citation names them, as in [1#3]. */
+	export let paragraphIds: number[] = [];
 	export let onClick: () => void = () => {};
 
-	$: preview = getCitationPreview(citation);
+	$: preview = getCitationPreview(citation, paragraphIds);
 </script>
 
 <button

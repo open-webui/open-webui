@@ -2,7 +2,7 @@
 	import { getContext } from 'svelte';
 	import { embed, showTabs, showEmbeds } from '$lib/stores';
 	import { isValidHttpUrl } from '$lib/utils';
-	import { getCitations } from '$lib/utils/citations';
+	import { getCitations, getCitedPassages, getParagraphIds } from '$lib/utils/citations';
 
 	import CitationModal from './Citations/CitationModal.svelte';
 
@@ -26,7 +26,7 @@
 	let selectedCitation: any = null;
 
 	export const showSourceModal = (sourceId) => {
-		// "2#page" and 2 both name citation number 2
+		// "2#page", "2#3,2#4" and 2 all name citation number 2
 		const number = typeof sourceId === 'string' ? parseInt(sourceId.split('#')[0]) : sourceId;
 		const citation = citations.find((citation) => citation.number === number);
 		if (citation) openCitation(citation, sourceId);
@@ -37,7 +37,15 @@
 
 		// A cited file opens beside the chat, at the cited page when one is known. Web pages,
 		// and files that cannot be previewed, show their retrieved text in the popup.
-		const metadata = citation.metadata?.[0];
+		// A citation of paragraphs, as in [1#3][1#4], opens at those paragraphs alone
+		const cited = getCitedPassages(
+			citation,
+			typeof sourceId === 'string' ? getParagraphIds(sourceId.split(',')) : []
+		);
+		// Plain [1] on a source with numbered paragraphs cites it as a whole: no page, no marks
+		const wholeSource =
+			!cited.length && (citation.paragraphs ?? []).some((paragraphs: any[]) => paragraphs?.length);
+		const metadata = cited[0]?.metadata ?? citation.metadata?.[0];
 		const fileName = String(metadata?.name ?? citation.source?.name ?? '');
 		if (
 			!readOnly &&
@@ -52,19 +60,23 @@
 			embed.set({
 				file: {
 					id: metadata.file_id,
-					page: Number.isInteger(metadata.page) ? metadata.page + 1 : null,
+					page: !wholeSource && Number.isInteger(metadata.page) ? metadata.page + 1 : null,
 					// The cited passages of this file, each with its page and relevance
-					passages: (citation.document ?? [])
-						.map((text, i) => ({
-							text,
-							metadata: citation.metadata?.[i],
-							distance: showRelevance ? citation.distances?.[i] : undefined
-						}))
+					passages: (cited.length
+						? cited
+						: wholeSource
+							? []
+							: (citation.document ?? []).map((text, i) => ({
+									text,
+									metadata: citation.metadata?.[i],
+									distance: citation.distances?.[i]
+								}))
+					)
 						.filter((passage) => passage.metadata?.file_id === metadata.file_id)
 						.map(({ text, metadata, distance }) => ({
 							text,
 							page: Number.isInteger(metadata?.page) ? metadata.page + 1 : null,
-							distance
+							distance: showRelevance ? distance : undefined
 						})),
 					showPercentage
 				},

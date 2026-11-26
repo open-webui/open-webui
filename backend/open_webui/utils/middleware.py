@@ -633,20 +633,142 @@ def get_citation_ids(source: dict, source_ids: dict) -> list[int]:
     return citation_ids
 
 
-def get_source_context(sources: list, source_ids: dict = None, include_content: bool = True) -> str:
+BLANK_LINE_RE = re.compile(r'\n[ \t]*\n')
+SENTENCE_END_RE = re.compile(r'[.!?:;]["\'”’)\]]*$')
+# Where a block with no blank lines may be cut, best first: a sentence end, a line end, a space
+BLOCK_BREAK_RES = (
+    re.compile(r'[.!?]["\'”’)\]]*(?=\s)'),
+    re.compile(r'(?=\n)'),
+    re.compile(r'(?=\s)'),
+)
+
+
+def split_paragraphs(text: str, max_size: int | None = None) -> list[tuple[int, int]]:
+    """
+    Split text into the paragraphs a model can cite, as (start, end) offsets.
+
+    Paragraphs are the blocks between blank lines, and a heading joins the block after it.
+    Text with no blank lines, as extracted PDF text often is, is cut into pieces no longer
+    than max_size, the configured chunk size, at sentence ends where it can be.
+    """
+    blocks = []
+    start = 0
+    for match in [*BLANK_LINE_RE.finditer(text), None]:
+        end = match.start() if match else len(text)
+        block = text[start:end]
+        if block.strip():
+            blocks.append((start + len(block) - len(block.lstrip()), end - len(block) + len(block.rstrip())))
+        start = match.end() if match else end
+
+    def is_heading(block_start: int, block_end: int) -> bool:
+        line = text[block_start:block_end]
+        return '\n' not in line and (line.startswith('#') or not SENTENCE_END_RE.search(line))
+
+    units = []
+    heading_start = None
+    for block_start, block_end in blocks:
+        if is_heading(block_start, block_end):
+            heading_start = block_start if heading_start is None else heading_start
+            continue
+        units.append((block_start if heading_start is None else heading_start, block_end))
+        heading_start = None
+    if heading_start is not None:
+        units.append((heading_start, blocks[-1][1]))
+
+    if not max_size or max_size <= 0:
+        return units
+    return [piece for unit_start, unit_end in units for piece in cut_block(text, unit_start, unit_end, max_size)]
+
+
+def cut_block(text: str, start: int, end: int, max_size: int) -> list[tuple[int, int]]:
+    """Cut a block into pieces no longer than max_size, at the last good break in each."""
+    pieces = []
+    while end - start > max_size:
+        window = text[start : start + max_size]
+        cut = max_size
+        for pattern in BLOCK_BREAK_RES:
+            breaks = [match.end() for match in pattern.finditer(window, 1)]
+            if breaks:
+                cut = breaks[-1]
+                break
+        pieces.append((start, start + cut))
+        rest = text[start + cut : end]
+        start = end - len(rest.lstrip())
+    pieces.append((start, end))
+    return pieces
+
+
+def get_source_paragraphs(sources: list, max_size: int | None = None) -> list[list[list[tuple[int, int, int]]]]:
+    """
+    Number the paragraphs of each source document for citation as [N#P].
+
+    Numbering runs through every document cited by the same N. A source with a single
+    paragraph gets none, so it is cited as [N]. Each source saves its paragraphs, so a
+    citation like [1#3] can be shown from the message later.
+    """
+    spans = [
+        [split_paragraphs(doc, max_size) if isinstance(doc, str) else [] for doc in source.get('document', [])]
+        for source in sources
+    ]
+    totals = {}
+    for source, source_spans in zip(sources, spans):
+        for citation_id, doc_spans in zip(source['citation_ids'], source_spans):
+            totals[citation_id] = totals.get(citation_id, 0) + len(doc_spans)
+
+    numbers = {}
+    numbered = []
+    for source, source_spans in zip(sources, spans):
+        source_numbered = []
+        for citation_id, doc_spans in zip(source['citation_ids'], source_spans):
+            doc_numbered = []
+            if totals[citation_id] > 1:
+                for start, end in doc_spans:
+                    numbers[citation_id] = numbers.get(citation_id, 0) + 1
+                    doc_numbered.append((numbers[citation_id], start, end))
+            source_numbered.append(doc_numbered)
+        numbered.append(source_numbered)
+
+        if any(source_numbered):
+            source['paragraphs'] = [
+                [{'id': number, 'start': start, 'end': end} for number, start, end in doc_numbered]
+                for doc_numbered in source_numbered
+            ]
+        else:
+            source.pop('paragraphs', None)
+    return numbered
+
+
+def get_source_context(
+    sources: list, source_ids: dict = None, include_content: bool = True, paragraph_size: int | None = None
+) -> str:
     """
     Build <source> tag context string from citation sources.
+
+    With content, paragraphs are marked [N#P] for citation; paragraph_size caps a
+    paragraph in text that has no blank lines.
     """
     context_string = ''
     if source_ids is None:
         source_ids = {}
     for source in sources:
-        citation_ids = get_citation_ids(source, source_ids)
-        for doc, meta, citation_id in zip(source.get('document', []), source.get('metadata', []), citation_ids):
+        get_citation_ids(source, source_ids)
+    paragraphs = get_source_paragraphs(sources, paragraph_size) if include_content else [[] for _ in sources]
+    for source, source_paragraphs in zip(sources, paragraphs):
+        for index, (doc, meta, citation_id) in enumerate(
+            zip(source.get('document', []), source.get('metadata', []), source['citation_ids'])
+        ):
             src_name = source.get('source', {}).get('name')
             src_type = source.get('source', {}).get('type')
             src_rid = source.get('source', {}).get('id') if src_type != 'text' else None
-            body = doc if include_content else ''
+            doc_paragraphs = source_paragraphs[index] if index < len(source_paragraphs) else []
+            if not include_content:
+                body = ''
+            elif doc_paragraphs:
+                body = '\n\n'.join(
+                    f'[{citation_id}#{number}] {doc[start:end]}' for number, start, end in doc_paragraphs
+                )
+            else:
+                body = doc
             extra_attrs = ''
             for key, value in filter_source_metadata(meta).items():
                 if key in ('id', 'name', 'resource-type', 'resource-id'):
@@ -682,7 +804,12 @@ async def apply_source_context_to_messages(
     if not sources or not user_message:
         return messages
 
-    context = get_source_context(sources, source_ids, include_content=include_content)
+    context = get_source_context(
+        sources,
+        source_ids,
+        include_content=include_content,
+        paragraph_size=await Config.get('rag.chunk_size'),
+    )
 
     context = context.strip()
     if not context:

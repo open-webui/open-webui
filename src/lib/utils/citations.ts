@@ -33,6 +33,7 @@ export const getCitations = (sources: any[] | null | undefined) => {
 				existing.metadata.push(metadata);
 				// Kept in step with the documents, as not every document has one
 				existing.distances.push(distance);
+				existing.paragraphs.push(source.paragraphs?.[index] ?? []);
 				return;
 			}
 
@@ -52,7 +53,9 @@ export const getCitations = (sources: any[] | null | undefined) => {
 				source: _source,
 				document: [document],
 				metadata: metadata ? [metadata] : [],
-				distances: [distance]
+				distances: [distance],
+				// Each document's numbered paragraphs, cited as [number#paragraph]
+				paragraphs: [source.paragraphs?.[index] ?? []]
 			});
 		});
 	}
@@ -79,14 +82,46 @@ const getPassagePreview = (passage: string, isHtml: boolean): string => {
 		.replace(/\s+/g, ' ');
 };
 
-/** What a hovered citation shows: its title, and the passage the citation modal lists first. */
-export const getCitationPreview = (citation: any) => {
+/** The paragraph numbers in citation identifiers such as "1#3". */
+export const getParagraphIds = (identifiers: string[]): number[] => [
+	...new Set(
+		identifiers
+			.map((identifier) => /^\d+#(\d+)$/.exec(identifier)?.[1])
+			.filter((id): id is string => !!id)
+			.map(Number)
+	)
+];
+
+/** The paragraphs a citation such as [1#3][1#4] points at, each with its document's metadata. */
+export const getCitedPassages = (citation: any, paragraphIds: number[]) => {
+	const passages: { id: number; text: string; metadata: any; distance: any }[] = [];
+	(citation?.document ?? []).forEach((document: string, index: number) => {
+		for (const paragraph of citation.paragraphs?.[index] ?? []) {
+			if (typeof document === 'string' && paragraphIds.includes(paragraph?.id)) {
+				passages.push({
+					id: paragraph.id,
+					text: document.slice(paragraph.start, paragraph.end),
+					metadata: citation.metadata?.[index],
+					distance: citation.distances?.[index]
+				});
+			}
+		}
+	});
+	return passages.sort((a, b) => a.id - b.id);
+};
+
+/**
+ * What a hovered citation shows: its title, and the cited paragraph or else the passage
+ * the citation modal lists first.
+ */
+export const getCitationPreview = (citation: any, paragraphIds: number[] = []) => {
 	const { document, metadata, distances } = citation;
 	const isRanked =
 		distances.length === document.length &&
 		distances.every((distance: any) => typeof distance === 'number');
 	const index = isRanked ? distances.indexOf(Math.max(...distances)) : 0;
-	const passageMetadata = metadata[index];
+	const [cited] = getCitedPassages(citation, paragraphIds);
+	const passageMetadata = cited ? cited.metadata : metadata[index];
 
 	const name = decodeString(citation.title);
 	const url = isValidHttpUrl(citation.source?.url) ? citation.source.url : null;
@@ -98,7 +133,7 @@ export const getCitationPreview = (citation: any) => {
 			: name,
 		url,
 		page: Number.isInteger(passageMetadata?.page) ? passageMetadata.page + 1 : null,
-		passage: getPassagePreview(document[index], !!passageMetadata?.html)
+		passage: getPassagePreview(cited ? cited.text : document[index], !!passageMetadata?.html)
 	};
 };
 
@@ -180,7 +215,8 @@ export const getCarriedSources = (
 						document: [document],
 						metadata: metadata ? [metadata] : [],
 						distances: distance !== undefined ? [distance] : [],
-						citation_ids: [number]
+						citation_ids: [number],
+						paragraphs: [source.paragraphs?.[index] ?? []]
 					}
 				]);
 			});
