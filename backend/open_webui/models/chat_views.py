@@ -115,10 +115,18 @@ class PanelTabs(ViewModel):
             raise ValueError('Layout must contain every group exactly once')
 
 
+class FolderPage(ViewModel):
+    """What a folder's own page showed: its section and the directory browsed in Files."""
+
+    section: Literal['files', 'chats', 'notes', 'automations', 'knowledge']
+    directory: str | None = None
+
+
 class ChatViewData(ViewModel):
     schemaVersion: Literal[1]
     selectedMachineId: str | None
     panels: PanelTabs
+    folderPage: FolderPage | None = None
 
     @model_validator(mode='before')
     @classmethod

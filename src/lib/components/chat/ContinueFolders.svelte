@@ -34,7 +34,6 @@
 				<li>
 					<a
 						href="/folders/{folder.id}"
-						data-sveltekit-keepfocus
 						class="group flex items-center gap-2 h-7 -mx-2 px-2 rounded-lg text-sm transition-colors duration-75 hover:bg-base-50 dark:hover:bg-base-850"
 						title={[
 							folder.name,

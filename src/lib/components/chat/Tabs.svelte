@@ -473,6 +473,8 @@
 	}
 	/** Keeps the layout in step with the chat: carry it over, attach it to the new chat id, or load. */
 	function followChat(current: ViewState, id: string | null) {
+		// Leaving a folder for anything else, even without a restore, means returning to it is not opening it again from inside.
+		if (!isFolderSessionId(id)) lastFolderView = null;
 		if (current.status === 'idle') return void restoreChatView(id);
 		// A folder keeps its own tabs; nothing is carried into it.
 		if (isFolderSessionId(id) && current.entry.chatId !== id) return void restoreChatView(id);
