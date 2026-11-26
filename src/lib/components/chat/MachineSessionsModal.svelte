@@ -37,7 +37,7 @@
 	let places: Record<string, Place> = {};
 	let error = '';
 	let loading = true;
-	let stopping: Session | null = null;
+	let stopping: Session | 'all' | null = null;
 	let showConfirm = false;
 
 	const folderIdOf = (id: string) => id.slice('folder:'.length, id.lastIndexOf(':'));
@@ -74,14 +74,17 @@
 		}
 	};
 
-	const stop = async (session: Session) => {
-		try {
-			await machineRequest(target, `/sessions/${session.kind}/${encodeURIComponent(session.id)}`, {
-				method: 'DELETE'
-			});
-		} catch (reason) {
-			error = reason instanceof Error ? reason.message : String(reason);
-		}
+	const stop = async (list: Session[]) => {
+		const results = await Promise.allSettled(
+			list.map((session) =>
+				machineRequest(target, `/sessions/${session.kind}/${encodeURIComponent(session.id)}`, {
+					method: 'DELETE'
+				})
+			)
+		);
+		const failed = results.find((result) => result.status === 'rejected');
+		if (failed)
+			error = String(failed.reason instanceof Error ? failed.reason.message : failed.reason);
 		await refresh();
 	};
 
@@ -112,14 +115,26 @@
 			<h2 class="min-w-0 truncate text-sm font-medium text-base-900 dark:text-base-0" title={label}>
 				{label}
 			</h2>
-			<span class="min-w-0 flex-1 truncate text-base-500"
-				>{[
-					shells && $i18n.t('{{count}} shells', { count: shells }),
-					commands && $i18n.t('{{count}} commands', { count: commands })
-				]
-					.filter(Boolean)
-					.join(' · ')}</span
-			>
+			<div class="flex min-w-0 flex-1 items-center gap-1.5 text-base-500">
+				<span class="min-w-0 truncate"
+					>{[
+						shells && $i18n.t('{{count}} shells', { count: shells }),
+						commands && $i18n.t('{{count}} commands', { count: commands })
+					]
+						.filter(Boolean)
+						.join(' · ')}</span
+				>
+				{#if sessions.length}
+					<button
+						type="button"
+						class="shrink-0 text-base-400 transition hover:text-base-700 dark:text-base-600 dark:hover:text-base-300"
+						on:click={() => {
+							stopping = 'all';
+							showConfirm = true;
+						}}>{$i18n.t('Stop all')}</button
+					>
+				{/if}
+			</div>
 			<button
 				type="button"
 				aria-label={$i18n.t('Refresh')}
@@ -197,10 +212,16 @@
 
 <ConfirmDialog
 	bind:show={showConfirm}
-	title={stopping?.kind === 'shell' ? $i18n.t('Stop this shell?') : $i18n.t('Stop this command?')}
-	message={stopping?.kind === 'shell'
-		? $i18n.t('The shell and everything running in it stop.')
-		: $i18n.t('The command and everything it started stop.')}
-	confirmLabel={$i18n.t('Stop')}
-	onConfirm={() => stopping && stop(stopping)}
+	title={stopping === 'all'
+		? $i18n.t('Stop all {{count}}?', { count: sessions.length })
+		: stopping?.kind === 'shell'
+			? $i18n.t('Stop this shell?')
+			: $i18n.t('Stop this command?')}
+	message={stopping === 'all'
+		? $i18n.t('Every shell and command listed here stops, with everything running in them.')
+		: stopping?.kind === 'shell'
+			? $i18n.t('The shell and everything running in it stop.')
+			: $i18n.t('The command and everything it started stop.')}
+	confirmLabel={stopping === 'all' ? $i18n.t('Stop all') : $i18n.t('Stop')}
+	onConfirm={() => stopping && stop(stopping === 'all' ? sessions : [stopping])}
 />

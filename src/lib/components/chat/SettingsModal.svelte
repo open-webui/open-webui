@@ -478,7 +478,7 @@
 <Modal
 	size="full"
 	containerClassName="p-3 sm:p-4 lg:p-6"
-	className="h-[calc(100dvh-1.5rem)] sm:h-[calc(100dvh-2rem)] lg:h-[calc(100dvh-3rem)] flex flex-col md:flex-row bg-base-0 dark:bg-base-900 rounded-4xl overflow-hidden"
+	className="h-[calc(100dvh-1.5rem)] sm:h-[calc(100dvh-2rem)] lg:h-[calc(100dvh-3rem)] flex flex-col md:flex-row bg-base-0 dark:bg-base-900 rounded-3xl overflow-hidden"
 	ariaLabel={$i18n.t('Settings')}
 	bind:show={modalShow}
 >

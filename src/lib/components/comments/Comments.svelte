@@ -76,7 +76,7 @@
 					show={true}
 					size="md"
 					ariaLabel={$i18n.t('Comments')}
-					className="bg-base-0 dark:bg-base-900 rounded-4xl overflow-hidden"
+					className="bg-base-0 dark:bg-base-900 rounded-3xl overflow-hidden"
 					onRequestClose={() => (view = null)}
 				>
 					<div class="h-[min(70dvh,40rem)]">

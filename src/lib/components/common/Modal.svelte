@@ -9,7 +9,7 @@
 	export let show = true;
 	export let size = 'md';
 	export let containerClassName = 'p-3';
-	export let className = 'bg-base-0 dark:bg-base-900 rounded-4xl';
+	export let className = 'bg-base-0 dark:bg-base-900 rounded-3xl';
 	export let onRequestClose: (() => void) | null = null;
 	export let ariaLabel: string | undefined = undefined;
 	const requestClose = () => (onRequestClose ? onRequestClose() : (show = false));

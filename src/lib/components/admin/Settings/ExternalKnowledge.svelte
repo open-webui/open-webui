@@ -594,7 +594,7 @@
 		: $i18n.t('Add Knowledge Connection')}
 	bind:show={showSourceModal}
 	size="sm"
-	className="bg-base-0 dark:bg-base-900 rounded-4xl"
+	className="bg-base-0 dark:bg-base-900 rounded-3xl"
 >
 	<div>
 		<div class="flex justify-between dark:text-base-100 px-4 pt-3 pb-1">

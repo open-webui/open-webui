@@ -90,7 +90,7 @@
 
 <Modal
 	size="sm"
-	className="bg-base-0 dark:bg-base-900 rounded-4xl overflow-hidden !border-0"
+	className="bg-base-0 dark:bg-base-900 rounded-3xl overflow-hidden !border-0"
 	show={!!userId}
 	ariaLabel={$i18n.t('Profile')}
 	onRequestClose={close}
