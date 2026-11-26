@@ -1231,7 +1231,7 @@ class AdminConfig(MfaConfigForm):
                 if not key.strip() or key in unsafe_keys:
                     raise ValueError(f'Invalid translation key: {key}')
                 if text.strip():
-                    if placeholders(key) != placeholders(text):
+                    if placeholders(key) and placeholders(key) != placeholders(text):
                         raise ValueError(f'Interpolation placeholders do not match: {locale}: {key}')
                     translations[key] = text
             if translations:

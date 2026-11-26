@@ -25,7 +25,7 @@
 	import AdminSettingSaveButton from './AdminSettingSaveButton.svelte';
 	import Plus from '$lib/components/icons/Plus.svelte';
 	import I18nSettings from './I18nSettings.svelte';
-	import { updateI18n } from '$lib/i18n';
+	import { loadBundledResource, updateI18n } from '$lib/i18n';
 	import { entriesToI18n, i18nToEntries, type I18nEntry } from '$lib/utils/translationDictionary';
 
 	const i18n: any = getContext('i18n');
@@ -120,7 +120,7 @@
 		if (saving) return;
 		saving = true;
 		try {
-			const cleaned = entriesToI18n(uiI18nEntries);
+			const cleaned = entriesToI18n(uiI18nEntries, await loadBundledResource('en-US'));
 			const res = await updateAdminConfig(localStorage.token, {
 				...adminConfig,
 				SKILL_CONTENT_MAX_CHARS: adminConfig.SKILL_CONTENT_MAX_CHARS ?? null,
