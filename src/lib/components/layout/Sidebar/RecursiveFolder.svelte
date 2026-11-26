@@ -924,7 +924,7 @@
 
 								{#if folders[folderId]?.machine_id}
 									<div
-										class="min-w-0 shrink-[2] truncate text-xs text-base-400 dark:text-base-500"
+										class="min-w-0 shrink-[2] translate-y-[0.03125rem] truncate text-xs text-base-400 dark:text-base-500"
 										title={folders[folderId].directory || undefined}
 									>
 										{($machines ?? []).find(({ id }) => id === folders[folderId].machine_id)
