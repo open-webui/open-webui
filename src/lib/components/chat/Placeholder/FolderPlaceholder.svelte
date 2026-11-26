@@ -7,6 +7,12 @@
 	import { machineIdOf } from '$lib/utils/machines';
 	import { folderSessionId } from '$lib/utils/chatId';
 	import {
+		changeChatView,
+		chatViewChanges,
+		chatViewEntry,
+		loadChatView
+	} from '$lib/stores/chatViewStates';
+	import {
 		loadFolderChatPage,
 		folderChatPageKey,
 		getFolderState,
@@ -22,6 +28,7 @@
 	} from '$lib/stores/chatList';
 	import {
 		FOLDER_PAGE_SIZE,
+		type FolderSection,
 		NO_STATUS,
 		NO_PRIORITY,
 		statusDefs,
@@ -84,7 +91,27 @@
 	export let folder: FolderDetails | null = null;
 	export let readOnly = false;
 	/** Which part of the folder is showing: its files, chats, notes, automations or knowledge. */
-	export let folderSection: 'files' | 'chats' | 'notes' | 'automations' | 'knowledge' = 'chats';
+	export let folderSection: FolderSection = 'chats';
+
+	// The page is saved with the folder's tabs, so it opens exactly as it was left.
+	$: folderView =
+		folder?.id && $user?.id ? chatViewEntry($user.id, folderSessionId(folder.id, $user.id)) : null;
+	// The tabs load it too; this covers the page showing first.
+	$: if (folderView && !folderView.loaded) void loadChatView(folderView)?.catch(() => {});
+	// Read again whenever a view changes; loading one does not reassign it.
+	const isSettled = (view: typeof folderView, _changes: number) =>
+		!!view && (view.loaded || !!view.error);
+	$: folderViewSettled = isSettled(folderView, $chatViewChanges);
+	let restoredFolderId: string | null = null;
+	let filesDirectory: string | null = null;
+	const saveFolderPage = () => {
+		if (!folderView?.loaded || restoredFolderId !== folder?.id) return;
+		const folderPage = { section: folderSection, directory: filesDirectory };
+		const saved = folderView.state.folderPage;
+		if (saved?.section === folderPage.section && (saved.directory ?? null) === folderPage.directory)
+			return;
+		changeChatView(folderView, { ...folderView.state, folderPage });
+	};
 
 	// A folder opened on a machine's directory shows that directory's files.
 	$: filesTarget =
@@ -98,7 +125,7 @@
 					}
 				)
 			: null;
-	$: if (folderSection === 'files' && !filesTarget) folderSection = 'chats';
+	$: if (folderSection === 'files' && $machines && !filesTarget) folderSection = 'chats';
 
 	let notes: any[] = [];
 	let notesTotal = 0;
@@ -176,10 +203,11 @@
 	$: canUploadKnowledge =
 		$user?.role === 'admin' || ($user?.permissions?.chat?.file_upload ?? true);
 
-	function showSection(section: typeof folderSection) {
+	function showSection(section: FolderSection, save = true) {
 		folderSection = section;
 		if (section === 'notes') void loadNotes();
 		if (section === 'automations') void loadAutomations();
+		if (save) saveFolderPage();
 	}
 	export let onNewChat: () => void = () => {};
 
@@ -1105,6 +1133,14 @@
 		void loadAutomations();
 	}
 
+	// After the reset above, so the page left last wins once the folder's view is in.
+	$: if (folderViewSettled && folder?.id && restoredFolderId !== folder.id) {
+		restoredFolderId = folder.id;
+		const saved = folderView?.state.folderPage;
+		filesDirectory = saved?.directory ?? null;
+		if (saved) showSection(saved.section, false);
+	}
+
 	// Backstop: tag groups that appear later (e.g. a tag created while open) get their chats.
 	$: if (
 		by === 'tags' &&
@@ -1822,17 +1858,21 @@
 	{/if}
 
 	<div class="min-h-0 min-w-0 flex-1 overflow-hidden">
-		{#if folderSection === 'files' && filesTarget}
+		{#if folderSection === 'files' && filesTarget && folderViewSettled}
 			<div class="h-full">
 				{#key filesTarget.selector}
 					{#await import('../FileNav.svelte') then { default: FileNav }}
 						<FileNav
 							target={filesTarget}
 							machineId={filesTarget.selector}
-							initialDirectory={folder?.data?.working_directory || null}
+							initialDirectory={filesDirectory || folder?.data?.working_directory || null}
 							manageFileRequests={false}
 							showTerminalDock={false}
 							onOpenFile={(path, page) => showFileNavPath.set({ path, page })}
+							onViewChange={(view) => {
+								filesDirectory = view?.directory ?? null;
+								saveFolderPage();
+							}}
 						/>
 					{/await}
 				{/key}

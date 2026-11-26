@@ -3,6 +3,8 @@ import { tagColors, type FolderTag, type TagColor } from './tags';
 
 // Folder list and board views page through a folder's chats this many at a time.
 export const FOLDER_PAGE_SIZE = 50;
+/** The parts of a folder's own page. */
+export type FolderSection = 'files' | 'chats' | 'notes' | 'automations' | 'knowledge';
 export type FolderActivity = 'unread' | 'generating' | 'waiting_for_approval' | 'idle';
 
 // Chats only have "No status" built in; every other status is defined per folder.

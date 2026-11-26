@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { MachineContext } from '$lib/types';
+	import type { FolderSection } from '$lib/utils/folders';
 	import type { Writable } from 'svelte/store';
 	import { toast } from 'svelte-sonner';
 	import { marked } from 'marked';
@@ -106,7 +107,7 @@
 	// Height of the floating folder composer, so lists can scroll clear of it.
 	let composerHeight = 0;
 	// The composer belongs with the folder's chats and files, not its notes or automations.
-	let folderSection: 'files' | 'chats' | 'notes' | 'automations' | 'knowledge' = 'chats';
+	let folderSection: FolderSection = 'chats';
 	$: folderComposer = folderSection === 'chats' || folderSection === 'files';
 
 	let models = [];
