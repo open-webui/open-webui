@@ -4405,6 +4405,7 @@
 	"settings.personal.shortcuts.openComments.label": "Comments",
 	"settings.personal.shortcuts.openDesktop.label": "Desktop",
 	"settings.personal.shortcuts.openFiles.label": "Files",
+	"settings.personal.shortcuts.openGit.label": "Git",
 	"settings.personal.shortcuts.openModelSelector.label": "Open Model Selector",
 	"settings.personal.shortcuts.openSettings.label": "Open Settings",
 	"settings.personal.shortcuts.preventFileCreation.label": "Prevent File Creation",

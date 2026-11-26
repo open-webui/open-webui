@@ -12,6 +12,8 @@
 		type GitBranch
 	} from '$lib/apis/machines/git';
 	import { copyToClipboard } from '$lib/utils';
+	import { settings } from '$lib/stores';
+	import { formatChord, keybindings } from '$lib/shortcuts';
 	import Icon from '../FileNav/Icon.svelte';
 	import GitDiff from './GitDiff.svelte';
 	import { parseDiffRows } from '../Messages/diff';
@@ -776,7 +778,14 @@
 				>
 			</Tooltip>
 			{#if onOpenTab && !standalone}
-				<Tooltip content={$i18n.t('Open in tab')}>
+				<Tooltip
+					content={[
+						$i18n.t('Open in tab'),
+						$settings?.keyboardShortcuts !== false ? formatChord($keybindings.openGit) : ''
+					]
+						.filter(Boolean)
+						.join(' · ')}
+				>
 					<button
 						class="flex h-6 w-5 items-center justify-center text-base-400 hover:text-base-600 dark:hover:text-base-300 shrink-0 transition-colors duration-75"
 						aria-label={$i18n.t('Open in tab')}

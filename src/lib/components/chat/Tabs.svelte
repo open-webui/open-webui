@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { AppLayoutContext, MachineContext } from '$lib/types';
-	import type { GitStatus } from '$lib/apis/machines/git';
+	import { gitRequest, type GitStatus } from '$lib/apis/machines/git';
 	let fileGitStatuses: Record<string, GitStatus | null> = {};
 	let fileGitDiffModes: Record<string, 'unified' | 'split'> = {};
 	let fileGitHideWhitespace: Record<string, boolean> = {};
@@ -557,19 +557,17 @@
 		if (target) tab.target = target;
 		return target;
 	};
+	/** The folder new sessions on `target` start in: the open file panel's, else the chat folder's. */
+	const workingDirectory = (target: MachineTarget) =>
+		getCurrentDirectory(target.selector) ||
+		(machineIdOf($selectedFolder?.data) === target.selector
+			? $selectedFolder?.data?.working_directory || undefined
+			: undefined);
 	const startSession = (chatView: NonNullable<typeof viewEntry>, tab: Tab) => {
 		const target = resolveTabConnection(tab);
 		if (target) {
 			delete sessionFailures[tab.id];
-			void createViewSession(
-				chatView,
-				tab.id,
-				target,
-				getCurrentDirectory(target.selector) ||
-					(machineIdOf($selectedFolder?.data) === target.selector
-						? $selectedFolder?.data?.working_directory || undefined
-						: undefined)
-			);
+			void createViewSession(chatView, tab.id, target, workingDirectory(target));
 		}
 	};
 	const stopSession = (target: MachineTarget, kind: Tab['kind'], sessionId: string) =>
@@ -648,7 +646,24 @@
 	let supportsMachine = false;
 	let supportsDesktop = false;
 	let supportsBrowser = false;
+	let supportsGit = false;
 	let featureCheckRequestId = 0;
+	// The repo the working directory is in, checked each time the + menu opens.
+	let gitRoot: string | null = null;
+	let gitRootKey = '';
+	const checkGitRoot = async () => {
+		const target = selectedConnection;
+		const key = JSON.stringify([target?.selector, target && workingDirectory(target)]);
+		if (key !== gitRootKey) gitRoot = null;
+		gitRootKey = key;
+		if (!target || !supportsGit) return (gitRoot = null);
+		try {
+			const status = await gitRequest<GitStatus>(target, workingDirectory(target) || '.', 'status');
+			if (key === gitRootKey) gitRoot = status.is_repo ? (status.root ?? null) : null;
+		} catch {
+			if (key === gitRootKey) gitRoot = null;
+		}
+	};
 	let releasePanel: (target: HTMLElement) => void = () => {};
 	const preservePanel = (target: HTMLElement) => ({ destroy: () => releasePanel(target) });
 
@@ -1706,6 +1721,14 @@
 			case Shortcut.OPEN_DESKTOP:
 				if ((supportsDesktop && selectedConnection) || canSelectMachine) action = openDesktop;
 				break;
+			case Shortcut.OPEN_GIT:
+				if (supportsGit && selectedConnection)
+					action = async () => {
+						const connection = selectedConnection!;
+						await checkGitRoot();
+						if (gitRoot) openGit(connection.selector, gitRoot);
+					};
+				break;
 			case Shortcut.NEW_CHAT_TAB:
 				if (canOpenChat) action = () => openFeatureTab('chat');
 				break;
@@ -1799,15 +1822,17 @@
 		supportsMachine = false;
 		supportsDesktop = false;
 		supportsBrowser = false;
+		supportsGit = false;
 		if (!selectedConnection) return;
 		try {
 			const result = await machineRequest<{
-				features?: { terminal?: boolean; desktop?: boolean; browser?: boolean };
+				features?: { terminal?: boolean; desktop?: boolean; browser?: boolean; git?: boolean };
 			}>(selectedConnection, '/api/config');
 			if (version === featureCheckRequestId) {
 				supportsMachine = result.features?.terminal !== false;
 				supportsDesktop = result.features?.desktop === true;
 				supportsBrowser = result.features?.browser === true;
+				supportsGit = result.features?.git === true;
 			}
 		} catch {
 			/* Files remain available when interactive terminals are disabled. */
@@ -2749,7 +2774,7 @@
 				{/each}
 			</div>
 			{#if canOpenNewTab && viewReady && !chatLoading}
-				<Dropdown align="start" closeOnSelect>
+				<Dropdown align="start" closeOnSelect onOpenChange={(open) => open && checkGitRoot()}>
 					<button
 						type="button"
 						class="flex items-center justify-center w-7 h-7 rounded-lg text-base-400 hover:text-base-600 dark:hover:text-base-300 transition-colors duration-100 shrink-0"
@@ -2762,6 +2787,15 @@
 									><Icon name="folder" size={14} /><span class="flex-1 text-start"
 										>{$i18n.t('Files')}</span
 									><HotkeyHint name="openFiles" className="ms-auto" /></button
+								>
+							{/if}
+							{#if gitRoot && selectedConnection}
+								{@const root = gitRoot}
+								{@const connection = selectedConnection}
+								<button on:click={() => openGit(connection.selector, root)}
+									><Icon name="git-branch" size={14} /><span class="flex-1 text-start"
+										>{$i18n.t('Git')}</span
+									><HotkeyHint name="openGit" className="ms-auto" /></button
 								>
 							{/if}
 							{#if supportsMachineFiles || canSelectMachine}<button on:click={openNewFileTab}
