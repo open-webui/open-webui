@@ -104,7 +104,12 @@
 	import { RealtimeCall, getBridgeTurnState, type BridgeSubmission } from '$lib/utils/realtime';
 	import { acquireWakeLock } from '$lib/utils/wakeLock';
 	import { routeAvatarAnimation } from '$lib/utils/voice-avatar';
-	import { createTemporaryChatId, isSavedChatId, isTemporaryChatId } from '$lib/utils/chatId';
+	import {
+		createTemporaryChatId,
+		folderSessionId,
+		isSavedChatId,
+		isTemporaryChatId
+	} from '$lib/utils/chatId';
 	import { canUseTemporaryChats } from '$lib/utils/settings-access';
 	import { resolveLocalizedModelPromptSuggestions } from '$lib/utils/localizedContent';
 	import { resumeTemporaryChat } from '$lib/apis';
@@ -5015,11 +5020,14 @@
 		if (parent?.files?.some((file: any) => file.type === 'filesystem')) {
 			const attached = parent.files.filter((file: any) => file.type === 'filesystem');
 			const machine = machineIdOf(attached.find((file: any) => machineIdOf(file)));
+			// Chats in a folder work in the folder's workspace.
+			const folderSession =
+				chat?.folder_id && $user ? folderSessionId(chat.folder_id, $user.id) : null;
 			if (
 				attached.some(
 					(file: any) =>
 						(machineIdOf(file) && machineIdOf(file) !== machine) ||
-						(file.session_id && file.session_id !== $chatId)
+						(file.session_id && file.session_id !== $chatId && file.session_id !== folderSession)
 				)
 			)
 				throw new Error('Attached files must belong to this chat and the same machine.');
