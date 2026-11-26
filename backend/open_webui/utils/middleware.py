@@ -534,6 +534,7 @@ def get_citation_source_from_tool_result(
                 note_id = chunk.get('note_id', '')
                 chunk_type = chunk.get('type', 'file')
                 content = chunk.get('content', '')
+                page = chunk.get('page')
 
                 # Use file_id or note_id as the key
                 key = file_id or note_id or source_name
@@ -556,6 +557,8 @@ def get_citation_source_from_tool_result(
                         'file_id': file_id,
                         'name': source_name,
                         'source': source_name,
+                        # Search results give the model 1-based file pages; citations use 0-based ones
+                        **({'page': page - 1} if file_id and type(page) is int and page > 0 else {}),
                         **({'note_id': note_id} if note_id else {}),
                     }
                 )
