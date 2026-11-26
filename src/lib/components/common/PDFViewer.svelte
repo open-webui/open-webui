@@ -544,8 +544,9 @@
 		cancelTextLayers();
 
 		const wrappers: HTMLElement[] = [];
-		const firstPage = singlePage ? selectedPage : 1;
-		const lastPage = singlePage ? selectedPage : pdfDoc.numPages;
+		const shownPage = clampDocumentTargetPage(targetPage, pdfDoc.numPages) ?? 1;
+		const firstPage = singlePage ? shownPage : 1;
+		const lastPage = singlePage ? shownPage : pdfDoc.numPages;
 
 		for (let i = firstPage; i <= lastPage; i++) {
 			const page = await pdfDoc.getPage(i);
@@ -596,7 +597,7 @@
 
 		const { x, y, scale } = pzInstance?.getTransform() ?? { x: 0, y: 0, scale: 1 };
 		const keepView =
-			singlePage && renderedPage && renderedPage !== selectedPage && Math.abs(scale - 1) >= 0.01;
+			singlePage && renderedPage && renderedPage !== shownPage && Math.abs(scale - 1) >= 0.01;
 		pageObserver?.disconnect();
 		for (const wrapper of nearbyWrappers) void releasePage(wrapper);
 		nearbyWrappers.clear();
@@ -605,7 +606,7 @@
 		void renderCommentMarkers();
 		lastRenderedZoom = 1;
 		zoomLevel = 1;
-		renderedPage = singlePage ? selectedPage : 0;
+		renderedPage = singlePage ? shownPage : 0;
 		initPanzoom();
 		if (keepView) {
 			pzInstance?.zoomAbs(0, 0, scale);
