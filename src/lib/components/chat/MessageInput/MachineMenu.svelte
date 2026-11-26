@@ -37,7 +37,7 @@
 	export let selectedMachineId: Pick<Writable<string | null>, 'subscribe' | 'set'>;
 
 	const rowClass =
-		'flex w-full min-w-0 gap-2 items-center h-[1.6875rem] pl-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-base-50/40 dark:hover:bg-base-800/40';
+		'flex w-full min-w-0 gap-2 items-center h-[1.6875rem] pl-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-base-50/40 dark:hover:bg-base-800/40 disabled:cursor-not-allowed';
 	const headerButtonClass =
 		'p-0.5 rounded-md text-base-400 hover:text-base-600 dark:text-base-500 dark:hover:text-base-300 transition';
 	const moreClass =
@@ -51,6 +51,8 @@
 		if (inMenu) tab = '';
 	};
 	export let disabled = false;
+	/** Opens for looking only: the machine and its directory can't be switched, started, stopped, or edited. */
+	export let locked = false;
 	export let chatId: string | null = null;
 	export let onSelect = (id: string | null) => selectMachine(selectedMachineId, id, chatId);
 	export let machineContext: MachineContext | null = null;
@@ -128,6 +130,7 @@
 	].filter((section) => !section.devices || section.machines.length > 0);
 
 	const toggleMachine = (id: string) => {
+		if (locked) return;
 		closeMenu();
 		onSelect($selectedMachineId === id ? null : id);
 	};
@@ -215,6 +218,7 @@
 			role="menuitemradio"
 			aria-checked="true"
 			class="{rowClass} pr-2 bg-base-50/40 dark:bg-base-800/40"
+			disabled={locked}
 			on:click={() => toggleMachine($selectedMachineId)}
 		>
 			<Cloud className="size-3.5 shrink-0" strokeWidth="2" />
@@ -232,7 +236,7 @@
 			</span>
 			{#if !section.devices}
 				<div class="flex items-center gap-0.5">
-					{#if writable.length}
+					{#if writable.length && !locked}
 						<Tooltip content={$i18n.t('New machine')} placement="top">
 							<button
 								type="button"
@@ -272,6 +276,7 @@
 					type="button"
 					role="menuitemradio"
 					aria-checked={$selectedMachineId === machine.id}
+					disabled={locked}
 					class="{rowClass} {$selectedMachineId === machine.id
 						? 'pr-14 bg-base-50/40 dark:bg-base-800/40'
 						: 'pr-8'}"
@@ -298,14 +303,14 @@
 				>
 					<MachineItemMenu
 						{label}
-						loadStatus={owned && reachable ? () => instanceStatus(machine.id) : null}
+						loadStatus={owned && reachable && !locked ? () => instanceStatus(machine.id) : null}
 						onRestart={() => confirmLifecycle(machine.id, label, 'restart')}
 						onStop={() => confirmLifecycle(machine.id, label, 'stop')}
 						onStart={() => runLifecycle(machine.id, label, 'start')}
 						onInfo={reachable ? () => openInfo(machine.id, label) : null}
 						onFiles={reachable ? () => openFiles(machine.id, label) : null}
 						onSessions={reachable ? () => openSessions(machine.id, label) : null}
-						onSettings={owned ? () => openMachineDialog(machine.id) : null}
+						onSettings={owned && !locked ? () => openMachineDialog(machine.id) : null}
 					/>
 				</div>
 			</div>
@@ -430,7 +435,7 @@
 					await updateChatById(localStorage.token, chatId!, { working_directory: path });
 				}
 			}}
-			{disabled}
+			disabled={disabled || locked}
 		/>
 	{/key}
 {/if}

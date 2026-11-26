@@ -9,7 +9,6 @@
 	import { isFolderSessionId, isSavedChatId, isTemporaryChatId } from '$lib/utils/chatId';
 	import Icon from './FileNav/Icon.svelte';
 	import Spinner from '../common/Spinner.svelte';
-	import Tooltip from '../common/Tooltip.svelte';
 	import Modal from '$lib/components/common/Modal.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
@@ -109,20 +108,18 @@
 		aria-label={$i18n.t('Sessions on {{name}}', { name: label })}
 		class="text-xs text-base-600 dark:text-base-400"
 	>
-		<div class="flex items-start gap-3 px-4 pt-3 pb-1">
-			<div class="min-w-0 flex-1">
-				<h2 class="truncate text-sm font-medium text-base-900 dark:text-base-0" title={label}>
-					{label}
-				</h2>
-				{#if sessions.length}<div class="mt-0.5 text-xs text-base-500 dark:text-base-400">
-						{[
-							shells && $i18n.t('{{count}} shells', { count: shells }),
-							commands && $i18n.t('{{count}} commands', { count: commands })
-						]
-							.filter(Boolean)
-							.join(' · ')}
-					</div>{/if}
-			</div>
+		<div class="flex items-center gap-2 px-3 pt-2.5 pb-1">
+			<h2 class="min-w-0 truncate text-sm font-medium text-base-900 dark:text-base-0" title={label}>
+				{label}
+			</h2>
+			<span class="min-w-0 flex-1 truncate text-base-500"
+				>{[
+					shells && $i18n.t('{{count}} shells', { count: shells }),
+					commands && $i18n.t('{{count}} commands', { count: commands })
+				]
+					.filter(Boolean)
+					.join(' · ')}</span
+			>
 			<button
 				type="button"
 				aria-label={$i18n.t('Refresh')}
@@ -136,69 +133,57 @@
 				type="button"
 				aria-label={$i18n.t('Close')}
 				on:click={onClose}
-				class="shrink-0 rounded-lg py-1 text-base-500 transition hover:text-base-700 dark:text-base-400 dark:hover:text-base-200"
+				class="flex size-6 shrink-0 items-center justify-center rounded-lg text-base-500 transition hover:text-base-700 dark:text-base-400 dark:hover:text-base-200"
 			>
-				<XMark className="size-4" />
+				<XMark className="size-3.5" />
 			</button>
 		</div>
-		<div class="px-2 pt-1 pb-3">
-			{#if error}<div role="alert" class="px-2 py-2 text-xs break-words">
-					<div>{$i18n.t('Sessions unavailable')}</div>
-					<div class="mt-0.5 text-[0.6875rem] text-base-500">{error}</div>
+		<div class="px-1.5 pb-2">
+			{#if error}<div role="alert" class="px-1.5 py-1.5 break-words">
+					{$i18n.t('Sessions unavailable')}
+					<span class="text-base-500">· {error}</span>
 				</div>{/if}
 			{#if !sessions.length && loading}
-				<div class="flex justify-center py-4"><Spinner className="size-4" /></div>
+				<div class="flex justify-center py-3"><Spinner className="size-3.5" /></div>
 			{:else if !sessions.length && !error}
-				<p class="px-2 py-3 text-xs text-base-500">{$i18n.t('Nothing running')}</p>
+				<p class="px-1.5 py-1.5 text-base-500">{$i18n.t('Nothing running')}</p>
 			{:else}
-				<ul class="flex flex-col">
+				<ul class="mx-1.5 flex flex-col">
 					{#each sessions as session (`${session.kind}:${session.id}`)}
 						{@const place = places[session.chat_id]}
 						<li
-							class="group flex items-center gap-2 rounded-xl px-2 py-1.5 hover:bg-base-50/40 dark:hover:bg-base-800/40"
+							class="group flex h-[1.6875rem] items-center gap-2 rounded-lg pl-2.5 pr-1 hover:bg-base-50/40 dark:hover:bg-base-800/40"
 						>
-							<span
-								class="shrink-0 text-base-500"
-								title={session.kind === 'shell' ? $i18n.t('Shell') : $i18n.t('Command')}
+							<button
+								type="button"
+								disabled={!place?.href}
+								class="flex h-full min-w-0 flex-1 items-center gap-2 text-left disabled:cursor-default"
+								title={`${nameOf(session)} · PID ${session.pid} · ${new Date(session.created_at).toLocaleString()}`}
+								on:click={() => place?.href && open(place.href)}
 							>
-								<TerminalPrompt className="size-3.5" />
-							</span>
-							<div class="min-w-0 flex-1">
-								<div
-									class="truncate text-[0.8125rem] text-base-800 dark:text-base-200 {session.kind ===
+								{#if session.kind === 'shell'}<TerminalPrompt
+										className="size-3.5 shrink-0 text-base-500"
+									/>{/if}
+								<span
+									class="min-w-0 truncate text-base-800 dark:text-base-200 {session.kind ===
 									'command'
-										? 'font-mono text-xs'
-										: ''}"
-									title={`${nameOf(session)} · PID ${session.pid}`}
+										? 'font-mono'
+										: ''}">{nameOf(session)}</span
 								>
-									{nameOf(session)}
-								</div>
-								<div class="flex min-w-0 items-center gap-1 text-[0.6875rem] text-base-500">
-									{#if place?.href}
-										<button
-											type="button"
-											class="min-w-0 truncate hover:text-base-800 hover:underline dark:hover:text-base-200"
-											on:click={() => place.href && open(place.href)}>{place.name}</button
-										>
-									{:else}
-										<span class="min-w-0 truncate">{place?.name ?? '…'}</span>
-									{/if}
-									<span class="shrink-0" title={new Date(session.created_at).toLocaleString()}
-										>· {dayjs(session.created_at).fromNow()}</span
-									>
-								</div>
-							</div>
-							<Tooltip content={$i18n.t('Stop')}>
-								<button
-									type="button"
-									aria-label={$i18n.t('Stop {{name}}', { name: nameOf(session) })}
-									class="flex size-6 shrink-0 items-center justify-center rounded-lg text-base-400 transition hover:text-base-700 dark:hover:text-base-200"
-									on:click={() => {
-										stopping = session;
-										showConfirm = true;
-									}}><Stop className="size-3.5" /></button
+								<span class="ml-auto max-w-[50%] shrink-0 truncate text-base-500"
+									>{place?.name ?? '…'} · {dayjs(session.created_at).fromNow(true)}</span
 								>
-							</Tooltip>
+							</button>
+							<button
+								type="button"
+								aria-label={$i18n.t('Stop {{name}}', { name: nameOf(session) })}
+								title={$i18n.t('Stop')}
+								class="flex size-6 shrink-0 items-center justify-center rounded-lg text-base-400 opacity-0 transition group-hover:opacity-100 focus-visible:opacity-100 hover:text-base-700 dark:hover:text-base-200"
+								on:click={() => {
+									stopping = session;
+									showConfirm = true;
+								}}><Stop className="size-3.5" /></button
+							>
 						</li>
 					{/each}
 				</ul>
