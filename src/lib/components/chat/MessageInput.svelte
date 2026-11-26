@@ -179,6 +179,7 @@
 	export let contextCompactionEnabled = false;
 	export let embedded = false;
 	export let autofocus = true;
+	export let active = true;
 	// Recorded audio goes to the host when given (note chats), otherwise it is attached to the message.
 	export let onRecordedAudio: ((file: File) => unknown) | null = null;
 	export let callActive = false;
@@ -541,7 +542,7 @@
 	};
 
 	export const focus = (options: FocusOptions = {}) => {
-		chatInputElement?.focus(options);
+		if (active) chatInputElement?.focus(options);
 	};
 
 	export const setText = (text: string = '') => {
@@ -1915,7 +1916,7 @@
 		loaded = true;
 
 		window.setTimeout(() => {
-			if (autofocus && !$mobile && !$voiceCall) {
+			if (autofocus && active && !$mobile && !$voiceCall) {
 				const chatInput = document.getElementById(inputId);
 				chatInput?.focus();
 			}
@@ -2418,7 +2419,7 @@
 													json={true}
 													richText={$settings?.richTextInput ?? true}
 													messageInput={true}
-													{autofocus}
+													autofocus={autofocus && active}
 													followUpSuggestion={!generating &&
 													history?.messages?.[history?.currentId]?.role === 'assistant' &&
 													history?.messages?.[history?.currentId]?.done

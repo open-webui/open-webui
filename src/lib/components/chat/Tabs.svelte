@@ -2412,6 +2412,7 @@
 				{:else if tab.kind === 'chat'}
 					<ChatTab
 						bind:this={chatViews[tab.id]}
+						active={tab.id === tabs.activeId}
 						bind:streaming={chatStreamingStates[tab.id]}
 						bind:tabTitleEditor={chatTitleEditors[tab.id]}
 						bind:tabActions={chatTabActions[tab.id]}
