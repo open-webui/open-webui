@@ -608,6 +608,8 @@
 		<path d="M4 5H20" />
 		<path d="M4 12H16" />
 		<path d="M4 19H12" />
+	{:else if name === 'arrow-up-right'}
+		<path d="M7 17L17 7M17 7H8M17 7V16" />
 	{:else if name === 'external-link'}
 		<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
 		<polyline points="15 3 21 3 21 9" />

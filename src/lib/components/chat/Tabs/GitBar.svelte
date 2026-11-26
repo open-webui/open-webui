@@ -781,7 +781,7 @@
 						class="flex h-6 w-5 items-center justify-center text-base-400 hover:text-base-600 dark:hover:text-base-300 shrink-0 transition-colors duration-75"
 						aria-label={$i18n.t('Open in tab')}
 						on:click={() => onOpenTab?.(status?.root ?? directory)}
-						><Icon name="expand" size={12} /></button
+						><Icon name="arrow-up-right" size={13} /></button
 					>
 				</Tooltip>
 			{/if}
