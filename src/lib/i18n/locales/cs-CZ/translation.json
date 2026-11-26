@@ -2966,6 +2966,8 @@
 	"Requested scopes": "Požadované rozsahy oprávnění",
 	"Require an authenticator for all users": "Vyžadovat ověřovací aplikaci pro všechny uživatele",
 	"required": "povinné",
+	"Rerank results": "",
+	"Rescore results with the reranking model from Documents settings and drop those below the relevance threshold.": "",
 	"Research Knowledge": "Výzkumné znalosti",
 	"Reset": "Resetovat",
 	"Reset All Models": "Resetovat všechny modely",

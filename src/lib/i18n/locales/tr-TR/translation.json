@@ -2920,6 +2920,8 @@
 	"Requested scopes": "İstenen kapsamlar",
 	"Require an authenticator for all users": "Tüm kullanıcılar için kimlik doğrulayıcıyı zorunlu kıl",
 	"required": "gerekli",
+	"Rerank results": "",
+	"Rescore results with the reranking model from Documents settings and drop those below the relevance threshold.": "",
 	"Research Knowledge": "Araştırma Bilgisi",
 	"Reset": "Sıfırla",
 	"Reset All Models": "Tüm Modelleri Sıfırla",

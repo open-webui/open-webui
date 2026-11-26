@@ -2966,6 +2966,8 @@
 	"Requested scopes": "Prašomos aprėptys",
 	"Require an authenticator for all users": "Reikalauti autentifikavimo programėlės visiems naudotojams",
 	"required": "privaloma",
+	"Rerank results": "",
+	"Rescore results with the reranking model from Documents settings and drop those below the relevance threshold.": "",
 	"Research Knowledge": "Tyrimų žinios",
 	"Reset": "Atkurti",
 	"Reset All Models": "Išvalyti visus modelius",

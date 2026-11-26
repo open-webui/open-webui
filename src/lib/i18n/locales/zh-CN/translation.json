@@ -2908,6 +2908,8 @@
 	"Requested scopes": "",
 	"Require an authenticator for all users": "要求所有用户使用验证器",
 	"required": "必填",
+	"Rerank results": "",
+	"Rescore results with the reranking model from Documents settings and drop those below the relevance threshold.": "",
 	"Research Knowledge": "研究知识库",
 	"Reset": "重置",
 	"Reset All Models": "重置所有模型",

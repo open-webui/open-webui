@@ -2920,6 +2920,8 @@
 	"Requested scopes": "درخواست کردہ اسکوپس",
 	"Require an authenticator for all users": "تمام صارفین کے لیے آتھنٹیکیٹر ایپ لازمی کریں",
 	"required": "درکار",
+	"Rerank results": "",
+	"Rescore results with the reranking model from Documents settings and drop those below the relevance threshold.": "",
 	"Research Knowledge": "تحقیقی علم",
 	"Reset": "ری سیٹ",
 	"Reset All Models": "تمام ماڈلز کو ری سیٹ کریں",

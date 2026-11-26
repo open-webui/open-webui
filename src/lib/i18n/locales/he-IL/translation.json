@@ -2943,6 +2943,8 @@
 	"Requested scopes": "היקפים מבוקשים",
 	"Require an authenticator for all users": "דרישת אפליקציית אימות מכל המשתמשים",
 	"required": "חובה",
+	"Rerank results": "",
+	"Rescore results with the reranking model from Documents settings and drop those below the relevance threshold.": "",
 	"Research Knowledge": "ידע מחקרי",
 	"Reset": "אפס",
 	"Reset All Models": "אפס את כל המודלים",

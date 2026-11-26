@@ -2943,6 +2943,8 @@
 	"Requested scopes": "Scope-uri solicitate",
 	"Require an authenticator for all users": "Impune o aplicație de autentificare pentru toți utilizatorii",
 	"required": "obligatoriu",
+	"Rerank results": "",
+	"Rescore results with the reranking model from Documents settings and drop those below the relevance threshold.": "",
 	"Research Knowledge": "Cunoștințe de cercetare",
 	"Reset": "Resetează",
 	"Reset All Models": "Resetează toate modelele",

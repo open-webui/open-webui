@@ -2921,6 +2921,8 @@
 	"Requested scopes": "Mga hiniling na scope",
 	"Require an authenticator for all users": "Gawing kailangan ang authenticator app para sa lahat ng gumagamit",
 	"required": "kailangan",
+	"Rerank results": "",
+	"Rescore results with the reranking model from Documents settings and drop those below the relevance threshold.": "",
 	"Research Knowledge": "Kaalaman sa Pananaliksik",
 	"Reset": "I-reset",
 	"Reset All Models": "I-reset ang Lahat ng Modelo",

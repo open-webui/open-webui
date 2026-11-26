@@ -2920,6 +2920,8 @@
 	"Requested scopes": "अनुरोधित स्कोप",
 	"Require an authenticator for all users": "सभी उपयोगकर्ताओं के लिए ऑथेंटिकेटर अनिवार्य करें",
 	"required": "आवश्यक",
+	"Rerank results": "",
+	"Rescore results with the reranking model from Documents settings and drop those below the relevance threshold.": "",
 	"Research Knowledge": "शोध संबंधी ज्ञान",
 	"Reset": "रीसेट करें",
 	"Reset All Models": "सभी मॉडल रीसेट करें",

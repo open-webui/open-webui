@@ -74,6 +74,7 @@
 	let storeIdInput = '';
 	// Save a connection whose stores are listed as knowledge bases, live, instead of one knowledge base.
 	let listStores = false;
+	let showAdvanced = false;
 	let creating = false;
 	let showSourceModal = false;
 	let connections: ExternalKnowledgeConnection[] = [];
@@ -102,6 +103,7 @@
 		documentIdField: 'id',
 		tableName: 'document_chunk',
 		collectionField: 'collection_name',
+		rerank: false,
 		testQuery: ''
 	};
 
@@ -153,6 +155,7 @@
 			timeout: 30,
 			dbName: '',
 			sourceName: '',
+			rerank: false,
 			testQuery: '',
 			...schemaDefaults(DEFAULT_PROVIDER)
 		};
@@ -162,6 +165,7 @@
 		storeIds = [];
 		storeIdInput = '';
 		listStores = false;
+		showAdvanced = false;
 		editingItem = null;
 		editingConnection = null;
 	};
@@ -175,10 +179,12 @@
 			name: connection.name ?? '',
 			provider: connection.provider,
 			endpoint: connection.endpoint ?? '',
-			timeout: connection.config?.timeout ?? 30
+			timeout: connection.config?.timeout ?? 30,
+			rerank: connection.config?.rerank === true
 		};
 		storeIds = connection.config?.store_ids ?? [];
 		accessGrants = structuredClone(connection.config?.access_grants ?? []);
+		showAdvanced = sourceForm.rerank;
 		showSourceModal = true;
 	};
 
@@ -210,6 +216,7 @@
 			timeout: connection.config?.timeout ?? 30,
 			dbName: connection.config?.db_name ?? '',
 			sourceName: source?.name ?? '',
+			rerank: connection.config?.rerank === true,
 			testQuery: '',
 			contentField: sourceConfig.content_field ?? defaults.contentField,
 			vectorField: sourceConfig.vector_field ?? defaults.vectorField,
@@ -225,6 +232,7 @@
 					.map((id: string) => id.trim())
 					.filter(Boolean);
 		accessGrants = structuredClone(item.access_grants ?? []);
+		showAdvanced = sourceForm.rerank;
 		showSourceModal = true;
 	};
 
@@ -289,6 +297,7 @@
 						: {},
 		config: {
 			timeout: Number(sourceForm.timeout) || 30,
+			rerank: sourceForm.rerank,
 			...(sourceForm.provider === 'milvus' && sourceForm.dbName
 				? { db_name: sourceForm.dbName }
 				: {})
@@ -1056,6 +1065,52 @@
 										</div>
 									{/if}
 								</div>
+							</div>
+						{/if}
+
+						<div class="flex items-center justify-between">
+							<button
+								type="button"
+								class="flex items-center gap-1 text-xs text-base-500 dark:text-base-400 hover:text-base-700 dark:hover:text-base-200 transition mt-2"
+								on:click={() => (showAdvanced = !showAdvanced)}
+							>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									viewBox="0 0 20 20"
+									fill="currentColor"
+									class="w-3 h-3 transition-transform {showAdvanced ? 'rotate-90' : ''}"
+								>
+									<path
+										fill-rule="evenodd"
+										d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z"
+										clip-rule="evenodd"
+									/>
+								</svg>
+								{$i18n.t('Advanced')}
+							</button>
+						</div>
+
+						{#if showAdvanced}
+							<div class="flex items-center justify-between gap-3 mt-2">
+								<Tooltip
+									content={$i18n.t(
+										'Rescore results with the reranking model from Documents settings and drop those below the relevance threshold.'
+									)}
+									placement="top-start"
+									className="w-fit"
+								>
+									<label
+										for="external-source-rerank"
+										class="text-xs text-base-500 underline decoration-dotted decoration-base-400/70 underline-offset-4 dark:decoration-base-500 cursor-help"
+										>{$i18n.t('Rerank results')}</label
+									>
+								</Tooltip>
+								<Switch
+									id="external-source-rerank"
+									ariaLabel={$i18n.t('Rerank results')}
+									bind:state={sourceForm.rerank}
+									on:change={markUntested}
+								/>
 							</div>
 						{/if}
 

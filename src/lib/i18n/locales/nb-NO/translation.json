@@ -2920,6 +2920,8 @@
 	"Requested scopes": "Forespurte omfang",
 	"Require an authenticator for all users": "Krev autentiseringsapp for alle brukere",
 	"required": "påkrevd",
+	"Rerank results": "",
+	"Rescore results with the reranking model from Documents settings and drop those below the relevance threshold.": "",
 	"Research Knowledge": "Forskningskunnskap",
 	"Reset": "Tilbakestill",
 	"Reset All Models": "Tilbakestill alle modeller",

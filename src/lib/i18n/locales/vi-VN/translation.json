@@ -2897,6 +2897,8 @@
 	"Requested scopes": "Phạm vi được yêu cầu",
 	"Require an authenticator for all users": "Yêu cầu ứng dụng xác thực cho tất cả người dùng",
 	"required": "bắt buộc",
+	"Rerank results": "",
+	"Rescore results with the reranking model from Documents settings and drop those below the relevance threshold.": "",
 	"Research Knowledge": "Kiến thức nghiên cứu",
 	"Reset": "Xóa toàn bộ",
 	"Reset All Models": "Đặt lại Tất cả Mô hình",

@@ -2920,6 +2920,8 @@
 	"Requested scopes": "Gipangayo nga mga sakop sa pagtugot",
 	"Require an authenticator for all users": "Ipugos ang app sa pagpamatuod sa tanang tiggamit",
 	"required": "gikinahanglan",
+	"Rerank results": "",
+	"Rescore results with the reranking model from Documents settings and drop those below the relevance threshold.": "",
 	"Research Knowledge": "Kahibalo sa panukiduki",
 	"Reset": "I-reset",
 	"Reset All Models": "I-reset ang tanang modelo",

@@ -2920,6 +2920,8 @@
 	"Requested scopes": "Scopes yettwasutren",
 	"Require an authenticator for all users": "Suter asnas n usesteb i yiseqdacen akk",
 	"required": "yettwasra",
+	"Rerank results": "",
+	"Rescore results with the reranking model from Documents settings and drop those below the relevance threshold.": "",
 	"Research Knowledge": "Tamussni n unadi",
 	"Reset": "Wennez",
 	"Reset All Models": "Ales akk timudmiwin",

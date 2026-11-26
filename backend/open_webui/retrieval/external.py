@@ -583,6 +583,33 @@ async def list_virtual_knowledge(user_id: Optional[str] = None, query: Optional[
     return knowledge
 
 
+async def _rerank(request, query: str, chunks: list[dict], embedding_function, user=None) -> list[dict]:
+    """Rescore chunks with the configured reranker, keeping the top TOP_K_RERANKER above RELEVANCE_THRESHOLD."""
+    from langchain_core.documents import Document
+    from open_webui.retrieval.utils import RerankCompressor
+
+    if not chunks:
+        return []
+
+    config = await Config.get_many('rag.top_k_reranker', 'rag.relevance_threshold')
+    reranking_function = getattr(request.app.state, 'RERANKING_FUNCTION', None)
+    compressor = RerankCompressor(
+        embedding_function=embedding_function,
+        top_n=config.get('rag.top_k_reranker'),
+        reranking_function=(
+            (lambda query, documents: reranking_function(query, documents, user=user)) if reranking_function else None
+        ),
+        r_score=config.get('rag.relevance_threshold'),
+    )
+    documents = await compressor.acompress_documents(
+        [Document(page_content=chunk['content'], metadata=chunk['metadata']) for chunk in chunks], query
+    )
+    return [
+        {'content': doc.page_content, 'metadata': doc.metadata, 'distance': doc.metadata.get('score')}
+        for doc in documents
+    ]
+
+
 async def retrieve_external_knowledge(
     request,
     knowledge: KnowledgeModel,
@@ -632,13 +659,26 @@ async def retrieve_external_knowledge_for_connection(
         *(retrieve(connection, auth_config, knowledge, query, count, embedding_function) for query in queries)
     )
 
-    # Score direction differs per provider and metric, so merge by rank
+    if (connection.get('config') or {}).get('rerank'):
+        query_chunks = await asyncio.gather(
+            *(
+                _rerank(request, query, query_result, embedding_function, user)
+                for query, query_result in zip(queries, query_chunks)
+            )
+        )
+        # Reranker scores share one scale, so merge by score like internal knowledge.
+        merged = sorted(
+            (chunk for result in query_chunks for chunk in result), key=lambda c: c['distance'], reverse=True
+        )
+    else:
+        # Score direction differs per provider and metric, so merge by rank
+        merged = (chunk for chunks_at_rank in zip_longest(*query_chunks) for chunk in chunks_at_rank if chunk)
+
     seen_contents = set()
-    for chunks_at_rank in zip_longest(*query_chunks):
-        for chunk in chunks_at_rank:
-            if chunk and chunk['content'] not in seen_contents:
-                seen_contents.add(chunk['content'])
-                chunks.append(chunk)
+    for chunk in merged:
+        if chunk['content'] not in seen_contents:
+            seen_contents.add(chunk['content'])
+            chunks.append(chunk)
 
     chunks = chunks[:count]
     log.info(

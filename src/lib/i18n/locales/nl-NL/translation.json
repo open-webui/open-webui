@@ -2920,6 +2920,8 @@
 	"Requested scopes": "Aangevraagde toegangsbereiken",
 	"Require an authenticator for all users": "Authenticator verplichten voor alle gebruikers",
 	"required": "vereist",
+	"Rerank results": "",
+	"Rescore results with the reranking model from Documents settings and drop those below the relevance threshold.": "",
 	"Research Knowledge": "Onderzoekskennis",
 	"Reset": "Herstellen",
 	"Reset All Models": "Herstel alle modellen",

@@ -2911,6 +2911,8 @@
 	"Requested scopes": "Cakupan yang diminta",
 	"Require an authenticator for all users": "Wajibkan autentikator untuk semua pengguna",
 	"required": "wajib",
+	"Rerank results": "",
+	"Rescore results with the reranking model from Documents settings and drop those below the relevance threshold.": "",
 	"Research Knowledge": "Riset Pengetahuan",
 	"Reset": "Atur Ulang",
 	"Reset All Models": "Atur Ulang Semua Model",

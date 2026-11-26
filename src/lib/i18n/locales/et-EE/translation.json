@@ -2920,6 +2920,8 @@
 	"Requested scopes": "Taotletud ulatused",
 	"Require an authenticator for all users": "Nõua kõigilt kasutajatelt autentimisrakendust",
 	"required": "nõutav",
+	"Rerank results": "",
+	"Rescore results with the reranking model from Documents settings and drop those below the relevance threshold.": "",
 	"Research Knowledge": "Uurimistöö teadmised",
 	"Reset": "Lähtesta",
 	"Reset All Models": "Lähtesta kõik mudelid",

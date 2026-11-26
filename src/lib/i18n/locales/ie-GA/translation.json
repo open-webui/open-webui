@@ -2920,6 +2920,8 @@
 	"Requested scopes": "Raonta feidhme iarrtha",
 	"Require an authenticator for all users": "Éiligh fíordheimhneoir do gach úsáideoir",
 	"required": "riachtanach",
+	"Rerank results": "",
+	"Rescore results with the reranking model from Documents settings and drop those below the relevance threshold.": "",
 	"Research Knowledge": "Eolas Taighde",
 	"Reset": "Athshocraigh",
 	"Reset All Models": "Athshocraigh Gach Samhail",

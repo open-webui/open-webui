@@ -2920,6 +2920,8 @@
 	"Requested scopes": "Umbiðin scopes",
 	"Require an authenticator for all users": "Krev váttanarapp fyri allar brúkarar",
 	"required": "kravt",
+	"Rerank results": "",
+	"Rescore results with the reranking model from Documents settings and drop those below the relevance threshold.": "",
 	"Research Knowledge": "Kanna vitan",
 	"Reset": "Endurstilla",
 	"Reset All Models": "Endurstilla øll modell",

@@ -2966,6 +2966,8 @@
 	"Requested scopes": "Запрашиваемые области",
 	"Require an authenticator for all users": "Требовать аутентификатор для всех пользователей",
 	"required": "обязательно",
+	"Rerank results": "",
+	"Rescore results with the reranking model from Documents settings and drop those below the relevance threshold.": "",
 	"Research Knowledge": "Исследовать знания",
 	"Reset": "Сбросить",
 	"Reset All Models": "Сбросить все модели",

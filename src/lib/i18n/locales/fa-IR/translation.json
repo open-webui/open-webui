@@ -2920,6 +2920,8 @@
 	"Requested scopes": "محدوده\u200cهای درخواست شده",
 	"Require an authenticator for all users": "الزام برنامه احراز هویت برای همه کاربران",
 	"required": "مورد نیاز",
+	"Rerank results": "",
+	"Rescore results with the reranking model from Documents settings and drop those below the relevance threshold.": "",
 	"Research Knowledge": "دانش پژوهشی",
 	"Reset": "بازنشانی",
 	"Reset All Models": "بازنشانی همه مدل\u200cها",

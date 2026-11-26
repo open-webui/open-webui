@@ -2920,6 +2920,8 @@
 	"Requested scopes": "Kért hatókörök",
 	"Require an authenticator for all users": "Hitelesítő alkalmazás megkövetelése minden felhasználótól",
 	"required": "kötelező",
+	"Rerank results": "",
+	"Rescore results with the reranking model from Documents settings and drop those below the relevance threshold.": "",
 	"Research Knowledge": "Tudás kutatása",
 	"Reset": "Visszaállítás",
 	"Reset All Models": "Minden modell visszaállítása",

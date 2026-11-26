@@ -2897,6 +2897,8 @@
 	"Requested scopes": "Scope ที่ร้องขอ",
 	"Require an authenticator for all users": "บังคับให้ผู้ใช้ทุกคนใช้แอปยืนยันตัวตน",
 	"required": "จำเป็น",
+	"Rerank results": "",
+	"Rescore results with the reranking model from Documents settings and drop those below the relevance threshold.": "",
 	"Research Knowledge": "ฐานความรู้งานวิจัย",
 	"Reset": "รีเซ็ต",
 	"Reset All Models": "รีเซ็ตโมเดลทั้งหมด",

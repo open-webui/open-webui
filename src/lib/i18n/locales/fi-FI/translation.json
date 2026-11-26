@@ -2920,6 +2920,8 @@
 	"Requested scopes": "Pyydetyt käyttöoikeudet",
 	"Require an authenticator for all users": "Vaadi todennussovellus kaikilta käyttäjiltä",
 	"required": "vaaditaan",
+	"Rerank results": "",
+	"Rescore results with the reranking model from Documents settings and drop those below the relevance threshold.": "",
 	"Research Knowledge": "Tutki tietoa",
 	"Reset": "Nollaa",
 	"Reset All Models": "Nollaa kaikki mallit",

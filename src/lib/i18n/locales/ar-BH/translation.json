@@ -3012,6 +3012,8 @@
 	"Requested scopes": "",
 	"Require an authenticator for all users": "إلزام جميع المستخدمين بتطبيق مصادقة",
 	"required": "مطلوب",
+	"Rerank results": "",
+	"Rescore results with the reranking model from Documents settings and drop those below the relevance threshold.": "",
 	"Research Knowledge": "معرفة بحثية",
 	"Reset": "إعادة تعيين",
 	"Reset All Models": "إعادة تعيين جميع النماذج",

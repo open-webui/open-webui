@@ -2943,6 +2943,8 @@
 	"Requested scopes": "Escopos solicitados",
 	"Require an authenticator for all users": "Exigir autenticador para todos os usuários",
 	"required": "obrigatório",
+	"Rerank results": "",
+	"Rescore results with the reranking model from Documents settings and drop those below the relevance threshold.": "",
 	"Research Knowledge": "Pesquisar Conhecimento",
 	"Reset": "Redefinir",
 	"Reset All Models": "Redefinir todos os modelos",

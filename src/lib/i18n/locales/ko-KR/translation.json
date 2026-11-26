@@ -2898,6 +2898,8 @@
 	"Requested scopes": "요청된 스코프",
 	"Require an authenticator for all users": "모든 사용자에게 인증 앱 요구",
 	"required": "필수",
+	"Rerank results": "",
+	"Rescore results with the reranking model from Documents settings and drop those below the relevance threshold.": "",
 	"Research Knowledge": "연구 지식",
 	"Reset": "초기화",
 	"Reset All Models": "모든 모델 초기화",

@@ -2920,6 +2920,8 @@
 	"Requested scopes": "கோரப்பட்ட ஸ்கோப்கள்",
 	"Require an authenticator for all users": "அனைத்துப் பயனர்களுக்கும் அங்கீகரிப்புச் செயலியைக் கட்டாயமாக்கவும்",
 	"required": "தேவை",
+	"Rerank results": "",
+	"Rescore results with the reranking model from Documents settings and drop those below the relevance threshold.": "",
 	"Research Knowledge": "ஆராய்ச்சி அறிவு",
 	"Reset": "மீட்டமை",
 	"Reset All Models": "அனைத்து மாடல்களையும் மீட்டமைக்கவும்",

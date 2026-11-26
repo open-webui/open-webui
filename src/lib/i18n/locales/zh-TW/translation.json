@@ -2897,6 +2897,8 @@
 	"Requested scopes": "要求的權限範圍",
 	"Require an authenticator for all users": "要求所有使用者使用驗證器",
 	"required": "必填",
+	"Rerank results": "",
+	"Rescore results with the reranking model from Documents settings and drop those below the relevance threshold.": "",
 	"Research Knowledge": "研究知識庫",
 	"Reset": "重設",
 	"Reset All Models": "重設所有模型",
