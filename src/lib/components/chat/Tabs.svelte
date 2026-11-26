@@ -697,6 +697,7 @@
 			chat: 'chat-lines',
 			page: 'page',
 			files: 'folder',
+			git: 'git-branch',
 			file: 'page',
 			terminal: 'terminal',
 			browser: 'browser',
@@ -963,6 +964,21 @@
 			page
 		});
 		if (page != null) fileViews[id]?.revealPage?.(page);
+	};
+	const openGit = (machineId: string, root: string, sourceModelId = modelId) => {
+		if (!isMachineReachable(machineId)) return;
+		const target = resolveMachineTarget(machineId, $machines ?? [], localStorage.token, {
+			chatId: panelChatId,
+			modelId: sourceModelId ?? null
+		});
+		openPanel({
+			id: JSON.stringify(['git', machineId, target?.context.modelId ?? null, root]),
+			kind: 'git',
+			label: root.split('/').filter(Boolean).pop() || $i18n.t('Git'),
+			machineId,
+			target: target ?? undefined,
+			directory: root
+		});
 	};
 	const openNewFileTab = () => {
 		if (!selectedConnection) return askForMachine(openNewFileTab);
@@ -2459,6 +2475,22 @@
 							});
 						}}
 					/>
+				{:else if tab.kind === 'git' && tab.machineId && target}
+					<GitBar
+						standalone
+						bind:this={gitViews[tab.id]}
+						initialView={chatView.transient[`git:${tab.id}`]}
+						bind:diffMode={fileGitDiffModes[tab.machineId]}
+						bind:hideWhitespace={fileGitHideWhitespace[tab.machineId]}
+						{target}
+						chatId={chatView.chatId}
+						directory={tab.directory ?? '.'}
+						active={panelVisible && visibleTabIds.has(tab.id)}
+						onOpenFile={(path) => openFile(path, tab.machineId!, null, target.context.modelId)}
+						onOpenDirectory={(path) =>
+							openFiles(tab.machineId, path, false, target.context.modelId)}
+						{onDraftPrompt}
+					/>
 				{:else if (tab.kind === 'files' || tab.kind === 'file') && tab.machineId}
 					{@const fileTarget = isMounted ? resolveTabConnection(tab) : null}
 					<div class="flex h-full min-h-0 flex-col">
@@ -2541,6 +2573,7 @@
 									openFile(path, tab.machineId!, null, fileTarget?.context.modelId)}
 								onOpenDirectory={(path) =>
 									openFiles(tab.machineId, path, false, fileTarget?.context.modelId)}
+								onOpenTab={(root) => openGit(tab.machineId!, root, fileTarget?.context.modelId)}
 								{onDraftPrompt}
 							/>
 						{/if}

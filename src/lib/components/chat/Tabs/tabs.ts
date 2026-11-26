@@ -6,6 +6,7 @@ export type TabKind =
 	| 'chat'
 	| 'page'
 	| 'files'
+	| 'git'
 	| 'file'
 	| 'terminal'
 	| 'browser'

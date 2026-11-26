@@ -17,7 +17,9 @@ class ViewModel(BaseModel):
 
 class PanelTab(ViewModel):
     id: str
-    kind: Literal['chat', 'comments', 'files', 'file', 'terminal', 'browser', 'desktop', 'side', 'page', 'overview']
+    kind: Literal[
+        'chat', 'comments', 'files', 'file', 'git', 'terminal', 'browser', 'desktop', 'side', 'page', 'overview'
+    ]
     label: str
     href: str | None = None
     machineId: str | None = None
