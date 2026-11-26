@@ -22,13 +22,18 @@
 	} from '$lib/stores/chatViewStates';
 	import { v4 as uuidv4 } from 'uuid';
 	import Sortable from 'sortablejs';
-	import { beforeNavigate } from '$app/navigation';
+	import { beforeNavigate, pushState } from '$app/navigation';
 	import { WEBUI_NAME } from '$lib/stores';
 	import type Chat from './Chat.svelte';
 	import { pageTabKey } from './Tabs/tabs';
 	import Page from './Tabs/Page.svelte';
 	let pageViews: Record<string, Page> = {};
-	let pendingPageTab: { href: string; label: string; inSplit?: boolean } | null = null;
+	let pendingPageTab: {
+		href: string;
+		label: string;
+		inSplit?: boolean;
+		replace?: boolean;
+	} | null = null;
 	import {
 		config,
 		embed,
@@ -54,7 +59,7 @@
 	import CommentsPanel, {
 		type CommentsRequest
 	} from '$lib/components/comments/CommentsPanel.svelte';
-	import { page } from '$app/stores';
+	import { navigating, page } from '$app/stores';
 
 	import {
 		createTabsState,
@@ -453,6 +458,8 @@
 				)
 			)
 				panels = activateTab(panels, mainChatTabId);
+			if (poppedHref) pendingPageTab = { href: poppedHref, label: '', replace: true };
+			poppedHref = '';
 			entry.state.panels = panels;
 			tabs = entry.state.panels;
 			dirtyFiles = {};
@@ -750,6 +757,34 @@
 		tabs = activateTab(tabs, id);
 		showTabs.set(true);
 	};
+	let historyEntry = `${get(page).state.tab} ${get(page).url.pathname}`;
+	let poppedHref = '';
+	const addHistoryEntry = (href: string) => {
+		if (new URL(href, location.origin).pathname === location.pathname) return;
+		const tab = uuidv4();
+		historyEntry = `${tab} ${get(page).url.pathname}`;
+		pushState(href, { ...get(page).state, tab });
+	};
+	const showAddressed = () => {
+		if (location.pathname !== new URL(mainChatHref, location.origin).pathname) {
+			const href = location.pathname + location.search + location.hash;
+			const active = tabs.tabs.find((tab) => tab.id === tabs.activeId);
+			if (
+				active?.kind === 'page' &&
+				!findPageTab(new URL(location.href)) &&
+				active.href?.split('/')[1] === location.pathname.split('/')[1]
+			)
+				void navigatePageTab(active.id, href);
+			else openPageTab({ href, label: '' });
+			return;
+		}
+		focusMainChat();
+		if (!isLargeScreen) showTabs.set(false);
+	};
+	$: if (`${$page.state.tab} ${$page.url.pathname}` !== historyEntry) {
+		historyEntry = `${$page.state.tab} ${$page.url.pathname}`;
+		if (!get(navigating)) showAddressed();
+	}
 	const activateFilesOnDrag = (node: HTMLElement, tab: Tab) => {
 		if (tab.kind !== 'files') return;
 		let timer: ReturnType<typeof setTimeout> | undefined;
@@ -822,7 +857,12 @@
 	// A folder's tabs are not there yet while the chat being left is still shown.
 	const isPanelViewReady = (id: string | null, entry: ChatViewEntry | null) =>
 		!isFolderSessionId(id) || entry?.chatId === id;
-	export const openPageTab = (request: { href: string; label: string; inSplit?: boolean }) => {
+	export const openPageTab = (request: {
+		href: string;
+		label: string;
+		inSplit?: boolean;
+		replace?: boolean;
+	}) => {
 		const url = new URL(request.href, location.origin);
 		if (url.origin !== location.origin || !pageTabKey(url)) return;
 		if (!viewReady || !isPanelViewReady(panelChatId, viewEntry)) {
@@ -830,9 +870,11 @@
 			return;
 		}
 		if ((url.pathname === '/' && !url.search) || request.href === mainChatHref) {
+			if (!request.replace) addHistoryEntry(mainChatHref);
 			focusMainChat();
 			return;
 		}
+		if (!request.replace) addHistoryEntry(request.href);
 		const existing = findPageTab(url);
 		if (existing) {
 			selectTab(existing.id);
@@ -866,7 +908,7 @@
 			tabs = activateTab(openTab(tabs, joined), activeId);
 		}
 	};
-	const navigatePageTab = async (id: string, href: string) => {
+	const navigatePageTab = async (id: string, href: string, push = false) => {
 		const url = new URL(href, location.origin);
 		if (url.pathname === '/' && !url.search) {
 			await closeTab(id);
@@ -876,13 +918,16 @@
 		const existing = findPageTab(url);
 		if (existing?.kind === 'page' && existing.id !== id) {
 			await closeTab(id);
-			if (!tabs.tabs.some((tab) => tab.id === id)) openPageTab({ href, label: '' });
+			if (!tabs.tabs.some((tab) => tab.id === id)) openPageTab({ href, label: '', replace: !push });
 			return;
 		}
 		if (!((await pageViews[id]?.requestClose()) ?? true)) return;
 		if (url.pathname === '/' || url.pathname.startsWith('/c/')) {
-			openPageTab({ href, label: '' });
-		} else if (viewEntry) updateViewTab(viewEntry, id, { href });
+			openPageTab({ href, label: '', replace: !push });
+		} else if (viewEntry) {
+			if (push && id === tabs.activeId) addHistoryEntry(href);
+			updateViewTab(viewEntry, id, { href });
+		}
 		await tick();
 	};
 
@@ -1915,16 +1960,21 @@
 		);
 	}
 
-	beforeNavigate(({ from, to, cancel, willUnload }) => {
+	beforeNavigate(({ from, to, cancel, willUnload, type }) => {
 		if (from?.url.pathname === to?.url.pathname) {
+			if (type === 'popstate') showAddressed();
 			// The router stays on the main chat while other tabs are in front; going there uncovers it.
-			if (to && location.pathname !== to.url.pathname) {
+			else if (to && location.pathname !== to.url.pathname) {
 				// A folder's chats are tabs, opened again by the route.
 				if (!mainTabFolder || !to.url.pathname.startsWith('/c/')) focusMainChat();
 				if (!isLargeScreen) showTabs.set(false);
 			}
 			return;
 		}
+		poppedHref =
+			type === 'popstate' && to && location.pathname !== to.url.pathname
+				? location.pathname + location.search + location.hash
+				: '';
 		captureView();
 		if (viewEntry) void flushChatView(viewEntry);
 		if (willUnload && hasChatViewDrafts()) cancel();
@@ -2292,7 +2342,7 @@
 						bind:this={pageViews[tab.id]}
 						href={tab.href}
 						active={visibleTabIds.has(tab.id)}
-						onNavigate={(href) => navigatePageTab(tab.id, href)}
+						onNavigate={(href, replace) => navigatePageTab(tab.id, href, !replace)}
 						onTitleChange={(label) => {
 							if (label && tabs.tabs.find((item) => item.id === tab.id)?.label !== label)
 								updateViewTab(chatView, tab.id, { label });
