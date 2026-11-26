@@ -173,9 +173,8 @@
 	const showQuoteText = (index: number | null, rect: DOMRect | null) => {
 		const passage = index === null ? null : fileQuoteTexts[index];
 		if (!passage || !rect) return closeQuoteText();
-		// The card shows what the mark does not: the rest of a passage longer than the marked line,
-		// and the passage's relevance. Plain text already reads as its passage does.
-		const showText = !isPlainText && quoteLines(passage.text).length > 1;
+		// Plain text already reads as its passage does, so only its relevance is worth showing
+		const showText = !isPlainText;
 		if (!showText && typeof passage.distance !== 'number') return closeQuoteText();
 		keepQuoteText();
 		// Below the mark, or above it when there is more room there
@@ -478,7 +477,8 @@
 				{/if}
 				{#if hoveredText}
 					{@const hasRelevance = typeof hoveredText.distance === 'number'}
-					{@const hasLabel = hasRelevance || (hoveredText.page && hoveredText.showText)}
+					<!-- The passage always sits under a label line, as it does under its relevance -->
+					{@const hasLabel = hasRelevance || hoveredText.showText}
 					<!-- Styled as the file and chat hover previews are -->
 					<div
 						role="tooltip"
@@ -500,6 +500,8 @@
 							>
 								{#if hoveredText.page}
 									<span>{$i18n.t('Page')} {hoveredText.page}</span>
+								{:else if !hasRelevance}
+									<span>{$i18n.t('Citation')}</span>
 								{/if}
 								{#if hasRelevance}
 									<span class="flex items-center gap-1.5">
