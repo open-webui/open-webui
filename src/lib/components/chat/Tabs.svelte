@@ -420,6 +420,11 @@
 	}
 
 	let lastFolderView: string | null = null;
+	// A reload shows what was on screen; a later in-app mount is not a reload.
+	let reloaded =
+		!get(navigating) &&
+		(performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming).type ===
+			'reload';
 	async function restoreChatView(id: string | null) {
 		if (!$user?.id) return;
 		captureView();
@@ -454,7 +459,7 @@
 					(tab) =>
 						activeIds.includes(tab.id) &&
 						tab.id !== mainChatTabId &&
-						(tab.kind === 'page' || tab.kind === 'chat')
+						(tab.kind === 'page' || (tab.kind === 'chat' && !reloaded))
 				)
 			)
 				panels = activateTab(panels, mainChatTabId);
@@ -1981,6 +1986,7 @@
 			}
 			return;
 		}
+		reloaded = false;
 		poppedHref =
 			type === 'popstate' && to && location.pathname !== to.url.pathname
 				? location.pathname + location.search + location.hash
