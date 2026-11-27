@@ -781,10 +781,13 @@
 		focusMainChat();
 		if (!isLargeScreen) showTabs.set(false);
 	};
-	$: if (`${$page.state.tab} ${$page.url.pathname}` !== historyEntry) {
-		historyEntry = `${$page.state.tab} ${$page.url.pathname}`;
+	const onHistoryEntryChange = (entry: string) => {
+		if (entry === historyEntry) return;
+		historyEntry = entry;
 		if (!get(navigating)) showAddressed();
-	}
+	};
+	// Only $page triggers this, since addHistoryEntry records its entry before $page catches up.
+	$: onHistoryEntryChange(`${$page.state.tab} ${$page.url.pathname}`);
 	const activateFilesOnDrag = (node: HTMLElement, tab: Tab) => {
 		if (tab.kind !== 'files') return;
 		let timer: ReturnType<typeof setTimeout> | undefined;
