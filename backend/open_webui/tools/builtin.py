@@ -50,6 +50,7 @@ from open_webui.routers.memories import (
     ReadMemoryPathForm,
     SearchMemoriesForm,
     UpdateMemoriesForm,
+    get_request_chat_memories,
     update_memory_by_id,
 )
 from open_webui.routers.memories import (
@@ -75,6 +76,7 @@ from open_webui.utils.access_control.files import has_access_to_note_files
 from open_webui.utils.access_control.notes import has_note_access
 from open_webui.utils.chat_id import is_saved_chat_id
 from open_webui.utils.json_codec import JSONCodec
+from open_webui.utils.memory import get_memory_folder
 from open_webui.utils.notifications import notify_target
 from open_webui.utils.sanitize import sanitize_code
 from open_webui.utils.skill_files import SkillFile, SkillFileOperation, skill_content_page, skill_overview
@@ -926,9 +928,13 @@ async def list_memory_paths(
     :param type: "user", "context", or "all"
     :return: JSON with memory paths, counts, children, and update times
     """
+    if __request__ is None:
+        return JSONCodec.dumps({'error': 'Request context not available'})
+
     try:
         user = UserModel(**__user__) if __user__ else None
         result = await _list_memory_paths(
+            __request__,
             ListMemoryPathsForm(
                 query=query or None,
                 type=type if type in {'user', 'context', 'all'} else 'all',
@@ -959,9 +965,13 @@ async def read_memory_path(
     :param include_children: Include memories under child paths
     :return: JSON with parent paths, child paths, and memories at the path
     """
+    if __request__ is None:
+        return JSONCodec.dumps({'error': 'Request context not available'})
+
     try:
         user = UserModel(**__user__) if __user__ else None
         result = await _read_memory_path(
+            __request__,
             ReadMemoryPathForm(
                 path=path,
                 type=type if type in {'user', 'context', 'all'} else 'all',
@@ -1002,6 +1012,7 @@ async def search_memories(
         user = UserModel(**__user__) if __user__ else None
 
         memories = await _search_memories(
+            __request__,
             SearchMemoriesForm(
                 query=query or None,
                 type=type if type in {'user', 'context', 'all'} else 'all',
@@ -1058,10 +1069,16 @@ async def add_memory(
 
     try:
         user = UserModel(**__user__) if __user__ else None
+        folder = await get_memory_folder(user, getattr(__request__.state, 'metadata', None))
 
         memory = await _add_memory(
             __request__,
-            AddMemoryForm(content=content, type=Memories.normalize_memory_type(type), path=path),
+            AddMemoryForm(
+                content=content,
+                type=Memories.normalize_memory_type(type),
+                path=path,
+                folder_id=folder.id if folder else None,
+            ),
             user,
         )
 
@@ -1211,7 +1228,7 @@ async def list_memories(
     try:
         user = UserModel(**__user__) if __user__ else None
 
-        memories = await Memories.get_memories_by_user_id(user.id)
+        memories = await get_request_chat_memories(__request__, user)
 
         if memories:
             memory_rows = [

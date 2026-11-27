@@ -9,9 +9,13 @@
 	import Modal from '$lib/components/common/Modal.svelte';
 	import AccessButton from '$lib/components/common/AccessButton.svelte';
 	import FolderShareModal from './FolderShareModal.svelte';
+	import FolderMemories from './FolderMemories.svelte';
 	import EmojiPicker from '$lib/components/common/EmojiPicker.svelte';
 	import Emoji from '$lib/components/common/Emoji.svelte';
 	import FolderIcon from '$lib/components/icons/Folder.svelte';
+	import SettingsAlt from '$lib/components/icons/SettingsAlt.svelte';
+	import Face from '$lib/components/icons/Face.svelte';
+	import ChevronLeft from '$lib/components/icons/ChevronLeft.svelte';
 	import XMark from '../icons/XMark.svelte';
 
 	import { toast } from 'svelte-sonner';
@@ -39,7 +43,7 @@
 	export let parentId = null;
 	export let edit = false;
 
-	let folder = null;
+	let folder: any = null;
 	let name = '';
 	let meta: { background_image_url: string | null; icon: string; [key: string]: unknown } = {
 		background_image_url: null,
@@ -55,6 +59,7 @@
 	};
 
 	let loading = false;
+	let selectedTab = 'general';
 	let showAccessModal = false;
 	let showAdvanced = false;
 	let showDirectoryPicker = false;
@@ -186,7 +191,21 @@
 	$: if (show) {
 		init();
 	}
+	const tabButtonClass = (active: boolean) =>
+		`flex items-center gap-1.5 h-7 px-2 md:w-full shrink-0 rounded-lg text-xs text-left transition-colors duration-75 ${
+			active
+				? 'font-medium text-base-900 dark:text-base-0 bg-base-50 dark:bg-base-0/[0.04]'
+				: 'text-base-600 hover:text-base-700 dark:text-base-400 dark:hover:text-base-300'
+		}`;
+
+	$: showPersonalization =
+		edit &&
+		!!folderId &&
+		$config?.features?.enable_memories &&
+		($user?.role === 'admin' || ($user?.permissions?.features?.memories ?? true));
+
 	$: if (!show) {
+		selectedTab = 'general';
 		showAccessModal = false;
 		showAdvanced = false;
 		showDirectoryPicker = false;
@@ -209,35 +228,103 @@
 	}
 </script>
 
-<Modal ariaLabel={edit ? $i18n.t('Edit Folder') : $i18n.t('Create Folder')} size="md" bind:show>
-	<div>
-		<div class=" flex justify-between dark:text-base-300 px-4 pt-3 pb-1">
+<Modal
+	ariaLabel={edit ? $i18n.t('Edit Folder') : $i18n.t('Create Folder')}
+	size={showPersonalization ? 'lg' : 'md'}
+	className="bg-base-0 dark:bg-base-900 rounded-3xl {showPersonalization
+		? 'flex flex-col md:flex-row overflow-hidden md:h-[36rem] md:min-h-0 max-h-[calc(100dvh-1.5rem)]'
+		: ''}"
+	bind:show
+>
+	{#if showPersonalization}
+		<nav
+			class="shrink-0 min-w-0 md:min-h-0 flex flex-col border-b md:border-b-0 md:border-r border-base-100/30 dark:border-base-0/[0.02] md:w-[12rem]"
+		>
+			<div class="flex items-center gap-1 m-1 md:mb-0 shrink-0">
+				<button
+					class="flex flex-1 items-center gap-1.5 h-7 px-2 rounded-lg text-xs text-base-600 dark:text-base-500 hover:text-base-700 dark:hover:text-base-300 transition-colors duration-75"
+					type="button"
+					on:click={() => {
+						show = false;
+					}}
+				>
+					<ChevronLeft className="size-3" strokeWidth="2" />
+					<span>{$i18n.t('Back')}</span>
+				</button>
+			</div>
+			<div
+				role="tablist"
+				aria-label={$i18n.t('Edit Folder')}
+				class="tabs scrollbar-none flex min-w-0 overflow-x-auto md:flex-col p-1 gap-px"
+			>
+				<button
+					role="tab"
+					aria-selected={selectedTab === 'general'}
+					class={tabButtonClass(selectedTab === 'general')}
+					on:click={() => (selectedTab = 'general')}
+				>
+					<SettingsAlt className="size-3.5" strokeWidth="2" />
+					<span>{$i18n.t('General')}</span>
+				</button>
+				<button
+					role="tab"
+					aria-selected={selectedTab === 'personalization'}
+					class={tabButtonClass(selectedTab === 'personalization')}
+					on:click={() => (selectedTab = 'personalization')}
+				>
+					<Face className="size-3.5" strokeWidth="2" />
+					<span>{$i18n.t('settings.personal.personalization.title')}</span>
+				</button>
+			</div>
+		</nav>
+	{/if}
+
+	<div class={showPersonalization ? 'flex-1 min-w-0 min-h-0 flex flex-col' : ''}>
+		<div class=" flex shrink-0 justify-between dark:text-base-300 px-4 pt-3 pb-1">
 			<div class=" text-sm self-center">
-				{#if edit}
+				{#if showPersonalization}
+					{selectedTab === 'personalization'
+						? $i18n.t('settings.personal.personalization.title')
+						: $i18n.t('General')}
+				{:else if edit}
 					{$i18n.t('Edit Folder')}
 				{:else}
 					{$i18n.t('Create Folder')}
 				{/if}
 			</div>
 			<div class="flex items-center gap-1">
-				{#if edit && folder && ($user?.role === 'admin' || (folder.user_id === $user?.id && $user?.permissions?.sharing?.folders))}
+				{#if edit && folder && selectedTab === 'general' && ($user?.role === 'admin' || (folder.user_id === $user?.id && $user?.permissions?.sharing?.folders))}
 					<AccessButton disabled={loading} on:click={() => (showAccessModal = true)} />
 				{/if}
-				<button
-					aria-label={$i18n.t('Close')}
-					class="self-center rounded-lg py-1 text-base-500 transition hover:text-base-700 dark:text-base-400 dark:hover:text-base-200 px-0"
-					on:click={() => {
-						show = false;
-					}}
-				>
-					<XMark className={'size-4'} />
-				</button>
+				{#if !showPersonalization}
+					<button
+						aria-label={$i18n.t('Close')}
+						class="self-center rounded-lg py-1 text-base-500 transition hover:text-base-700 dark:text-base-400 dark:hover:text-base-200 px-0"
+						on:click={() => {
+							show = false;
+						}}
+					>
+						<XMark className={'size-4'} />
+					</button>
+				{/if}
 			</div>
 		</div>
 
-		<div class="flex flex-col md:flex-row w-full px-4 pb-4 md:space-x-4 dark:text-base-200">
+		{#if showPersonalization && folder && selectedTab === 'personalization'}
+			<div class="flex-1 min-h-0 overflow-y-auto px-4 pb-4 dark:text-base-200">
+				<FolderMemories {folder} />
+			</div>
+		{/if}
+
+		<div
+			class="flex flex-col md:flex-row w-full px-4 md:space-x-4 dark:text-base-200 {showPersonalization
+				? 'flex-1 min-h-0 overflow-y-auto'
+				: ''}"
+			class:hidden={selectedTab !== 'general'}
+		>
 			<div class=" flex flex-col w-full sm:flex-row sm:justify-center sm:space-x-6">
 				<form
+					id="folder-form"
 					class="flex flex-col w-full"
 					on:submit|preventDefault={() => {
 						submitHandler();
@@ -294,6 +381,24 @@
 							bind:value={data.description}
 						/>
 					</div>
+
+					{#if $user?.role === 'admin' || ($user?.permissions.chat?.system_prompt ?? true)}
+						<div class="my-2">
+							<label for="folder-system-prompt" class="mb-1 block text-xs text-base-500">
+								{$i18n.t('System Prompt')}
+							</label>
+							<Textarea
+								id="folder-system-prompt"
+								ariaLabel={$i18n.t('System Prompt')}
+								className="w-full text-sm bg-transparent placeholder:text-base-300 dark:placeholder:text-base-700 outline-hidden"
+								placeholder={$i18n.t(
+									'Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.'
+								)}
+								maxSize={200}
+								bind:value={data.system_prompt}
+							/>
+						</div>
+					{/if}
 
 					<input
 						id="folder-background-image-input"
@@ -473,36 +578,6 @@
 								</div>
 							</div>
 
-							{#if $user?.role === 'admin' || ($user?.permissions.chat?.system_prompt ?? true)}
-								<div
-									class="grid grid-cols-[7rem_minmax(0,1fr)] items-start gap-2 px-1 py-1 sm:grid-cols-[8rem_minmax(0,1fr)]"
-								>
-									<label
-										for="folder-system-prompt"
-										class="block text-xs font-normal text-base-600 dark:text-base-400"
-									>
-										<ModelSettingsLabel
-											label={$i18n.t('System Prompt')}
-											description={$i18n.t(
-												'Set instructions that guide how the model behaves in this folder.'
-											)}
-										/>
-									</label>
-									<div>
-										<Textarea
-											id="folder-system-prompt"
-											ariaLabel={$i18n.t('System Prompt')}
-											className="w-full resize-none bg-transparent text-xs font-normal text-base-900 outline-hidden placeholder:text-base-400 dark:text-base-100 dark:placeholder:text-base-600"
-											placeholder={$i18n.t(
-												'Write your model system prompt content here\ne.g.) You are Mario from Super Mario Bros, acting as an assistant.'
-											)}
-											maxSize={200}
-											bind:value={data.system_prompt}
-										/>
-									</div>
-								</div>
-							{/if}
-
 							<Knowledge bind:selectedItems={data.files}>
 								<ModelSettingsLabel
 									slot="label"
@@ -514,24 +589,28 @@
 							</Knowledge>
 						</div>
 					</Collapsible>
-
-					<div class="flex justify-end pt-3 text-sm font-normal gap-1.5">
-						<button
-							class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-base-0 transition hover:bg-base-1000 disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-base-0 disabled:cursor-not-allowed"
-							type="submit"
-							disabled={loading}
-						>
-							{$i18n.t('Save')}
-
-							{#if loading}
-								<div class="shrink-0">
-									<Spinner className="size-3" />
-								</div>
-							{/if}
-						</button>
-					</div>
 				</form>
 			</div>
+		</div>
+
+		<div
+			class="flex shrink-0 justify-end gap-1.5 px-4 pt-3 pb-4 text-sm font-normal"
+			class:hidden={selectedTab !== 'general'}
+		>
+			<button
+				class="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-base-900 px-2.5 text-xs font-normal text-base-0 transition hover:bg-base-1000 disabled:opacity-60 dark:bg-base-100 dark:text-base-900 dark:hover:bg-base-0 disabled:cursor-not-allowed"
+				type="submit"
+				form="folder-form"
+				disabled={loading}
+			>
+				{$i18n.t('Save')}
+
+				{#if loading}
+					<div class="shrink-0">
+						<Spinner className="size-3" />
+					</div>
+				{/if}
+			</button>
 		</div>
 	</div>
 </Modal>

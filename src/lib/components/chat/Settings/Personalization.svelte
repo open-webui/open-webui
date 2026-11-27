@@ -1,6 +1,6 @@
 <script lang="ts">
 	import Switch from '$lib/components/common/Switch.svelte';
-	import { config, settings } from '$lib/stores';
+	import { config, folders, settings } from '$lib/stores';
 	import { createEventDispatcher, onMount, getContext } from 'svelte';
 	import type { Writable } from 'svelte/store';
 	import type { i18n as i18nType } from 'i18next';
@@ -11,6 +11,7 @@
 	import DropdownMenu from '$lib/components/common/DropdownMenu.svelte';
 	import ExperimentalBadge from '$lib/components/common/ExperimentalBadge.svelte';
 	import MemoryModal from './Personalization/MemoryModal.svelte';
+	import MemoryList from './Personalization/MemoryList.svelte';
 	import { deleteMemoriesByUserId, deleteMemoryById, getMemories } from '$lib/apis/memories';
 	import { toast } from 'svelte-sonner';
 	import UserSettingRow from './UserSettingRow.svelte';
@@ -37,16 +38,18 @@
 	let showClearConfirmDialog = false;
 	let showDeleteConfirm = false;
 	let query = '';
-	const actionButtonClass =
-		'shrink-0 text-xs text-base-500 transition-colors hover:text-base-900 dark:text-base-500 dark:hover:text-base-0';
 
 	type Memory = {
 		id: string;
 		content: string;
 		type?: string;
 		path?: string;
+		folder_id?: string | null;
 		updated_at?: number;
 	};
+	$: folderNames = new Map(
+		($folders as { id: string; name: string }[]).map((folder) => [folder.id, folder.name])
+	);
 
 	const loadMemories = async () => {
 		loadingMemories = true;
@@ -240,33 +243,13 @@
 								{/if}
 							</div>
 						{:else}
-							<div class="flex flex-col gap-2">
-								{#each sortedMemories as memory (memory.id)}
-									<div class="flex items-start justify-between gap-3">
-										<div
-											class="min-w-0 whitespace-pre-wrap break-words text-xs text-base-700 dark:text-base-300"
-										>
-											{memory.content}
-										</div>
-										<div class="flex shrink-0 items-center justify-end gap-2">
-											<button
-												type="button"
-												class="{actionButtonClass} hover:underline"
-												on:click={() => editMemory(memory)}
-											>
-												{$i18n.t('Edit')}
-											</button>
-											<button
-												type="button"
-												class="{actionButtonClass} hover:underline"
-												on:click={() => confirmDeleteMemory(memory)}
-											>
-												{$i18n.t('Remove')}
-											</button>
-										</div>
-									</div>
-								{/each}
-							</div>
+							<MemoryList
+								memories={sortedMemories}
+								{folderNames}
+								expandAll={!!query}
+								onEdit={editMemory}
+								onRemove={confirmDeleteMemory}
+							/>
 						{/if}
 					{/if}
 				</div>

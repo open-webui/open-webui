@@ -12,6 +12,8 @@
 
 	export let show;
 	export let memory = null;
+	/** The folder a new memory is added to; null adds it for every chat. @type {string | null} */
+	export let folderId = null;
 
 	const i18n = getContext('i18n');
 
@@ -33,7 +35,7 @@
 		const res = await (
 			edit
 				? updateMemoryById(localStorage.token, memory.id, content, type, path)
-				: addNewMemory(localStorage.token, content, type, path)
+				: addNewMemory(localStorage.token, content, type, path, folderId)
 		).catch((error) => {
 			toast.error(`${error}`);
 			return null;

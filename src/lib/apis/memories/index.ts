@@ -28,7 +28,13 @@ export const getMemories = async (token: string) => {
 	return res;
 };
 
-export const addNewMemory = async (token: string, content: string, type = 'user', path = '') => {
+export const addNewMemory = async (
+	token: string,
+	content: string,
+	type = 'user',
+	path = '',
+	folderId: string | null = null
+) => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/memories/add`, {
@@ -41,7 +47,8 @@ export const addNewMemory = async (token: string, content: string, type = 'user'
 		body: JSON.stringify({
 			content: content,
 			type,
-			path
+			path,
+			folder_id: folderId
 		})
 	})
 		.then(async (res) => {

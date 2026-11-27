@@ -108,6 +108,7 @@ from open_webui.utils.json_codec import JSONCodec, dumps_bytes
 from open_webui.utils.mcp.apps import MCPAppResult
 from open_webui.utils.memory import (
     add_memory_context,
+    get_memory_folder,
     memory_context_enabled,
     recall_memories,
     review_memory_after_turn,
@@ -2626,7 +2627,9 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                 )
 
         if not use_builtin_tools and await memory_context_enabled(user, features):
-            form_data = await add_memory_context(request, form_data, user, model)
+            form_data = await add_memory_context(
+                request, form_data, user, model, folder=await get_memory_folder(user, metadata)
+            )
 
         if 'web_search' in features and features['web_search'] and await Config.get('web.search.enable'):
             # features is client-supplied; re-check the permission the native FC path enforces.
@@ -3248,7 +3251,9 @@ async def process_chat_payload(request, form_data, user, metadata, model):
 
     # Added after compaction: it can summarize away the copy the model had, and it should not summarize this turn's.
     if use_builtin_tools and not metadata.get('assistant_message_id') and await memory_context_enabled(user, features):
-        initial_output.extend(await preload_memory(request, form_data['messages'], user, model))
+        initial_output.extend(
+            await preload_memory(request, form_data['messages'], user, model, await get_memory_folder(user, metadata))
+        )
     for name, manifest in manifests.items():
         if get_last_tool_result(form_data['messages'], name) != manifest:
             initial_output.extend(hidden_tool_result(name, manifest))
@@ -3269,14 +3274,14 @@ async def process_chat_payload(request, form_data, user, metadata, model):
     return form_data, metadata, events, False
 
 
-async def preload_memory(request, messages: list[dict], user, model: dict) -> list[dict]:
+async def preload_memory(request, messages: list[dict], user, model: dict, folder=None) -> list[dict]:
     """Keep automatic recall in ordinary tool history so later turns replay it unchanged.
 
     Memories whose line is still in an earlier recall are left out, so each is sent again only once
     it changes, was cut off by the character limit, or its earlier copy was compacted away.
     """
     sent = ''.join(f'{result}\n' for result in get_tool_results(messages, 'recall_memories'))
-    result = await recall_memories(request, messages, user, model, sent=sent)
+    result = await recall_memories(request, messages, user, model, sent=sent, folder=folder)
     return hidden_tool_result('recall_memories', result) if result else []
 
 
