@@ -125,7 +125,10 @@
 
 		{#if collapsible}
 			<Collapsible bind:open className="w-full" buttonClassName="w-full" onChange={setOpen}>
-				<div class="flex items-center justify-between h-6 w-full pl-3.5 pr-1.5 shrink-0">
+				<div
+					class="flex items-center justify-between h-6 w-full pl-3.5 pr-1.5 shrink-0"
+					data-section-handle
+				>
 					<h2 class="flex flex-1 h-full">
 						<button
 							type="button"

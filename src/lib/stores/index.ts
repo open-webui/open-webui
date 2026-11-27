@@ -392,6 +392,8 @@ type Settings = {
 	recentEmojis?: string[];
 	pinnedMenuItems?: string[];
 	pinnedNotesOrder?: string[];
+	/** Sidebar section ids ('models', 'notes', 'channels', 'folders', 'chats') in display order. */
+	sidebarSectionOrder?: string[];
 	/** Folder ids in display order, by parent folder id ('root' for top-level folders). */
 	folderOrder?: Record<string, string[]>;
 
