@@ -420,11 +420,9 @@
 										>{DAY_NAMES[day.getDay()]}</span
 									>
 									<span
-										class="size-5 flex items-center justify-center rounded-full {isToday(day)
-											? ($settings?.highContrastMode ?? false)
-												? 'bg-blue-600 text-white'
-												: 'bg-blue-500 text-white'
-											: 'text-base-400 dark:text-base-500'}"
+										class={isToday(day)
+											? 'font-medium text-base-800 dark:text-base-100'
+											: 'text-base-400 dark:text-base-500'}
 									>
 										{day.getDate()}
 									</span>
