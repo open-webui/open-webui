@@ -104,6 +104,13 @@
 		}
 	});
 
+	const preloadErrorHandler = async () => {
+		if (!mfaManagement && (await updated.check())) {
+			await unregisterServiceWorkers();
+			location.reload();
+		}
+	};
+
 	setContext('i18n', i18n);
 	/** @type {import('$lib/components/auth/MfaManagement.svelte').MfaManagementFlow | null} */
 	let mfaManagement = null;
@@ -1095,6 +1102,7 @@
 			}
 		};
 		window.addEventListener('beforeunload', beforeUnloadHandler);
+		window.addEventListener('vite:preloadError', preloadErrorHandler);
 
 		const token = localStorage.token;
 		const sessionUserRequest = token ? getSessionUser(token) : null;
@@ -1236,6 +1244,7 @@
 			window.removeEventListener('pagehide', handlePageHidden);
 			window.removeEventListener('pageshow', handlePageVisible);
 			window.removeEventListener('beforeunload', beforeUnloadHandler);
+			window.removeEventListener('vite:preloadError', preloadErrorHandler);
 			unsubscribeQueueUser();
 		};
 	});
