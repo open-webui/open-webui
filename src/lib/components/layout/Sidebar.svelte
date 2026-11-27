@@ -335,7 +335,8 @@
 			label: $i18n.t('Group by'),
 			key: 'folderGroup',
 			choices: [
-				{ value: 'none', label: $i18n.t('None') },
+				// Your own layout: sections and manual order
+				{ value: 'none', label: $i18n.t('Default') },
 				{ value: 'owner', label: $i18n.t('Owner') },
 				...(folderMachineIds.length ? [{ value: 'machine', label: $i18n.t('Machine') }] : [])
 			]
@@ -1815,8 +1816,12 @@
 											const { type, id, item } = e.detail;
 
 											if (type === 'folder') {
-												// Dropped on the section itself: top level, outside any section of yours
-												if (folderSections.some((section) => section.folderIds.includes(id))) {
+												// Dropped on the section itself: top level, outside any section of yours.
+												// While grouped, sections are hidden and keep their folders.
+												if (
+													($settings?.folderGroup ?? 'none') === 'none' &&
+													folderSections.some((section) => section.folderIds.includes(id))
+												) {
 													saveFolderListSettings({
 														folderSections: placeInSection(folderSections, id)
 													});

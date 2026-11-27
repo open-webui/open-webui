@@ -22,8 +22,9 @@
 	/** Shows the name as a text field; saving calls onRename. */
 	export let editing = false;
 	export let onRename: ((name: string) => void) | null = null;
-	/** Makes the heading draggable on its own, for a section nested in another; it then
-	 * isn't a handle for reordering the sidebar's sections. */
+	/** Whether the heading reorders the sidebar's sections; off for one nested in another. */
+	export let sortHandle = true;
+	/** Makes the heading draggable on its own, e.g. to reorder nested sections. */
 	export let onHeadingDragStart: ((e: DragEvent) => void) | null = null;
 	export let onHeadingDragEnd: (() => void) | null = null;
 
@@ -154,7 +155,7 @@
 				<!-- svelte-ignore a11y-no-static-element-interactions -->
 				<div
 					class="flex items-center justify-between h-6 w-full pl-3.5 pr-1.5 shrink-0"
-					data-section-handle={onHeadingDragStart ? undefined : ''}
+					data-section-handle={sortHandle ? '' : undefined}
 					draggable={onHeadingDragStart && !editing ? 'true' : undefined}
 					on:dragstart={(e) => onHeadingDragStart?.(e)}
 					on:dragend={() => onHeadingDragEnd?.()}

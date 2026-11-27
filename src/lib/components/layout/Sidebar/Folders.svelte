@@ -90,8 +90,8 @@
 		(a, b) => indexIn(topOrder, a.id) - indexIn(topOrder, b.id)
 	);
 
-	// Group by applies to the folders outside sections; a section is its own group.
-	// Grouping by machine with no machine folders left groups nothing.
+	// Grouping takes over from sections: it groups every top-level folder and hides the
+	// sections until it's off again. Grouping by machine with no machine folders left groups nothing.
 	$: groupBy =
 		$settings?.folderGroup === 'machine' && !roots.some((f) => f.machine_id)
 			? 'none'
@@ -132,20 +132,19 @@
 			!a.key ? -1 : !b.key ? 1 : a.label.localeCompare(b.label)
 		);
 	};
-	$: groups = buildGroups(unsectioned, groupBy, $machines, $i18n.t);
+	$: groups = buildGroups(groupBy === 'none' ? unsectioned : visible, groupBy, $machines, $i18n.t);
 
 	// Sections mix in among folders only when nothing else decides the order
 	$: mixed = groupBy === 'none' && ($settings?.folderSort ?? 'manual') === 'manual';
 	$: topItems = mixed ? topOrder.filter((id) => sectionIds.has(id) || unsectionedIds.has(id)) : [];
 
-	// A section goes beside top-level folders outside sections, when mixed. Beside a
-	// top-level folder in a section, any folder fits; outside sections, only folders of
-	// the same group, as a drag can't change a folder's owner or machine.
+	// A section goes beside top-level folders outside sections, when mixed. When grouped, a
+	// top-level folder only goes beside folders of its group, as a drag can't change a
+	// folder's owner or machine.
 	$: canReorder = (id: string, targetId: string) =>
 		sectionIds.has(id)
 			? mixed && unsectionedIds.has(targetId)
 			: !rootIds.has(targetId) ||
-				inSection(targetId) ||
 				groupKey(folders[id], groupBy) === groupKey(folders[targetId], groupBy);
 
 	const place = (order: string[], id: string, targetId: string, position: 'before' | 'after') => {
@@ -194,15 +193,18 @@
 			position
 		);
 
-		// A top-level folder joins the section of the folder it's placed beside
+		// A top-level folder joins the section of the folder it's placed beside; while
+		// grouped, sections are hidden and keep their folders
 		const targetSection = sections.find((section) => section.folderIds.includes(targetId));
 		await saveFolderListSettings({
 			folderOrder: { ...$settings?.folderOrder, [key]: order },
-			folderSections: placeInSection(
-				sections,
-				id,
-				parentId === null ? targetSection?.id : undefined
-			)
+			...(groupBy === 'none' && {
+				folderSections: placeInSection(
+					sections,
+					id,
+					parentId === null ? targetSection?.id : undefined
+				)
+			})
 		});
 	};
 
@@ -305,6 +307,7 @@
 		<SidebarSection
 			id="sidebar-folder-section-{section.id}"
 			name={section.name}
+			sortHandle={false}
 			editing={section.id === renamingSectionId}
 			onRename={(name) => renameSection(section.id, name)}
 			onHeadingDragStart={(e) => {
@@ -379,17 +382,25 @@
 	</div>
 {:else}
 	{#each groups as group (group.key)}
-		{#if groupBy !== 'none'}
-			<div
-				class="w-full truncate pl-2.5 pt-2 pb-0.5 text-[0.6875rem] text-base-400 dark:text-base-600"
+		{#if groupBy === 'none'}
+			{@render folderList(group.ids)}
+		{:else}
+			<!-- Looks and collapses like a section; its folders still take their own drops -->
+			<SidebarSection
+				id="sidebar-folder-group-{groupBy}-{group.key || 'none'}"
+				name={group.label}
+				className="-mx-1.5"
+				sortHandle={false}
+				dragAndDrop={false}
 			>
-				{group.label}
-			</div>
+				{@render folderList(group.ids)}
+			</SidebarSection>
 		{/if}
-		{@render folderList(group.ids)}
 	{/each}
 
-	{#each orderedSections as section (section.id)}
-		{@render sectionItem(section)}
-	{/each}
+	{#if groupBy === 'none'}
+		{#each orderedSections as section (section.id)}
+			{@render sectionItem(section)}
+		{/each}
+	{/if}
 {/if}
