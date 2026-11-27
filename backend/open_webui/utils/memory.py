@@ -369,7 +369,7 @@ async def recall_memories(
     seen_ids = set()
     for key, rows in (
         ('user', [memory for memory in memories if memory.type == 'user' and not memory.folder_id]),
-        ('folder', [memory for memory in memories if memory.folder_id]),
+        ('folder', [memory for memory in memories if memory.type == 'user' and memory.folder_id]),
     ):
         for memory in sorted(rows, key=lambda item: (item.path or '', item.updated_at or 0, item.id or '')):
             seen_ids.add(memory.id)
