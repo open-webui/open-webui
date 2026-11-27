@@ -1820,6 +1820,9 @@ async def chat_completion(
                 error_detail = e.detail if isinstance(e, HTTPException) else str(e)
                 if not (metadata.get('session_id') and metadata.get('chat_id')):
                     raise
+                if isinstance(e, aiohttp.ClientPayloadError):
+                    log.error('Model connection closed partway through the reply: %s', error_detail)
+                    error_detail = ERROR_MESSAGES.MODEL_CONNECTION_CLOSED
             finally:
                 if error_detail is not None:
                     log.error('Error processing chat payload: %s', error_detail)
