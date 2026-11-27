@@ -6,9 +6,10 @@ import re
 from typing import Any
 
 from fastapi import HTTPException
-from open_webui.models.chats import Chats
+from sqlalchemy import or_, select
+from open_webui.models.chats import Chat, Chats
 from open_webui.models.config import Config
-from open_webui.models.folders import FolderModel, Folders
+from open_webui.models.folders import Folder, FolderModel, Folders
 from open_webui.models.memories import Memories
 from open_webui.utils.access_control import has_permission
 from open_webui.utils.access_control.folders import has_folder_access
@@ -262,6 +263,15 @@ async def get_memory_folder(user, metadata: dict | None) -> FolderModel | None:
     if not folder or (user.role != 'admin' and not await has_folder_access(user.id, folder, 'read', db=None)):
         return None
     return folder
+
+
+async def get_chat_search_condition(user, metadata: dict | None):
+    """Past chats this chat may look up: its folder's if that is Folder only, else all but Folder only folders'."""
+    folder = await get_memory_folder(user, metadata)
+    if is_folder_only(folder):
+        return Chat.folder_id == folder.id
+    folder_only_ids = select(Folder.id).where(Folder.user_id == user.id, Folder.data['memory'].as_string() == 'folder')
+    return or_(Chat.folder_id.is_(None), Chat.folder_id.notin_(folder_only_ids))
 
 
 def is_folder_only(folder: FolderModel | None) -> bool:

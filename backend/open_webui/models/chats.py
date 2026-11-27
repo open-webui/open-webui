@@ -2257,14 +2257,16 @@ class ChatTable:
         include_archived: bool = False,
         skip: int = 0,
         limit: int = 60,
+        where: ColumnElement[bool] | None = None,
         db: AsyncSession | None = None,
     ) -> list[ChatTitleIdResponse]:
         """
         Search chats without loading their bodies, with pagination applied in SQL.
+        where adds a condition the chats must also meet.
         """
         search_text = sanitize_text_for_db(search_text).lower().strip()
 
-        if not search_text:
+        if not search_text and where is None:
             return await self.get_chat_list_by_user_id(
                 user_id, include_archived, filter={}, skip=skip, limit=limit, db=db
             )
@@ -2327,6 +2329,8 @@ class ChatTable:
 
             if folder_names:
                 stmt = stmt.filter(Chat.folder_id.in_(folder_ids))
+            if where is not None:
+                stmt = stmt.filter(where)
 
             # Check if the database dialect is either 'sqlite' or 'postgresql'
             bind = await session.connection()
