@@ -64,7 +64,9 @@
 		// except for plain [1] on a source with numbered paragraphs: that cites it as a whole.
 		const claimed = claim ? getClaimSpans(claim, fileSpans) : [];
 		const wholeSource =
-			!cited.length && (citation.paragraphs ?? []).some((paragraphs: any[]) => paragraphs?.length);
+			typeof sourceId === 'string' &&
+			!cited.length &&
+			(citation.paragraphs ?? []).some((paragraphs: any[]) => paragraphs?.length);
 		const marked = claimed.length ? claimed : wholeSource ? [] : fileSpans;
 		const metadata = (marked[0] ?? spans[0])?.metadata ?? citation.metadata?.[0];
 		const fileName = String(metadata?.name ?? citation.source?.name ?? '');
