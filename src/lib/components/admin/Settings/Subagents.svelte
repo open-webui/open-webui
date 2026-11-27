@@ -4,11 +4,12 @@
 	import { getContext, onMount, tick } from 'svelte';
 	import { toast } from 'svelte-sonner';
 
-	import { config as appConfig } from '$lib/stores';
+	import { config as appConfig, baseModels } from '$lib/stores';
 	import { getBackendConfig } from '$lib/apis';
 	import { getSubagentsConfig, setSubagentsConfig } from '$lib/apis/configs';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Switch from '$lib/components/common/Switch.svelte';
+	import TypeaheadSelector from '$lib/components/workspace/Models/TypeaheadSelector.svelte';
 
 	const i18n = getContext('i18n');
 
@@ -20,6 +21,7 @@
 	let maxIterations: number | null = null;
 	let maxOutput: number | null = null;
 	let systemPrompt = '';
+	let modelIds: string[] = [];
 
 	let savedConfig: Record<string, any> | null = null;
 	$: settings = {
@@ -28,7 +30,8 @@
 		SUBAGENTS_MAX_ASYNC: maxAsync,
 		SUBAGENTS_MAX_ITERATIONS: maxIterations,
 		SUBAGENTS_MAX_OUTPUT: maxOutput,
-		SUBAGENTS_SYSTEM_PROMPT: systemPrompt
+		SUBAGENTS_SYSTEM_PROMPT: systemPrompt,
+		SUBAGENTS_MODEL_IDS: modelIds
 	};
 	$: settingLabels = {
 		ENABLE_SUBAGENTS: $i18n.t('settings.admin.subagents.enableSubAgents.label'),
@@ -36,7 +39,8 @@
 		SUBAGENTS_MAX_ASYNC: $i18n.t('settings.admin.subagents.maxBackground.label'),
 		SUBAGENTS_MAX_ITERATIONS: $i18n.t('settings.admin.subagents.maxIterations.label'),
 		SUBAGENTS_MAX_OUTPUT: $i18n.t('settings.admin.subagents.maxOutput.label'),
-		SUBAGENTS_SYSTEM_PROMPT: $i18n.t('settings.admin.subagents.systemPrompt.label')
+		SUBAGENTS_SYSTEM_PROMPT: $i18n.t('settings.admin.subagents.systemPrompt.label'),
+		SUBAGENTS_MODEL_IDS: $i18n.t('settings.admin.subagents.models.label')
 	};
 
 	onMount(async () => {
@@ -48,6 +52,7 @@
 			maxIterations = config?.SUBAGENTS_MAX_ITERATIONS ?? null;
 			maxOutput = config?.SUBAGENTS_MAX_OUTPUT ?? null;
 			systemPrompt = config?.SUBAGENTS_SYSTEM_PROMPT ?? '';
+			modelIds = config?.SUBAGENTS_MODEL_IDS ?? [];
 		} catch (error) {
 			toast.error(`${error}`);
 		} finally {
@@ -67,7 +72,8 @@
 				SUBAGENTS_MAX_ASYNC: maxAsync ?? null,
 				SUBAGENTS_MAX_ITERATIONS: maxIterations ?? null,
 				SUBAGENTS_MAX_OUTPUT: maxOutput ?? null,
-				SUBAGENTS_SYSTEM_PROMPT: systemPrompt
+				SUBAGENTS_SYSTEM_PROMPT: systemPrompt,
+				SUBAGENTS_MODEL_IDS: modelIds
 			});
 			savedConfig = structuredClone(settings);
 			await appConfig.set(await getBackendConfig());
@@ -103,6 +109,34 @@
 				</p>
 
 				{#if enabled}
+					<TypeaheadSelector
+						id="sa-models"
+						label={$i18n.t('settings.admin.subagents.models.label')}
+						description={$i18n.t(
+							'Models sub-agents can run on. Users must have access to them. Leave empty to use the current model.'
+						)}
+						items={$baseModels
+							.filter((model) => !('owner_id' in model && model.owner_id))
+							.map((model) => ({
+								id: model.id,
+								name: model.name,
+								meta: model.info?.meta
+							}))}
+						selectedIds={modelIds}
+						placeholder={$i18n.t('Search Models')}
+						emptyLabel={$i18n.t('No models found')}
+						variant="dropdown"
+						on:select={(e) => {
+							modelIds = modelIds.includes(e.detail.id)
+								? modelIds.filter((id) => id !== e.detail.id)
+								: [...modelIds, e.detail.id];
+						}}
+						on:enableall={(e) => {
+							modelIds = [...new Set([...modelIds, ...e.detail.map((model) => model.id)])];
+						}}
+						on:clear={() => (modelIds = [])}
+					/>
+
 					<div>
 						<label class="text-xs text-base-600 dark:text-base-400" for="sa-concurrent">
 							{$i18n.t('settings.admin.subagents.maxConcurrent.label')}

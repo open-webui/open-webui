@@ -3283,6 +3283,7 @@ DEFAULT_CONFIG = {
     'subagents.max_iterations': SUBAGENTS_MAX_ITERATIONS,
     'subagents.max_output': SUBAGENTS_MAX_OUTPUT,
     'subagents.system_prompt': SUBAGENTS_SYSTEM_PROMPT,
+    'subagents.model_ids': [],
     'automations.max_count': AUTOMATION_MAX_COUNT,
     'automations.min_interval': AUTOMATION_MIN_INTERVAL,
     'automations.max_concurrent': AUTOMATION_MAX_CONCURRENT,

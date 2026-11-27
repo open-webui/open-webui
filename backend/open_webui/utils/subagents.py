@@ -55,9 +55,8 @@ _foreground_semaphore: asyncio.Semaphore | None = None
 _parent_locks: weakref.WeakValueDictionary[str, asyncio.Lock] = weakref.WeakValueDictionary()
 
 
-async def get_subagent_models(request: Request, user: UserModel, model: dict) -> list[dict]:
-    subagents = (model.get('info', {}).get('meta') or {}).get('subagents') or {}
-    model_ids = subagents.get('model_ids') or []
+async def get_subagent_models(request: Request, user: UserModel) -> list[dict]:
+    model_ids = await Config.get('subagents.model_ids')
     if not model_ids:
         return []
     candidates = [model for model_id, model in request.app.state.MODELS.items() if model_id in model_ids]
@@ -634,7 +633,7 @@ async def delegate(
     if not run.get('model_id'):
         return 'Error: model context is required.'
     if model_id:
-        available_models = await get_subagent_models(request, UserModel(**user_data), metadata.get('model') or {})
+        available_models = await get_subagent_models(request, UserModel(**user_data))
         available_ids = [model['id'] for model in available_models]
         if model_id not in available_ids:
             return (
