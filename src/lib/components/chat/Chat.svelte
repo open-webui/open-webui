@@ -121,6 +121,7 @@
 	} from './Messages/structuredOutput';
 
 	import {
+		addChatMessagesById,
 		addTagById,
 		archiveChatById,
 		compactChatById,
@@ -4027,6 +4028,8 @@
 		}, 1000);
 	};
 
+	const messagePairSaves: Record<string, Record<string, any>> = {};
+
 	const createMessagePair = async (userPrompt) => {
 		if (isShared) return;
 		messageInput?.setText('');
@@ -4098,7 +4101,27 @@
 			const _chatId = $chatId || (await getChatId(history));
 			if (_chatId === null) return;
 			if (_chatId) {
-				await saveChatHandler(_chatId, history);
+				if ($chatId == _chatId && !$temporaryChat) {
+					const pairMessages = Object.fromEntries(
+						[userMessage, ...responseMessages].map((message) => [message.id, message])
+					);
+					if (messagePairSaves[_chatId]) {
+						Object.assign(messagePairSaves[_chatId], pairMessages);
+						return;
+					}
+					messagePairSaves[_chatId] = pairMessages;
+					try {
+						while (Object.keys(messagePairSaves[_chatId]).length) {
+							const unsavedMessages = messagePairSaves[_chatId];
+							messagePairSaves[_chatId] = {};
+							await addChatMessagesById(localStorage.token, _chatId, unsavedMessages).catch(() =>
+								saveChatHandler(_chatId, history)
+							);
+						}
+					} finally {
+						delete messagePairSaves[_chatId];
+					}
+				}
 			} else {
 				await initChatHandler(history);
 			}
