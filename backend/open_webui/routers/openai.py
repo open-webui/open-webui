@@ -607,7 +607,7 @@ async def speech(request: Request, user=Depends(get_verified_user)):
                 async for chunk in r.content.iter_chunked(8192):
                     await f.write(chunk)
 
-            async with aiofiles.open(file_body_path, 'w') as f:
+            async with aiofiles.open(file_body_path, 'w', encoding='utf-8') as f:
                 await f.write(JSONCodec.dumps(JSONCodec.loads(body.decode('utf-8'))))
 
             # Return the saved file
