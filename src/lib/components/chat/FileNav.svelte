@@ -144,6 +144,9 @@
 	export let initialFile: { path: string; page?: number | null } | null = null;
 	export let initialDirectory: string | null = null;
 	export let onSelectDirectory: ((path: string) => void) | null = null;
+	// Rows are costly to draw.
+	let seen = false;
+	$: if (active) seen = true;
 	let showCloneRepository = false;
 	let gitAvailable = false;
 	let cloneSupportVersion = 0;
@@ -3046,7 +3049,7 @@
 				{/if}
 
 				{#if !isSearching && !loading && !error && !uploading && !(effectiveMachineId && $machines === null)}
-					{#if visibleEntries.length > 0 || creatingFolder || creatingFile}
+					{#if seen && (visibleEntries.length > 0 || creatingFolder || creatingFile)}
 						<ul
 							data-file-list
 							class={viewMode === 'grid'
