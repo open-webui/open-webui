@@ -396,6 +396,12 @@ type Settings = {
 	sidebarSectionOrder?: string[];
 	/** Folder ids in display order, by parent folder id ('root' for top-level folders). */
 	folderOrder?: Record<string, string[]>;
+	/** Whose top-level folders the sidebar lists. */
+	folderOwner?: 'all' | 'yours' | 'shared';
+	/** Which machine's top-level folders the sidebar lists: 'all', 'none' or a machine id. */
+	folderMachine?: string;
+	/** How the sidebar orders folders; 'manual' follows folderOrder. */
+	folderSort?: 'manual' | 'name' | 'updated_at' | 'created_at';
 
 	defaultUploadContext?: 'full' | 'focused';
 

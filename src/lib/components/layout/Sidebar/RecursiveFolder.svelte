@@ -73,6 +73,8 @@
 	import DragGhost from '$lib/components/common/DragGhost.svelte';
 
 	import FolderIcon from '$lib/components/icons/Folder.svelte';
+	import Shared from './icons/Shared.svelte';
+	import Tooltip from '$lib/components/common/Tooltip.svelte';
 	import MoreHorizontal from './icons/MoreHorizontal.svelte';
 
 	import ChatItem from './ChatItem.svelte';
@@ -210,10 +212,23 @@
 
 	$: isWritable = !folders[folderId]?.shared || folders[folderId]?.permission === 'write';
 
+	/** A shared folder shown at the top level, the only kind of shared folder that moves
+	 * @param {string | null} id */
+	const isSharedRoot = (id) => {
+		const folder = id ? folders[id] : null;
+		return !!folder?.shared && !(folder.parent_id && folders[folder.parent_id]);
+	};
+
+	const isDraggingShared = () => !!draggedFolderId && !!folders[draggedFolderId]?.shared;
+
 	/** @param {any} e */
 	const getDropPosition = (e) => {
-		// Only folders reorder, and shared folders keep their place
-		if (draggedFolderId && !folders[folderId]?.shared && rowElement.contains(e.target)) {
+		// Only folders reorder, only in manual sort; shared ones only beside other top-level folders
+		const isRoot = folders[folderId]?.parent_id === null || isSharedRoot(folderId);
+		const reorderable =
+			($settings?.folderSort ?? 'manual') === 'manual' &&
+			(isDraggingShared() ? isRoot : !folders[folderId]?.shared || isSharedRoot(folderId));
+		if (draggedFolderId && reorderable && rowElement.contains(e.target)) {
 			const rect = rowElement.getBoundingClientRect();
 			const offset = (e.clientY - rect.top) / rect.height;
 			if (offset < 0.25) return 'before';
@@ -222,20 +237,32 @@
 		return 'inside';
 	};
 
+	/** Where a drop would land, or null when it's not allowed here
+	 * @param {any} e */
+	const getAllowedDrop = (e) => {
+		if (dragged || parentDragged) return null;
+		const position = getDropPosition(e);
+		// Order is personal; moving inside needs write access and never takes a shared folder
+		if (position === 'inside' && (!isWritable || isDraggingShared())) return null;
+		return position;
+	};
+
 	const onDragOver = (e) => {
 		e.stopPropagation();
-		if (dragged || parentDragged || !isWritable) {
+		const position = getAllowedDrop(e);
+		if (!position) {
+			draggedOver = false;
 			return;
 		}
 		e.preventDefault();
 		draggedOver = true;
-		dropPosition = getDropPosition(e);
+		dropPosition = position;
 	};
 
 	const onDrop = async (e) => {
 		e.preventDefault();
 		e.stopPropagation();
-		if (dragged || parentDragged || !isWritable) {
+		if (!getAllowedDrop(e)) {
 			return;
 		}
 
@@ -775,7 +802,7 @@
 	bind:this={folderElement}
 	class="relative {className}"
 	role="listitem"
-	draggable={!folders[folderId]?.shared}
+	draggable={!folders[folderId]?.shared || isSharedRoot(folderId)}
 >
 	{#if draggedOver && dropPosition === 'inside'}
 		<div
@@ -932,6 +959,15 @@
 									</div>
 								{/if}
 
+								{#if isSharedRoot(folderId)}
+									<Tooltip
+										content={`${$i18n.t('Shared')}${folders[folderId].owner_name ? ` · ${folders[folderId].owner_name}` : ''}`}
+										className="flex shrink-0 text-base-400 dark:text-base-500"
+									>
+										<Shared className="size-3.5" strokeWidth="1.75" />
+									</Tooltip>
+								{/if}
+
 								{#if !folders[folderId]?.shared && (folders[folderId]?.unread_count ?? 0) > 0}
 									<div
 										class="inline-flex h-4 min-w-4 shrink-0 items-center justify-center rounded-md bg-sky-500/10 px-1 text-[0.625rem] font-semibold leading-4 text-sky-600 dark:bg-sky-400/10 dark:text-sky-300"
@@ -1012,7 +1048,8 @@
 					{#if folders[folderId]?.childrenIds}
 						{@const children = sortFolders(
 							folders[folderId].childrenIds.map((id) => folders[id]),
-							$settings?.folderOrder?.[folderId]
+							$settings?.folderOrder?.[folderId],
+							$settings?.folderSort
 						)}
 
 						{#if children.length > 0}

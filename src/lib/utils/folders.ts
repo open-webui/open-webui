@@ -142,15 +142,23 @@ export type CanEditChat = (chat: Pick<WorkspaceChat, 'user_id'>) => boolean;
 export type WorkspacePage = { chats: WorkspaceChat[]; total: number; has_more: boolean };
 export type FolderUser = { id: string; name: string; count: number };
 
-// Folders missing from the saved order go last, by name.
-export const sortFolders = <T extends { id: string; name?: string }>(
+export type FolderSort = 'manual' | 'name' | 'updated_at' | 'created_at';
+
+// Manual sort follows the saved order, and folders missing from it go last, by name.
+// Time sorts put the newest first.
+export const sortFolders = <
+	T extends { id: string; name?: string; updated_at?: number; created_at?: number }
+>(
 	folders: T[],
-	order: string[] = []
+	order: string[] = [],
+	sort: FolderSort = 'manual'
 ): T[] => {
-	const position = new Map(order.map((id, index) => [id, index]));
+	const saved = sort === 'manual' ? order : [];
+	const position = new Map(saved.map((id, index) => [id, index]));
 	return [...folders].sort(
 		(a, b) =>
-			(position.get(a.id) ?? order.length) - (position.get(b.id) ?? order.length) ||
+			(sort === 'updated_at' || sort === 'created_at' ? (b[sort] ?? 0) - (a[sort] ?? 0) : 0) ||
+			(position.get(a.id) ?? saved.length) - (position.get(b.id) ?? saved.length) ||
 			(a.name ?? '').localeCompare(b.name ?? '', undefined, {
 				numeric: true,
 				sensitivity: 'base'

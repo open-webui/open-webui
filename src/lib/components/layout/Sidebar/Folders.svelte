@@ -1,6 +1,5 @@
 <script lang="ts">
-	import { getContext, createEventDispatcher } from 'svelte';
-	const i18n = getContext('i18n');
+	import { createEventDispatcher } from 'svelte';
 	const dispatch = createEventDispatcher();
 
 	import { toast } from 'svelte-sonner';
@@ -21,29 +20,39 @@
 	export let onDelete = () => {};
 	export let onFolderUnreadCounts = () => {};
 
-	let ownedList: string[] = [];
-	let sharedList: string[] = [];
+	let rootOrder: string[] = [];
 
-	$: {
-		const rootFolders = Object.values(folders).filter((f) => {
-			if (!f.name) return false;
-			// Root folder: no parent, or shared folder whose parent isn't in our folders
-			if (f.shared) {
-				return !f.parent_id || !folders[f.parent_id];
-			}
-			return f.parent_id === null;
-		});
-		ownedList = sortFolders(
-			rootFolders.filter((f) => !f.shared),
-			$settings?.folderOrder?.root
-		).map((f) => f.id);
-		sharedList = sortFolders(rootFolders.filter((f) => f.shared)).map((f) => f.id);
-	}
+	$: roots = Object.values(folders).filter((f) => {
+		if (!f.name) return false;
+		// Root folder: no parent, or shared folder whose parent isn't in our folders
+		if (f.shared) {
+			return !f.parent_id || !folders[f.parent_id];
+		}
+		return f.parent_id === null;
+	});
+	$: rootOrder = sortFolders(roots, $settings?.folderOrder?.root).map((f) => f.id);
+
+	// Filters only hide folders; the saved order keeps them all
+	$: owner = $settings?.folderOwner ?? 'all';
+	// A machine that no longer has folders here filters nothing
+	$: machine =
+		$settings?.folderMachine === 'none' ||
+		roots.some((f) => f.machine_id && f.machine_id === $settings?.folderMachine)
+			? $settings?.folderMachine
+			: 'all';
+	$: rootList = sortFolders(roots, $settings?.folderOrder?.root, $settings?.folderSort)
+		.filter(
+			(f) =>
+				(owner === 'all' || (owner === 'shared') === !!f.shared) &&
+				(machine === 'all' || (machine === 'none' ? !f.machine_id : f.machine_id === machine))
+		)
+		.map((f) => f.id);
 
 	const onReorder = async (id: string, targetId: string, position: 'before' | 'after') => {
-		const parentId = folders[targetId].parent_id;
+		// A shared folder only moves among top-level folders; the owner's tree stays as it is
+		const parentId = folders[targetId].shared ? null : folders[targetId].parent_id;
 
-		if (folders[id].parent_id !== parentId) {
+		if (!folders[id].shared && folders[id].parent_id !== parentId) {
 			const res = await updateFolderParentIdById(localStorage.token, id, parentId).catch(
 				(error) => {
 					toast.error(`${error}`);
@@ -57,10 +66,14 @@
 		}
 
 		const key = parentId ?? 'root';
-		const order = sortFolders(
-			Object.values(folders).filter((f) => f.parent_id === parentId && !f.shared && f.id !== id),
-			$settings?.folderOrder?.[key]
-		).map((f) => f.id);
+		const order = (
+			parentId === null
+				? rootOrder
+				: sortFolders(
+						Object.values(folders).filter((f) => f.parent_id === parentId && !f.shared),
+						$settings?.folderOrder?.[key]
+					).map((f) => f.id)
+		).filter((f) => f !== id);
 		order.splice(order.indexOf(targetId) + (position === 'after' ? 1 : 0), 0, id);
 
 		const folderOrder = { ...$settings?.folderOrder, [key]: order };
@@ -77,39 +90,9 @@
 	};
 </script>
 
-{#if ownedList.length > 0}
+{#if rootList.length > 0}
 	<div role="list">
-		{#each ownedList as folderId (folderId)}
-			<RecursiveFolder
-				className=""
-				bind:folderRegistry
-				{folders}
-				{folderId}
-				{shiftKey}
-				{onDelete}
-				{onItemMove}
-				{onReorder}
-				{onFolderUnreadCounts}
-				on:import={(e) => {
-					dispatch('import', e.detail);
-				}}
-				on:update={(e) => {
-					dispatch('update', e.detail);
-				}}
-				on:change={(e) => {
-					dispatch('change', e.detail);
-				}}
-			/>
-		{/each}
-	</div>
-{/if}
-
-{#if sharedList.length > 0}
-	<div class="w-full pl-2.5 text-[0.6875rem] text-base-400 dark:text-base-600 pt-2 pb-0.5">
-		{$i18n.t('Shared')}
-	</div>
-	<div role="list">
-		{#each sharedList as folderId (folderId)}
+		{#each rootList as folderId (folderId)}
 			<RecursiveFolder
 				className=""
 				bind:folderRegistry
