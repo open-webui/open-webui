@@ -210,6 +210,7 @@
 	$: if (isSavedChatId($chatId)) mainChatHref = `/c/${$chatId}`;
 	export let embedded = false;
 	export let tabbed = false;
+	export let tabActive = true;
 	const chatId = embedded ? writable('') : _chatId;
 	const chatTitle = embedded ? writable('') : _chatTitle;
 	const audioQueue = embedded ? writable<AudioQueue | null>(null) : _audioQueue;
@@ -6633,6 +6634,7 @@
 										{contextCompactionEnabled}
 										{embedded}
 										autofocus={!embeddedCollapsed}
+										active={tabActive}
 										{onRecordedAudio}
 										compactHandler={handleManualCompact}
 										statusHandler={handleStatusCommand}
@@ -6771,6 +6773,7 @@
 										{contextCompactionEnabled}
 										{embedded}
 										autofocus={!embeddedCollapsed}
+										active={tabActive}
 										{onRecordedAudio}
 										compactHandler={handleManualCompact}
 										statusHandler={handleStatusCommand}
@@ -6818,6 +6821,7 @@
 									bind:folderTabActions
 									{selectedMachineId}
 									machineSelectionEnabled={!machineFixed}
+									active={tabActive}
 									disabled={!canUseMachine}
 									placeholder={canUseMachine
 										? ''

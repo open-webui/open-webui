@@ -430,7 +430,7 @@
 	export let floatingMenuPlacement = 'bottom-start';
 
 	// Avoid opening the mobile keyboard or stealing focus from the call overlay.
-	$: suppressAutoFocus = messageInput && ($mobile || $voiceCall);
+	$: suppressAutoFocus = messageInput && ($mobile || $voiceCall || !autofocus);
 
 	let content = null;
 	let htmlValue = '';

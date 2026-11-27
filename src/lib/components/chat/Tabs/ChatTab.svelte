@@ -21,6 +21,7 @@
 		temporary: chatView?.isTemporary() ?? false
 	});
 	export let chatId = '';
+	export let active = false;
 	export let streaming = false;
 	export let artifacts: Writable<{ type: string; content: string }[]> = writable([]);
 	export let onOpenArtifacts: (code?: string) => void = () => {};
@@ -114,6 +115,7 @@
 		bind:tabBarActions
 		embedded={true}
 		tabbed={true}
+		tabActive={active}
 		{parentChatId}
 		chatIdProp={chatId}
 		embeddedDraftKey={chatId ? '' : draftKey}

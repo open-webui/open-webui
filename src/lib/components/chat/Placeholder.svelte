@@ -65,6 +65,7 @@
 	export let selectedMachineId: Pick<Writable<string | null>, 'subscribe' | 'set'>;
 	export let machineSkills: Writable<any[]>;
 	export let messageInput = null;
+	export let active = true;
 
 	export let selectedToolIds = [];
 	export let selectedSkillIds = [];
@@ -168,6 +169,7 @@
 		{callActive}
 		{callEnabled}
 		bind:this={messageInput}
+		{active}
 		{history}
 		bind:selectedModels
 		{onModelSelect}
