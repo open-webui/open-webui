@@ -163,6 +163,7 @@
 		{disabled}
 		{machineSkills}
 		{chatId}
+		folderId={$selectedFolder?.id ?? null}
 		{onTemporaryChange}
 		bind:machineContext
 		{callActive}

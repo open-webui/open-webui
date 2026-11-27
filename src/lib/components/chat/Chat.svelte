@@ -6629,6 +6629,7 @@
 										bind:dragged
 										{dropzoneId}
 										chatId={$chatId}
+										folderId={chatFolderId}
 										{contextUsage}
 										{contextCompactionEnabled}
 										{embedded}
@@ -6767,6 +6768,7 @@
 										bind:dragged
 										{dropzoneId}
 										chatId={$chatId}
+										folderId={chatFolderId}
 										{contextUsage}
 										{contextCompactionEnabled}
 										{embedded}

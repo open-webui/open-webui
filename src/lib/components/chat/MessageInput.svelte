@@ -74,7 +74,7 @@
 	} from '$lib/utils';
 	import { uploadFile } from '$lib/apis/files';
 	import { filesystemFile, getCwd, templatesApi, uploadNewFileToMachine } from '$lib/apis/machines';
-	import { isSavedChatId } from '$lib/utils/chatId';
+	import { folderSessionId, isSavedChatId } from '$lib/utils/chatId';
 	import { generateAutoCompletion } from '$lib/apis';
 	import { deleteFileById } from '$lib/apis/files';
 	import { getChatById } from '$lib/apis/chats';
@@ -169,6 +169,7 @@
 	export let statusHandler: Function = () => {};
 	export let forkHandler: Function | null = null;
 	export let chatId = '';
+	export let folderId: string | null = null;
 	export let inputId = 'chat-input';
 	export let messagesContainerId = 'messages-container';
 	export let onTemporaryChange: ((value: boolean) => void) | null = null;
@@ -1493,10 +1494,13 @@
 				);
 				const existing = files.filter((file) => file.type === 'filesystem');
 				const machineId = machineIdOf(existing[0]) ?? machineIdOf(attachments[0]);
+				// Chats in a folder work in the folder's workspace.
+				const folderSession = folderId && $_user ? folderSessionId(folderId, $_user.id) : null;
 				if (
 					attachments.some(
 						(file) =>
-							machineIdOf(file) !== machineId || (file.session_id && file.session_id !== chatId)
+							machineIdOf(file) !== machineId ||
+							(file.session_id && file.session_id !== chatId && file.session_id !== folderSession)
 					)
 				)
 					throw new Error($i18n.t('Attached files must belong to this chat and the same machine.'));
