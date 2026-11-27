@@ -781,10 +781,13 @@
 		focusMainChat();
 		if (!isLargeScreen) showTabs.set(false);
 	};
-	$: if (`${$page.state.tab} ${$page.url.pathname}` !== historyEntry) {
-		historyEntry = `${$page.state.tab} ${$page.url.pathname}`;
+	const followHistoryEntry = (pageEntry: string) => {
+		if (pageEntry === historyEntry) return;
+		historyEntry = pageEntry;
 		if (!get(navigating)) showAddressed();
-	}
+	};
+	// Tracks $page only: addHistoryEntry sets historyEntry before $page catches up.
+	$: followHistoryEntry(`${$page.state.tab} ${$page.url.pathname}`);
 	const activateFilesOnDrag = (node: HTMLElement, tab: Tab) => {
 		if (tab.kind !== 'files') return;
 		let timer: ReturnType<typeof setTimeout> | undefined;
