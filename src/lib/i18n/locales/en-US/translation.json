@@ -4005,6 +4005,7 @@
 	"settings.admin.subagents.maxConcurrent.label": "Max concurrent",
 	"settings.admin.subagents.maxIterations.label": "Max iterations",
 	"settings.admin.subagents.maxOutput.label": "Max output",
+	"settings.admin.subagents.models.label": "Models",
 	"settings.admin.subagents.systemPrompt.description": "Leave empty for the built-in default.",
 	"settings.admin.subagents.systemPrompt.label": "System prompt",
 	"settings.admin.subagents.title": "Sub-agents",

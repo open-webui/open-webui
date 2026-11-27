@@ -76,6 +76,7 @@ SUBAGENTS_CONFIG_KEYS = {
     'SUBAGENTS_MAX_ITERATIONS': 'subagents.max_iterations',
     'SUBAGENTS_MAX_OUTPUT': 'subagents.max_output',
     'SUBAGENTS_SYSTEM_PROMPT': 'subagents.system_prompt',
+    'SUBAGENTS_MODEL_IDS': 'subagents.model_ids',
 }
 ROUTER_MODELS_CONFIG_KEYS = {
     'ROUTER_MODELS': 'router.models',
@@ -680,6 +681,7 @@ class SubagentsConfigForm(BaseModel):
     SUBAGENTS_MAX_ITERATIONS: int | None = Field(default=None, gt=0)
     SUBAGENTS_MAX_OUTPUT: int | None = Field(default=None, gt=0)
     SUBAGENTS_SYSTEM_PROMPT: str
+    SUBAGENTS_MODEL_IDS: list[str]
 
     @field_validator(
         'SUBAGENTS_MAX_CONCURRENT',

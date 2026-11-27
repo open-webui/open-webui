@@ -1019,7 +1019,7 @@ async def get_builtin_tools(
 
             parameters = spec.get('parameters', {})
             properties = parameters.get('properties', {})
-            subagent_models = await get_subagent_models(request, UserModel(**user), model) if user else []
+            subagent_models = await get_subagent_models(request, UserModel(**user)) if user else []
             if subagent_models:
                 properties['model_id']['enum'] = [model['id'] for model in subagent_models]
                 spec['description'] += f' Available models: {JSONCodec.dumps(subagent_models)}'
