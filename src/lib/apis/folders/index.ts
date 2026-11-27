@@ -194,7 +194,11 @@ export const updateFolderIsExpandedById = async (
 	return res;
 };
 
-export const updateFolderParentIdById = async (token: string, id: string, parentId?: string) => {
+export const updateFolderParentIdById = async (
+	token: string,
+	id: string,
+	parentId?: string | null
+) => {
 	let error = null;
 
 	const res = await fetch(`${WEBUI_API_BASE_URL}/folders/${id}/update/parent`, {

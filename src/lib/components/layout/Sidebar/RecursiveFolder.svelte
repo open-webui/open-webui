@@ -3,6 +3,12 @@
 	// Drag data can't be read until the drop
 	/** @type {string | null} */
 	let draggedFolderId = null;
+	/** A section of the folder list being dragged; it lands beside top-level folders. */
+	/** @type {string | null} */
+	let draggedSectionId = null;
+	export const getDraggedSectionId = () => draggedSectionId;
+	/** @param {string | null} id */
+	export const setDraggedSectionId = (id) => (draggedSectionId = id);
 </script>
 
 <script>
@@ -102,6 +108,9 @@
 	export let onItemMove = () => {};
 	/** @type {(id: string, targetId: string, position: 'before' | 'after') => void} */
 	export let onReorder = () => {};
+	/** Whether the list lets one folder be placed beside another, e.g. within the same group.
+	 * @type {(id: string, targetId: string) => boolean} */
+	export let canReorder = () => true;
 	export let onFolderUnreadCounts = () => {};
 
 	let folderElement;
@@ -223,11 +232,20 @@
 
 	/** @param {any} e */
 	const getDropPosition = (e) => {
+		// A section only goes beside a folder, never inside one
+		if (draggedSectionId) {
+			if (!rowElement.contains(e.target) || !canReorder(draggedSectionId, folderId))
+				return 'inside';
+			const rect = rowElement.getBoundingClientRect();
+			return e.clientY - rect.top < rect.height / 2 ? 'before' : 'after';
+		}
 		// Only folders reorder, only in manual sort; shared ones only beside other top-level folders
 		const isRoot = folders[folderId]?.parent_id === null || isSharedRoot(folderId);
 		const reorderable =
 			($settings?.folderSort ?? 'manual') === 'manual' &&
-			(isDraggingShared() ? isRoot : !folders[folderId]?.shared || isSharedRoot(folderId));
+			(isDraggingShared() ? isRoot : !folders[folderId]?.shared || isSharedRoot(folderId)) &&
+			!!draggedFolderId &&
+			canReorder(draggedFolderId, folderId);
 		if (draggedFolderId && reorderable && rowElement.contains(e.target)) {
 			const rect = rowElement.getBoundingClientRect();
 			const offset = (e.clientY - rect.top) / rect.height;
@@ -243,7 +261,8 @@
 		if (dragged || parentDragged) return null;
 		const position = getDropPosition(e);
 		// Order is personal; moving inside needs write access and never takes a shared folder
-		if (position === 'inside' && (!isWritable || isDraggingShared())) return null;
+		if (position === 'inside' && (!isWritable || isDraggingShared() || draggedSectionId))
+			return null;
 		return position;
 	};
 
@@ -310,7 +329,12 @@
 
 							const { type, id, item } = data;
 
-							if (type === 'folder') {
+							if (type === 'section') {
+								draggedOver = false;
+								const position = getDropPosition(e);
+								if (position !== 'inside') onReorder(id, folderId, position);
+								return;
+							} else if (type === 'folder') {
 								const position = getDropPosition(e);
 								if (position !== 'inside') {
 									draggedOver = false;
@@ -1063,6 +1087,7 @@
 										parentDragged={dragged || parentDragged}
 										{onItemMove}
 										{onReorder}
+										{canReorder}
 										{onDelete}
 										{onFolderUnreadCounts}
 										on:import={(e) => {

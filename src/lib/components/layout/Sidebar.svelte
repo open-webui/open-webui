@@ -81,6 +81,8 @@
 	} from '$lib/apis/folders';
 	import { createNewNote, getPinnedNoteList, toggleNotePinnedStatusById } from '$lib/apis/notes';
 	import { updateUserSettings } from '$lib/apis/users';
+	import { placeInSection, saveFolderListSettings } from '$lib/utils/folderSections';
+	import { v4 as uuidv4 } from 'uuid';
 	import { createNoteHandler } from '$lib/components/notes/utils';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 
@@ -284,6 +286,17 @@
 	].filter((group) => group.length > 0);
 	let showFolders = false;
 	let showFoldersMenu = false;
+	// Sections of the user's own in the folder list
+	$: folderSections = $settings?.folderSections ?? [];
+	let renamingSectionId: string | null = null;
+
+	const createFolderSection = async () => {
+		const section = { id: uuidv4(), name: $i18n.t('New section'), folderIds: [] };
+		showFolders = true;
+		await saveFolderListSettings({ folderSections: [...folderSections, section] });
+		renamingSectionId = section.id;
+	};
+
 	// Machines with top-level folders, the only ones worth filtering by
 	$: folderMachineIds = [
 		...new Set(
@@ -318,6 +331,15 @@
 					}
 				]
 			: []),
+		{
+			label: $i18n.t('Group by'),
+			key: 'folderGroup',
+			choices: [
+				{ value: 'none', label: $i18n.t('None') },
+				{ value: 'owner', label: $i18n.t('Owner') },
+				...(folderMachineIds.length ? [{ value: 'machine', label: $i18n.t('Machine') }] : [])
+			]
+		},
 		{
 			label: $i18n.t('Sort by'),
 			key: 'folderSort',
@@ -1793,6 +1815,12 @@
 											const { type, id, item } = e.detail;
 
 											if (type === 'folder') {
+												// Dropped on the section itself: top level, outside any section of yours
+												if (folderSections.some((section) => section.folderIds.includes(id))) {
+													saveFolderListSettings({
+														folderSections: placeInSection(folderSections, id)
+													});
+												}
 												if (folders[id].parent_id === null || folders[id].shared) {
 													return;
 												}
@@ -1872,6 +1900,17 @@
 																{/each}
 															</DropdownSub>
 														{/each}
+														<hr class="border-base-50/30 dark:border-base-800/30" />
+														<button
+															class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] select-none cursor-pointer hover:bg-base-100 dark:hover:bg-base-900"
+															on:click={() => {
+																showFoldersMenu = false;
+																createFolderSection();
+															}}
+														>
+															<PlusIcon className="size-3.5" />
+															<div class="flex items-center">{$i18n.t('New section')}</div>
+														</button>
 													</DropdownMenu>
 												</div>
 											</Dropdown>
@@ -1905,6 +1944,7 @@
 										</svelte:fragment>
 										<Folders
 											bind:folderRegistry
+											bind:renamingSectionId
 											{folders}
 											{shiftKey}
 											onFolderUnreadCounts={applyFolderUnreadCounts}

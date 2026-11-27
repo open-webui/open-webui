@@ -323,6 +323,13 @@ type OllamaModelDetails = {
 	quantization_level: string;
 };
 
+/** A section of the user's own in the sidebar's folder list, holding top-level folders. */
+export type FolderListSection = {
+	id: string;
+	name: string;
+	folderIds: string[];
+};
+
 type Settings = {
 	pinnedModels?: string[];
 	temporaryChatByDefault?: boolean;
@@ -394,7 +401,7 @@ type Settings = {
 	pinnedNotesOrder?: string[];
 	/** Sidebar section ids ('models', 'notes', 'channels', 'folders', 'chats') in display order. */
 	sidebarSectionOrder?: string[];
-	/** Folder ids in display order, by parent folder id ('root' for top-level folders). */
+	/** Folder ids in display order, by parent folder id ('root' for top-level folders and folderSections). */
 	folderOrder?: Record<string, string[]>;
 	/** Whose top-level folders the sidebar lists. */
 	folderOwner?: 'all' | 'yours' | 'shared';
@@ -402,6 +409,10 @@ type Settings = {
 	folderMachine?: string;
 	/** How the sidebar orders folders; 'manual' follows folderOrder. */
 	folderSort?: 'manual' | 'name' | 'updated_at' | 'created_at';
+	/** How the sidebar groups top-level folders that aren't in a section. */
+	folderGroup?: 'none' | 'owner' | 'machine';
+	/** The user's own sections of top-level folders; folderOrder.root places them among folders. */
+	folderSections?: FolderListSection[];
 
 	defaultUploadContext?: 'full' | 'focused';
 
