@@ -6857,6 +6857,19 @@ async def streaming_chat_response_handler(response, ctx):
                 except (asyncio.CancelledError, Exception):
                     pass
                 raise  # re-raise CancelledError for proper propagation
+            except Exception:
+                if save_to_chat:
+                    failed_output = full_output()
+                    for item in failed_output:
+                        if item.get('status') == 'in_progress':
+                            item['status'] = 'incomplete'
+                    await Chats.upsert_message_to_chat_by_id_and_message_id(
+                        metadata['chat_id'],
+                        metadata['message_id'],
+                        {'output': failed_output},
+                    )
+                await clear_response_stream(request.app.state.redis, response_stream_task_id)
+                raise
 
             if response.background is not None:
                 await response.background()
