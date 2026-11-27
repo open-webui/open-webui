@@ -1709,7 +1709,8 @@
 		{
 			kind: 'chat',
 			label: $i18n.t('New Chat'),
-			available: canOpenChat
+			// A new chat here is saved into the folder, which a read-only folder refuses
+			available: canOpenChat && (!mainTabFolder || !!mainTabFolder.canEdit)
 		},
 		{ kind: 'artifacts', label: $i18n.t('Artifacts'), available: showArtifactsTab },
 		{ kind: 'preview', label: $i18n.t('Preview'), available: showPreviewTab },
