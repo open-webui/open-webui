@@ -852,13 +852,23 @@ async def apply_source_context_to_messages(
         )
 
 
+def mark_paragraphs_in_place(doc: str, citation_id: int, doc_paragraphs: list[tuple[int, int, int]]) -> str:
+    """Put each paragraph's [N#P] marker before it, keeping the text between paragraphs as it is."""
+    pieces = []
+    position = 0
+    for number, start, _ in doc_paragraphs:
+        pieces.append(f'{doc[position:start]}[{citation_id}#{number}] ')
+        position = start
+    return ''.join(pieces) + doc[position:]
+
+
 def mark_tool_result(content: str, sources: list, source_ids: dict, paragraph_size: int | None) -> str:
     """Number the paragraphs of a file tool's sources and mark them in the 'content' fields of its result."""
     marked = {}
     for source, source_paragraphs in zip(sources, get_source_paragraphs(sources, paragraph_size, source_ids)):
         for doc, citation_id, doc_paragraphs in zip(source['document'], source['citation_ids'], source_paragraphs):
             if doc_paragraphs:
-                marked[doc] = mark_paragraphs(doc, citation_id, doc_paragraphs)
+                marked[doc] = mark_paragraphs_in_place(doc, citation_id, doc_paragraphs)
     if not marked:
         return content
     try:
