@@ -8,6 +8,7 @@
 	import { toast } from 'svelte-sonner';
 	import MachineSystemInfoModal from '../MachineSystemInfoModal.svelte';
 	import MachineFilesModal from '../MachineFilesModal.svelte';
+	import MachineSessionsModal from '../MachineSessionsModal.svelte';
 	import WorkingDirectoryMenu from './WorkingDirectoryMenu.svelte';
 	import type { MachineContext } from '$lib/types';
 
@@ -36,7 +37,7 @@
 	export let selectedMachineId: Pick<Writable<string | null>, 'subscribe' | 'set'>;
 
 	const rowClass =
-		'flex w-full min-w-0 gap-2 items-center h-[1.6875rem] pl-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-base-50/40 dark:hover:bg-base-800/40';
+		'flex w-full min-w-0 gap-2 items-center h-[1.6875rem] pl-2 text-[0.8125rem] font-normal cursor-pointer rounded-xl hover:bg-base-50/40 dark:hover:bg-base-800/40 disabled:cursor-not-allowed';
 	const headerButtonClass =
 		'p-0.5 rounded-md text-base-400 hover:text-base-600 dark:text-base-500 dark:hover:text-base-300 transition';
 	const moreClass =
@@ -50,7 +51,10 @@
 		if (inMenu) tab = '';
 	};
 	export let disabled = false;
+	/** Opens for looking only: the machine and its directory can't be switched, started, stopped, or edited. */
+	export let locked = false;
 	export let chatId: string | null = null;
+	export let onSelect = (id: string | null) => selectMachine(selectedMachineId, id, chatId);
 	export let machineContext: MachineContext | null = null;
 	/** Also offers the working directory of the selected machine. */
 	export let showDirectory = true;
@@ -126,8 +130,9 @@
 	].filter((section) => !section.devices || section.machines.length > 0);
 
 	const toggleMachine = (id: string) => {
+		if (locked) return;
 		closeMenu();
-		selectMachine(selectedMachineId, $selectedMachineId === id ? null : id, chatId);
+		onSelect($selectedMachineId === id ? null : id);
 	};
 
 	$: selectedSystemMachine = systemMachines.find(
@@ -154,7 +159,12 @@
 	};
 	let info: { target: MachineTarget; label: string } | null = null;
 	let files: { target: MachineTarget; label: string } | null = null;
-	const openFiles = async (selector: string, label: string) => {
+	let sessions: { target: MachineTarget; label: string } | null = null;
+	const openTargetModal = async (
+		selector: string,
+		label: string,
+		show: (opened: { target: MachineTarget; label: string }) => void
+	) => {
 		const target = resolveMachineTarget(selector, systemMachines, localStorage.token ?? '', {
 			chatId: $activeChatId || null,
 			modelId: modelId
@@ -162,8 +172,12 @@
 		if (!target) return;
 		closeMenu();
 		await tick();
-		files = { target, label };
+		show({ target, label });
 	};
+	const openFiles = (selector: string, label: string) =>
+		openTargetModal(selector, label, (opened) => (files = opened));
+	const openSessions = (selector: string, label: string) =>
+		openTargetModal(selector, label, (opened) => (sessions = opened));
 	const openInfo = async (selector: string, label: string) => {
 		if (
 			systemMachines.find((t) => !!selector && t.id === selector)?.scope === 'chat' &&
@@ -204,6 +218,7 @@
 			role="menuitemradio"
 			aria-checked="true"
 			class="{rowClass} pr-2 bg-base-50/40 dark:bg-base-800/40"
+			disabled={locked}
 			on:click={() => toggleMachine($selectedMachineId)}
 		>
 			<Cloud className="size-3.5 shrink-0" strokeWidth="2" />
@@ -221,7 +236,7 @@
 			</span>
 			{#if !section.devices}
 				<div class="flex items-center gap-0.5">
-					{#if writable.length}
+					{#if writable.length && !locked}
 						<Tooltip content={$i18n.t('New machine')} placement="top">
 							<button
 								type="button"
@@ -261,6 +276,7 @@
 					type="button"
 					role="menuitemradio"
 					aria-checked={$selectedMachineId === machine.id}
+					disabled={locked}
 					class="{rowClass} {$selectedMachineId === machine.id
 						? 'pr-14 bg-base-50/40 dark:bg-base-800/40'
 						: 'pr-8'}"
@@ -287,13 +303,14 @@
 				>
 					<MachineItemMenu
 						{label}
-						loadStatus={owned && reachable ? () => instanceStatus(machine.id) : null}
+						loadStatus={owned && reachable && !locked ? () => instanceStatus(machine.id) : null}
 						onRestart={() => confirmLifecycle(machine.id, label, 'restart')}
 						onStop={() => confirmLifecycle(machine.id, label, 'stop')}
 						onStart={() => runLifecycle(machine.id, label, 'start')}
 						onInfo={reachable ? () => openInfo(machine.id, label) : null}
 						onFiles={reachable ? () => openFiles(machine.id, label) : null}
-						onSettings={owned ? () => openMachineDialog(machine.id) : null}
+						onSessions={reachable ? () => openSessions(machine.id, label) : null}
+						onSettings={owned && !locked ? () => openMachineDialog(machine.id) : null}
 					/>
 				</div>
 			</div>
@@ -418,7 +435,7 @@
 					await updateChatById(localStorage.token, chatId!, { working_directory: path });
 				}
 			}}
-			{disabled}
+			disabled={disabled || locked}
 		/>
 	{/key}
 {/if}
@@ -428,13 +445,23 @@
 		bind:show={showMachines}
 		machineId={managedMachineId}
 		connections={writable}
-		onCreate={async (id) => selectMachine(selectedMachineId, id, chatId)}
+		onCreate={async (id) => onSelect(id)}
 	/>
 {/if}
 
 {#if files}
 	{#key files}
 		<MachineFilesModal target={files.target} label={files.label} onClose={() => (files = null)} />
+	{/key}
+{/if}
+
+{#if sessions}
+	{#key sessions}
+		<MachineSessionsModal
+			target={sessions.target}
+			label={sessions.label}
+			onClose={() => (sessions = null)}
+		/>
 	{/key}
 {/if}
 

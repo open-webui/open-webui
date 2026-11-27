@@ -82,13 +82,49 @@ export function textIndex(container: HTMLElement, within: string | null = '.text
 	return { text, chars };
 }
 
-/** The range of a quote that appears exactly once in the indexed text. */
-export function rangeOf({ text, chars }: TextIndex, quote: string): Range | null {
-	const needle = quote.normalize('NFKC').replace(/\s/g, '');
-	const index = needle ? text.indexOf(needle) : -1;
-	if (index < 0 || text.indexOf(needle, index + 1) !== -1) return null;
-	const start = chars[index],
-		end = chars[index + needle.length - 1];
+/**
+ * A W3C Web Annotation TextQuoteSelector: the quoted text, with the text just before and after
+ * it to tell repeated quotes apart. https://www.w3.org/TR/annotation-model/#text-quote-selector
+ */
+export type TextQuoteSelector = {
+	type: 'TextQuoteSelector';
+	exact: string;
+	prefix?: string;
+	suffix?: string;
+};
+
+// The characters of context a quote keeps on either side, as comment anchors do
+export const QUOTE_CONTEXT_LENGTH = 64;
+
+const squash = (text: string) => text.normalize('NFKC').replace(/\s/g, '');
+
+/**
+ * The range of a quote in the indexed text. Where it appears more than once, the place whose
+ * surrounding text shares the most characters with the prefix and suffix wins; a tie is left unmarked.
+ */
+export function rangeOf({ text, chars }: TextIndex, selector: TextQuoteSelector): Range | null {
+	const exact = squash(selector.exact);
+	const prefix = squash(selector.prefix ?? '');
+	const suffix = squash(selector.suffix ?? '');
+	let best = -1;
+	let bestScore = -1;
+	let tied = false;
+	for (
+		let index = exact ? text.indexOf(exact) : -1;
+		index >= 0;
+		index = text.indexOf(exact, index + 1)
+	) {
+		let score = 0;
+		while (score < prefix.length && text[index - 1 - score] === prefix[prefix.length - 1 - score])
+			score++;
+		const after = index + exact.length;
+		for (let i = 0; i < suffix.length && text[after + i] === suffix[i]; i++) score++;
+		if (score > bestScore) [best, bestScore, tied] = [index, score, false];
+		else if (score === bestScore) tied = true;
+	}
+	if (best < 0 || tied) return null;
+	const start = chars[best],
+		end = chars[best + exact.length - 1];
 	if (!start || !end) return null;
 	const range = document.createRange();
 	range.setStart(start.node, start.offset);
@@ -97,7 +133,7 @@ export function rangeOf({ text, chars }: TextIndex, quote: string): Range | null
 }
 
 export function findTextRange(container: HTMLElement, quote: string): Range | null {
-	return rangeOf(textIndex(container), quote);
+	return rangeOf(textIndex(container), { type: 'TextQuoteSelector', exact: quote });
 }
 
 /** The lines of a retrieved Markdown passage, as they would read on the source page. */
@@ -112,7 +148,8 @@ export function quoteLines(passage: string, limit = 400): string[] {
 		.map((line) =>
 			line
 				.replace(/^\s*(#{1,6}|[-*+>]|\d+[.)])\s+/, '')
-				.replace(/[*_`$]/g, '')
+				// Emphasis, code and math marks; a $ before a digit is an amount, as in $10,000
+				.replace(/[*_`]|\$(?!\d)/g, '')
 				.trim()
 		)
 		.filter((line) => line.replace(/\s/g, '').length >= 6);
@@ -154,7 +191,7 @@ export function markAt(root: ParentNode | null | undefined, x: number, y: number
 }
 
 type QuoteMarkOptions = {
-	quotes: string[];
+	quotes: TextQuoteSelector[];
 	onHover?: (index: number | null, rect: DOMRect | null) => void;
 };
 
@@ -167,7 +204,7 @@ export function quoteMarks(node: HTMLElement, options: QuoteMarkOptions) {
 	let timer: ReturnType<typeof setTimeout> | null = null;
 	let hovered: number | null = null;
 	let revealed = false;
-	let revealedQuotes: string[] | null = null;
+	let revealedQuotes: TextQuoteSelector[] | null = null;
 
 	const redraw = () => {
 		if (timer) clearTimeout(timer);

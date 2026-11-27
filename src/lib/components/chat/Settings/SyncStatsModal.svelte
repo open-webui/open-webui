@@ -327,7 +327,7 @@
 	ariaLabel={$i18n.t('Sync Usage Stats')}
 	bind:show
 	size="md"
-	className="bg-base-0 dark:bg-base-900 rounded-4xl"
+	className="bg-base-0 dark:bg-base-900 rounded-3xl"
 >
 	<div class="w-full">
 		{#if completed}

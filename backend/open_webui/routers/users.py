@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import asyncio
 import base64
+import io
 import logging
 import time
 from collections import Counter
@@ -8,7 +10,7 @@ from copy import deepcopy
 from datetime import datetime, timedelta
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile, status
 from fastapi.responses import FileResponse, Response
 from open_webui.config import DEFAULT_USER_PERMISSIONS
 from open_webui.constants import ERROR_MESSAGES
@@ -19,6 +21,7 @@ from open_webui.models.auths import ApiKey, Auths
 from open_webui.models.config import Config
 from open_webui.models.chat_messages import ChatMessages
 from open_webui.models.chats import Chats
+from open_webui.models.files import Files
 from open_webui.models.groups import Groups
 from open_webui.models.oauth_sessions import OAuthSessions
 from open_webui.models.users import (
@@ -38,6 +41,7 @@ from open_webui.models.access_grants import AccessGrants
 from open_webui.models.knowledge import Knowledges
 from open_webui.models.models import Models
 from open_webui.models.tools import Tools
+from open_webui.storage.provider import Storage
 from open_webui.tasks import stop_item_tasks
 from open_webui.utils.access_control import fill_missing_permissions, get_permissions, has_permission
 from open_webui.utils.auth import (
@@ -49,8 +53,10 @@ from open_webui.utils.auth import (
     validate_password,
 )
 from open_webui.utils.chat_variables import ChatVariablesError, normalize_user_variables, validate_user_variables
+from open_webui.utils.validate import BACKGROUND_IMAGE_MAX_BYTES, validate_background_image
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.datastructures import Headers
 
 log = logging.getLogger(__name__)
 
@@ -609,6 +615,80 @@ async def update_user_status_by_session_user(
     )
 
 
+# Update User Profile Banner By Session User
+
+
+class UserProfileBannerResponse(BaseModel):
+    profile_banner_image_url: str | None = None
+
+
+async def set_profile_banner(request: Request, user: UserModel, url: str | None, db: AsyncSession):
+    from open_webui.routers.files import delete_file_by_id
+
+    # Read the current banner here, as the authenticated user may be stale.
+    current = await Users.get_user_by_id(user.id, db=db)
+    updated = await Users.update_user_by_id(user.id, {'profile_banner_image_url': url}, db=db)
+    if not current or not updated:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=ERROR_MESSAGES.USER_NOT_FOUND,
+        )
+
+    if current.profile_banner_image_url:
+        try:
+            await delete_file_by_id(request, current.profile_banner_image_url.split('/')[-2], user=user, db=db)
+        except HTTPException as e:
+            log.warning('Could not delete the previous profile banner: %s', e.detail)
+
+    await publish_event(
+        request,
+        EVENTS.USER_PROFILE_UPDATED,
+        actor=user,
+        subject_id=user.id,
+        data={'updated_fields': ['profile_banner_image_url']},
+    )
+    return updated
+
+
+@router.post('/user/profile/banner', response_model=UserProfileBannerResponse)
+async def update_user_profile_banner_by_session_user(
+    request: Request,
+    file: UploadFile = File(...),
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    from open_webui.routers.files import upload_file_handler
+
+    data = await file.read(BACKGROUND_IMAGE_MAX_BYTES + 1)
+    try:
+        content_type = await asyncio.to_thread(validate_background_image, data)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+    uploaded = await upload_file_handler(
+        request,
+        file=UploadFile(
+            file=io.BytesIO(data),
+            filename=f'banner.{content_type.split("/")[1]}',
+            headers=Headers({'content-type': content_type}),
+        ),
+        metadata=None,
+        process=False,
+        user=user,
+        db=db,
+    )
+    return await set_profile_banner(request, user, f'/api/v1/files/{uploaded.id}/content', db)
+
+
+@router.delete('/user/profile/banner', response_model=UserProfileBannerResponse)
+async def delete_user_profile_banner_by_session_user(
+    request: Request,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    return await set_profile_banner(request, user, None, db)
+
+
 # Get User Info By Session User
 
 
@@ -873,6 +953,27 @@ async def get_user_profile_image_by_id(user_id: str, user=Depends(get_verified_u
         )
 
 
+# Get User Profile Banner By Id
+
+
+@router.get('/{user_id}/profile/banner')
+async def get_user_profile_banner_by_id(
+    user_id: str, user=Depends(get_verified_user), db: AsyncSession = Depends(get_async_session)
+):
+    profile = await Users.get_user_by_id(user_id, db=db)
+    url = profile.profile_banner_image_url if profile else None
+    file = await Files.get_file_by_id(url.split('/')[-2], db=db) if url else None
+    media_type = (file.meta or {}).get('content_type') if file else None
+    if not file or file.user_id != user_id or media_type not in PROFILE_IMAGE_ALLOWED_MIME_TYPES:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_MESSAGES.NOT_FOUND)
+
+    return FileResponse(
+        await asyncio.to_thread(Storage.get_file, file.path),
+        media_type=media_type,
+        headers={'X-Content-Type-Options': 'nosniff', 'Cache-Control': 'no-cache'},
+    )
+
+
 # Get User Active Status By Id
 
 
@@ -1116,12 +1217,14 @@ async def delete_user_by_id(
         )
 
     if user.id != user_id:
-        for chat_id in await Chats.get_chat_ids_by_user_id(user_id, db=db):
-            await stop_item_tasks(request.app.state.redis, chat_id)
-
+        chat_ids = await Chats.get_chat_ids_by_user_id(user_id, db=db)
         result = await Auths.delete_auth_by_id(user_id, db=db)
 
         if result:
+            # Delete first so stopped sub-agents have no chat to report back to.
+            for chat_id in chat_ids:
+                await stop_item_tasks(request.app.state.redis, chat_id)
+
             await publish_event(
                 request,
                 EVENTS.USER_DELETED,

@@ -204,6 +204,53 @@ async def has_machine_write_access(user, machine_id):
     return await has_connection_write_access(user, await get_connection(user, connection_id))
 
 
+async def has_machine_access(principal_type: str, principal_id: str, machine_id: str, owner_id: str) -> bool:
+    """Whether a user, or every member of a group through the group itself, can use the machine."""
+    from open_webui.config import BYPASS_ADMIN_ACCESS_CONTROL
+    from open_webui.models.access_grants import AccessGrants
+    from open_webui.models.config import Config
+    from open_webui.models.groups import Groups
+    from open_webui.models.users import Users
+    from open_webui.utils.access_control import has_access
+
+    # A personal machine is only ever its owner's.
+    if machine_id.startswith('tether:'):
+        return principal_type == 'user' and principal_id == owner_id
+
+    is_admin = False
+    if principal_type == 'user':
+        target = await Users.get_user_by_id(principal_id)
+        if not target:
+            return False
+        if target.role == 'admin' and BYPASS_ADMIN_ACCESS_CONTROL:
+            return True
+        is_admin = target.role == 'admin'
+        user_id = target.id
+        group_ids = {group.id for group in await Groups.get_groups_by_member_id(target.id, include_inherited=True)}
+    else:
+        user_id, group_ids = '', {principal_id}
+
+    template = machine_id.startswith('template:')
+    connection_id = split_template_id(machine_id)[0] if template else machine_id
+    connections = await Config.get('machines.connections', []) or []
+    connection = next((c for c in connections if c.get('id') == connection_id and c.get('enabled', True)), None)
+    if not connection:
+        return False
+    grants = (connection.get('config') or {}).get('access_grants', [])
+    # Connections without grants are admin-only, as in has_connection_access.
+    if not grants:
+        return is_admin
+    if not template:
+        return await has_access(user_id, 'read', grants, group_ids)
+    if await has_access(user_id, 'write', grants, group_ids):
+        return True
+    if not await has_access(user_id, 'read', grants, group_ids):
+        return False
+    return machine_id in await AccessGrants.get_accessible_resource_ids(
+        user_id=user_id, resource_type='machine', resource_ids=[machine_id], user_group_ids=group_ids
+    )
+
+
 def split_template_id(machine_id):
     if not machine_id.startswith('template:'):
         raise HTTPException(400, 'Invalid template machine ID')

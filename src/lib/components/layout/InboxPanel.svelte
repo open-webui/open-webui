@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { getContext, onMount, onDestroy } from 'svelte';
 	import dayjs from 'dayjs';
-	import { refreshInboxCount, setInboxCount } from '$lib/stores/inbox';
+	import { setInboxCount } from '$lib/stores/inbox';
 	import {
 		inboxRequest,
 		inboxLabels,
@@ -78,7 +78,6 @@
 			cursor = result.next_cursor;
 			if (!opened) {
 				setInboxCount(result.count ?? 0);
-				void refreshInboxCount();
 			}
 			opened = true;
 			loaded = true;

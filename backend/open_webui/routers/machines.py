@@ -15,6 +15,7 @@ import re
 from contextlib import suppress
 from html import escape
 import posixpath
+from typing import Literal
 from urllib.parse import quote, unquote, urljoin, urlsplit
 
 import aiohttp
@@ -35,6 +36,7 @@ from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.machines import MachineError, managed, local as local_machines, ssh as ssh_machines
 from open_webui.utils.machines.managed import describe
 from open_webui.utils.machines import (
+    has_machine_access,
     get_machine_client,
     find_machine_connection,
     machine_headers,
@@ -553,6 +555,32 @@ async def list_machines(request: Request, user=Depends(get_verified_user)):
         if connection.get('enabled', True)
         and (connection.get('template_id') or await has_connection_access(user, connection, user_group_ids))
     ]
+
+
+class AccessPrincipal(BaseModel):
+    principal_type: Literal['user', 'group']
+    principal_id: str
+
+
+class AccessCheckForm(BaseModel):
+    machine_id: str
+    principals: list[AccessPrincipal] = Field(max_length=256)
+
+
+@router.post('/access/check')
+async def check_machine_access(request: Request, form_data: AccessCheckForm, user=Depends(get_verified_user)):
+    """Return the given users and groups that cannot use a machine the caller can use."""
+    if form_data.machine_id not in {machine['id'] for machine in await list_machines(request, user)}:
+        raise HTTPException(404, 'Machine not found')
+    return {
+        'principals_without_access': [
+            principal
+            for principal in form_data.principals
+            if not await has_machine_access(
+                principal.principal_type, principal.principal_id, form_data.machine_id, user.id
+            )
+        ]
+    }
 
 
 PROXY_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']

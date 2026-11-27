@@ -23,7 +23,6 @@
 	import MessageInput from './MessageInput.svelte';
 	import Navbar from './Navbar.svelte';
 	import { canUseEncryption, connected, enter, request } from '$lib/encryption/client';
-	import Drawer from '../common/Drawer.svelte';
 	import ResizableSidePanel from '../common/ResizableSidePanel.svelte';
 	import EllipsisVertical from '../icons/EllipsisVertical.svelte';
 	import Thread from './Thread.svelte';
@@ -399,23 +398,21 @@
 		updateLastReadAt(id);
 	};
 
-	let mediaQuery;
-	let largeScreen = false;
+	const MIN_MESSAGES_WIDTH = 360;
+	const MIN_THREAD_WIDTH = 320;
+	let contentWidth = 0;
 	let threadPanelWidth = 420;
 
-	const handleMediaQuery = (e) => {
-		largeScreen = e.matches;
-	};
+	// The thread takes the whole width when it does not fit beside the messages.
+	$: threadFills = contentWidth < MIN_MESSAGES_WIDTH + MIN_THREAD_WIDTH;
+	$: if (contentWidth && !threadFills) {
+		threadPanelWidth = Math.min(threadPanelWidth, contentWidth - MIN_MESSAGES_WIDTH);
+	}
 
 	onMount(() => {
 		mounted = true;
 
 		$socket?.on('events:channel', channelEventHandler);
-
-		mediaQuery = window.matchMedia('(min-width: 768px)');
-
-		mediaQuery.addEventListener('change', handleMediaQuery);
-		handleMediaQuery(mediaQuery);
 	});
 
 	onDestroy(() => {
@@ -424,7 +421,6 @@
 		if ($active) updateLastReadAt(id);
 		if ($_channelId === id) _channelId.set(null);
 		$socket?.off('events:channel', channelEventHandler);
-		mediaQuery?.removeEventListener('change', handleMediaQuery);
 	});
 	import PageTitle from '$lib/components/common/PageTitle.svelte';
 </script>
@@ -466,41 +462,45 @@
 			: ''} w-full max-w-full min-w-0 flex flex-col"
 		id="channel-container"
 	>
-		<div class="w-full h-full flex">
-			<div class="h-full flex flex-col min-w-0 flex-1 relative">
-				<Navbar
-					{channel}
-					onPin={pinHandler}
-					onUpdate={async () => {
-						channel = await getChannelById(localStorage.token, id).catch((error) => {
-							return null;
-						});
-					}}
-				>
-					<svelte:fragment slot="subtitle">
-						{#if invitationSession}
-							<div
-								class="flex flex-wrap items-center gap-x-1.5 text-[0.6875rem] font-normal text-base-500 dark:text-base-400"
-							>
-								<span>{$i18n.t('Encrypted chat in progress')}</span>
-								<span aria-hidden="true">·</span>
-								<button
-									type="button"
-									aria-label={$i18n.t('Join encrypted chat')}
-									class="text-[0.6875rem] font-normal text-base-700 underline-offset-2 hover:underline dark:text-base-200"
-									on:click={() => {
-										if (!invitationSession || !canUseEncryption($user, $config?.features)) return;
-										enter(id, { action: 'join', session: invitationSession });
-										void goto(`/channels/${encodeURIComponent(id)}/encrypted`);
-									}}
-								>
-									{$i18n.t('Join')}
-								</button>
-							</div>
-						{/if}
-					</svelte:fragment>
-				</Navbar>
+		<Navbar
+			{channel}
+			onPin={pinHandler}
+			onUpdate={async () => {
+				channel = await getChannelById(localStorage.token, id).catch((error) => {
+					return null;
+				});
+			}}
+		>
+			<svelte:fragment slot="subtitle">
+				{#if invitationSession}
+					<div
+						class="flex flex-wrap items-center gap-x-1.5 text-[0.6875rem] font-normal text-base-500 dark:text-base-400"
+					>
+						<span>{$i18n.t('Encrypted chat in progress')}</span>
+						<span aria-hidden="true">·</span>
+						<button
+							type="button"
+							aria-label={$i18n.t('Join encrypted chat')}
+							class="text-[0.6875rem] font-normal text-base-700 underline-offset-2 hover:underline dark:text-base-200"
+							on:click={() => {
+								if (!invitationSession || !canUseEncryption($user, $config?.features)) return;
+								enter(id, { action: 'join', session: invitationSession });
+								void goto(`/channels/${encodeURIComponent(id)}/encrypted`);
+							}}
+						>
+							{$i18n.t('Join')}
+						</button>
+					</div>
+				{/if}
+			</svelte:fragment>
+		</Navbar>
 
+		<div class="relative w-full flex-1 min-h-0 flex" bind:clientWidth={contentWidth}>
+			<!-- Invisible rather than hidden, to keep the scroll position. -->
+			<div
+				class="h-full flex flex-col min-w-0 flex-1 relative"
+				class:invisible={threadId !== null && threadFills}
+			>
 				{#if channel && messages !== null}
 					<div class="flex-1 overflow-y-auto">
 						<div
@@ -577,30 +577,22 @@
 				{/if}
 			</div>
 
-			{#if !largeScreen}
-				{#if threadId !== null}
-					<Drawer show={threadId !== null} ariaLabel={$i18n.t('Thread')} onClose={closeThread}>
-						<div class=" {threadId !== null ? ' h-screen  w-full' : 'px-6 py-4'} h-full">
-							<Thread
-								{threadId}
-								{channel}
-								bind:chatInputElement={threadChatInputElement}
-								onPin={pinHandler}
-								onClose={closeThread}
-							/>
-						</div>
-					</Drawer>
-				{/if}
-			{:else if threadId !== null}
+			{#if threadId !== null && contentWidth}
 				<ResizableSidePanel
 					open={true}
 					bind:width={threadPanelWidth}
-					minWidth={320}
+					minWidth={MIN_THREAD_WIDTH}
 					maxWidth={640}
-					minSiblingWidth={360}
-					className="h-full"
+					minSiblingWidth={MIN_MESSAGES_WIDTH}
+					subtleDivider
+					fill={threadFills}
+					className={threadFills ? 'absolute inset-0 z-20' : 'h-full px-2 pt-1 pb-2'}
 				>
-					<div class="h-full w-full border-l border-base-100/60 dark:border-base-800/40">
+					<div
+						class="h-full w-full {threadFills
+							? ''
+							: 'rounded-3xl border border-base-200/60 dark:border-base-800/50 shadow-[0_6px_24px_-4px_rgba(0,0,0,0.1)]'}"
+					>
 						<Thread
 							{threadId}
 							{channel}

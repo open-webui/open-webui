@@ -3,6 +3,8 @@ import { tagColors, type FolderTag, type TagColor } from './tags';
 
 // Folder list and board views page through a folder's chats this many at a time.
 export const FOLDER_PAGE_SIZE = 50;
+/** The parts of a folder's own page. */
+export type FolderSection = 'files' | 'chats' | 'notes' | 'automations' | 'knowledge';
 export type FolderActivity = 'unread' | 'generating' | 'waiting_for_approval' | 'idle';
 
 // Chats only have "No status" built in; every other status is defined per folder.
@@ -20,6 +22,8 @@ export type CustomStatus = {
 	icon?: string;
 };
 export type StatusDef = CustomStatus & { custom: boolean };
+/** An entry of meta.statuses: a folder status, or `{ id: NO_STATUS }` marking where "No status" sits. */
+export type StatusEntry = CustomStatus | { id: typeof NO_STATUS };
 
 // Ready-made statuses offered as suggestions when adding statuses; folders start with none.
 export const suggestedStatuses: CustomStatus[] = [
@@ -57,6 +61,20 @@ export const statusDefs = (
 	{ id: NO_STATUS, name: t('No status'), custom: false },
 	...customStatuses(meta).map((item) => ({ ...item, custom: true }))
 ];
+
+// Grouped views follow the folder's order; a `{ id: 'none' }` entry in meta.statuses places
+// "No status", which otherwise goes last. The server already skips that entry.
+export const groupedStatusDefs = (
+	meta: { statuses?: unknown } | null | undefined,
+	t: (key: string) => string
+): StatusDef[] => {
+	const [none, ...custom] = statusDefs(meta, t);
+	const statuses = Array.isArray(meta?.statuses) ? meta.statuses : [];
+	const marker = statuses.findIndex((item) => item?.id === NO_STATUS);
+	const at =
+		marker < 0 ? custom.length : customStatuses({ statuses: statuses.slice(0, marker) }).length;
+	return [...custom.slice(0, at), none, ...custom.slice(at)];
+};
 
 // Priorities are fixed, most urgent first. A chat's priority is null when it has none;
 // 'none' is only the key for that group, column and filter, like NO_STATUS.
@@ -124,21 +142,37 @@ export type CanEditChat = (chat: Pick<WorkspaceChat, 'user_id'>) => boolean;
 export type WorkspacePage = { chats: WorkspaceChat[]; total: number; has_more: boolean };
 export type FolderUser = { id: string; name: string; count: number };
 
-// Folders missing from the saved order go last, by name.
-export const sortFolders = <T extends { id: string; name?: string }>(
+export type FolderSort = 'manual' | 'name' | 'updated_at' | 'created_at';
+
+// Manual sort follows the saved order, and folders missing from it go last, by name.
+// Time sorts put the newest first.
+export const sortFolders = <
+	T extends { id: string; name?: string; updated_at?: number; created_at?: number }
+>(
 	folders: T[],
-	order: string[] = []
+	order: string[] = [],
+	sort: FolderSort = 'manual'
 ): T[] => {
-	const position = new Map(order.map((id, index) => [id, index]));
+	const saved = sort === 'manual' ? order : [];
+	const position = new Map(saved.map((id, index) => [id, index]));
 	return [...folders].sort(
 		(a, b) =>
-			(position.get(a.id) ?? order.length) - (position.get(b.id) ?? order.length) ||
+			(sort === 'updated_at' || sort === 'created_at' ? (b[sort] ?? 0) - (a[sort] ?? 0) : 0) ||
+			(position.get(a.id) ?? saved.length) - (position.get(b.id) ?? saved.length) ||
 			(a.name ?? '').localeCompare(b.name ?? '', undefined, {
 				numeric: true,
 				sensitivity: 'base'
 			})
 	);
 };
+
+/** Whether a folder, or one inside it, is on a directory. */
+export const hasDirectory = (folders: any[], id: string): boolean =>
+	folders.some(
+		(folder) =>
+			(folder.id === id && !!folder.directory) ||
+			(folder.parent_id === id && hasDirectory(folders, folder.id))
+	);
 
 export const isChatUnread = (chat: WorkspaceChat) =>
 	(chat.last_read_at ?? 0) === 0 || chat.updated_at > (chat.last_read_at ?? 0);

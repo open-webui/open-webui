@@ -16,8 +16,10 @@
 
 	import { getContext, tick } from 'svelte';
 	const i18n = getContext<Writable<i18nType>>('i18n');
+	const appLayout = getContext<AppLayoutContext | undefined>('appLayout');
 
 	import { formatDate } from '$lib/utils';
+	import type { AppLayoutContext } from '$lib/types';
 
 	import { settings, user, shortCodesToEmojis, models } from '$lib/stores';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
@@ -542,6 +544,14 @@
 							>
 								{#if message?.meta?.model_id}
 									{message?.meta?.model_name ?? message?.meta?.model_id}
+								{:else if message.user?.id && !message.app_id && message.user.role !== 'webhook'}
+									<button
+										type="button"
+										class="max-w-full truncate align-bottom font-medium hover:underline"
+										on:click={() => appLayout?.openProfile?.(message.user.id)}
+									>
+										{message.user.name}
+									</button>
 								{:else}
 									{message?.user?.name}
 								{/if}

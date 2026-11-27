@@ -13,7 +13,8 @@
 		markAt,
 		rangeOf,
 		textIndex,
-		commentPin
+		commentPin,
+		type TextQuoteSelector
 	} from '$lib/utils/comments/highlights';
 	import type { FileComment, CommentResult } from '$lib/utils/comments/types';
 
@@ -32,7 +33,7 @@
 	export let selectedComment: FileComment | null = null;
 	export let sourceComments: FileComment[] | null = null;
 	/** Text to mark on whichever rendered pages contain it, such as a cited passage. */
-	export let highlightQuotes: string[] | null = null;
+	export let highlightQuotes: TextQuoteSelector[] | null = null;
 	/** Called with the index of the quote under the pointer and where its mark sits, or null. */
 	export let onQuoteHover: ((index: number | null, rect: DOMRect | null) => void) | null = null;
 	export let onAnchors: ((ids: string[]) => void) | null = null;
@@ -122,7 +123,7 @@
 			});
 			const text = textIndex(wrapper);
 			highlightQuotes.forEach((quote, index) => {
-				// A quote found more than once on the page is left unmarked
+				// A repeated quote whose context cannot tell the repeats apart is left unmarked
 				const range = rangeOf(text, quote);
 				if (range) markRange(wrapper, layer, range, String(index));
 			});
@@ -378,6 +379,23 @@
 		}
 	};
 
+	/** The page holding the most of the quotes, the first such page on a tie. */
+	const findQuotePage = async (doc: PdfDocument, quotes: TextQuoteSelector[]) => {
+		const needles = quotes.map((quote) => quote.exact.normalize('NFKC').replace(/\s/g, ''));
+		let best: { page: number; count: number } | null = null;
+		for (let number = 1; number <= doc.numPages; number++) {
+			const content = await (await doc.getPage(number)).getTextContent();
+			const text = content.items
+				.map((item) => ('str' in item ? item.str : ''))
+				.join('')
+				.normalize('NFKC')
+				.replace(/\s/g, '');
+			const count = needles.filter((needle) => needle && text.includes(needle)).length;
+			if (count > (best?.count ?? 0)) best = { page: number, count };
+		}
+		return best?.page ?? null;
+	};
+
 	export const scrollToPage = async (page: number | null) => {
 		targetPage = page;
 		if (singlePage) {
@@ -544,8 +562,9 @@
 		cancelTextLayers();
 
 		const wrappers: HTMLElement[] = [];
-		const firstPage = singlePage ? selectedPage : 1;
-		const lastPage = singlePage ? selectedPage : pdfDoc.numPages;
+		const shownPage = clampDocumentTargetPage(targetPage, pdfDoc.numPages) ?? 1;
+		const firstPage = singlePage ? shownPage : 1;
+		const lastPage = singlePage ? shownPage : pdfDoc.numPages;
 
 		for (let i = firstPage; i <= lastPage; i++) {
 			const page = await pdfDoc.getPage(i);
@@ -596,7 +615,7 @@
 
 		const { x, y, scale } = pzInstance?.getTransform() ?? { x: 0, y: 0, scale: 1 };
 		const keepView =
-			singlePage && renderedPage && renderedPage !== selectedPage && Math.abs(scale - 1) >= 0.01;
+			singlePage && renderedPage && renderedPage !== shownPage && Math.abs(scale - 1) >= 0.01;
 		pageObserver?.disconnect();
 		for (const wrapper of nearbyWrappers) void releasePage(wrapper);
 		nearbyWrappers.clear();
@@ -605,7 +624,7 @@
 		void renderCommentMarkers();
 		lastRenderedZoom = 1;
 		zoomLevel = 1;
-		renderedPage = singlePage ? selectedPage : 0;
+		renderedPage = singlePage ? shownPage : 0;
 		initPanzoom();
 		if (keepView) {
 			pzInstance?.zoomAbs(0, 0, scale);
@@ -719,9 +738,17 @@
 						if (token === loadToken) onCommentsError?.();
 					});
 			}
+			const quotePageWanted = !targetPage && !!highlightQuotes?.length;
 			activePage = clampDocumentTargetPage(targetPage, pageCount) ?? 1;
 			targetPage = clampDocumentTargetPage(targetPage, pageCount) ?? 1;
 			await renderAllPages();
+			// Text cited without its page, as a paragraph of a whole document is, opens where it is
+			if (quotePageWanted && highlightQuotes) {
+				const doc = pdfDoc;
+				void findQuotePage(doc, highlightQuotes).then((page) => {
+					if (token === loadToken && page && activePage === 1) void scrollToPage(page);
+				});
+			}
 		} catch (e) {
 			if (token === loadToken) {
 				console.error('PDF render error:', e);

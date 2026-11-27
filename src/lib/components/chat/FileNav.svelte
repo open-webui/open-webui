@@ -2065,6 +2065,12 @@
 	};
 
 	$: selectedCount = selectedEntries.size;
+	// On a folder page the list scrolls under the floating composer, and the selection toolbar sits in its fade.
+	const composerSpace = 'var(--folder-composer-space, 0px)';
+	$: listPadding =
+		!selectedFile && !isSearching && selectedCount > 0
+			? `max(2.5rem, calc(${composerSpace} + 0.5rem))`
+			: composerSpace;
 	$: comparisonEntries = [...selectedEntries]
 		.map((path) => visibleEntries.find((entry) => entry.fullPath === path))
 		.filter((entry) => entry !== undefined);
@@ -2802,8 +2808,8 @@
 		<div
 			bind:this={viewerRoot}
 			use:selectFilesByDrag
-			class:pb-8={!selectedFile && !isSearching && selectedCount > 0}
 			class="flex-1 overflow-y-auto min-h-0 min-w-0"
+			style:padding-bottom={listPadding}
 			on:scroll|capture={() => {
 				fileAsk = null;
 			}}
@@ -3168,27 +3174,37 @@
 
 		<!-- Float above the list footer without moving the rows. -->
 		{#if !selectedFile && !isSearching && (selectingFiles ? keepSelectionToolbar : selectedCount > 0)}
-			<div class="relative z-10 h-0 shrink-0">
-				<div class="absolute inset-x-0 bottom-0 bg-base-0 dark:bg-base-900">
-					<BulkActionBar
-						count={selectedCount}
-						{canCompare}
-						onCompare={() => {
-							if (canCompare)
-								openComparison([
-									comparisonFile(comparisonEntries[0]),
-									comparisonFile(comparisonEntries[1])
-								]);
-						}}
-						canDelete={selectedEntriesWritable}
-						onDelete={() => {
-							deleteTarget = { path: '__bulk__', name: `${selectedCount} items` };
-							showDeleteConfirm = true;
-						}}
-						onDownload={bulkDownload}
-						onSelectAll={selectAll}
-						onClear={clearSelection}
-					/>
+			<!-- Above the folder composer's fade, which is painted later at z-10. -->
+			<div class="relative z-20 h-0 shrink-0">
+				<!-- A centred 1.5rem pill, 1rem off the list's bottom, or on a folder page 1rem above
+				the input, inside the top of the composer's 2rem fade. -->
+				<div
+					class="pointer-events-none absolute inset-x-0 flex justify-center px-2"
+					style:bottom="max(1rem, calc({composerSpace} - 1rem))"
+				>
+					<div
+						class="pointer-events-auto min-w-0 rounded-full bg-base-0 shadow-sm ring-1 ring-base-100 dark:bg-base-850 dark:ring-base-800"
+					>
+						<BulkActionBar
+							count={selectedCount}
+							{canCompare}
+							onCompare={() => {
+								if (canCompare)
+									openComparison([
+										comparisonFile(comparisonEntries[0]),
+										comparisonFile(comparisonEntries[1])
+									]);
+							}}
+							canDelete={selectedEntriesWritable}
+							onDelete={() => {
+								deleteTarget = { path: '__bulk__', name: `${selectedCount} items` };
+								showDeleteConfirm = true;
+							}}
+							onDownload={bulkDownload}
+							onSelectAll={selectAll}
+							onClear={clearSelection}
+						/>
+					</div>
 				</div>
 			</div>
 		{/if}

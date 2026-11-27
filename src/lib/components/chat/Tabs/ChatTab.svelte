@@ -10,6 +10,7 @@
 	export const getOverview = () => chatView?.getOverview();
 	export let tabTitleEditor: import('svelte').Snippet | undefined = undefined;
 	export let tabActions: import('svelte').Snippet | undefined = undefined;
+	export let tabBarActions: import('svelte').Snippet | undefined = undefined;
 
 	export let initialPrompt = '';
 	export let initialView: any = null;
@@ -110,6 +111,7 @@
 		bind:this={chatView}
 		bind:tabTitleEditor
 		bind:tabActions
+		bind:tabBarActions
 		embedded={true}
 		tabbed={true}
 		{parentChatId}

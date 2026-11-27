@@ -403,7 +403,7 @@
 		{:else}
 			<div class="flex h-full justify-center">
 				<div class="my-auto">
-					<Spinner className="size-6" />
+					<Spinner className="size-5" />
 				</div>
 			</div>
 		{/if}

@@ -4,6 +4,7 @@
 	import Spinner from './Spinner.svelte';
 	import PDFViewer from './PDFViewer.svelte';
 	import type { FileComment, CommentResult } from '$lib/utils/comments/types';
+	import type { TextQuoteSelector } from '$lib/utils/comments/highlights';
 
 	export let data: ArrayBuffer | Uint8Array | null = null;
 	export let currentSlide = 0;
@@ -17,7 +18,7 @@
 	export let onCommentSelect: ((comment: FileComment) => void) | null = null;
 	export let selectedComment: FileComment | null = null;
 	export let sourceComments: FileComment[] | null = null;
-	export let highlightQuotes: string[] | null = null;
+	export let highlightQuotes: TextQuoteSelector[] | null = null;
 	export let onQuoteHover: ((index: number | null, rect: DOMRect | null) => void) | null = null;
 	export let onAnchors: ((ids: string[]) => void) | null = null;
 

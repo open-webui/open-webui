@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { AppLayoutContext, MachineContext } from '$lib/types';
-	import type { GitStatus } from '$lib/apis/machines/git';
+	import { gitRequest, type GitStatus } from '$lib/apis/machines/git';
 	let fileGitStatuses: Record<string, GitStatus | null> = {};
 	let fileGitDiffModes: Record<string, 'unified' | 'split'> = {};
 	let fileGitHideWhitespace: Record<string, boolean> = {};
@@ -22,13 +22,18 @@
 	} from '$lib/stores/chatViewStates';
 	import { v4 as uuidv4 } from 'uuid';
 	import Sortable from 'sortablejs';
-	import { beforeNavigate } from '$app/navigation';
+	import { beforeNavigate, pushState } from '$app/navigation';
 	import { WEBUI_NAME } from '$lib/stores';
 	import type Chat from './Chat.svelte';
 	import { pageTabKey } from './Tabs/tabs';
 	import Page from './Tabs/Page.svelte';
 	let pageViews: Record<string, Page> = {};
-	let pendingPageTab: { href: string; label: string; inSplit?: boolean } | null = null;
+	let pendingPageTab: {
+		href: string;
+		label: string;
+		inSplit?: boolean;
+		replace?: boolean;
+	} | null = null;
 	import {
 		config,
 		embed,
@@ -54,7 +59,7 @@
 	import CommentsPanel, {
 		type CommentsRequest
 	} from '$lib/components/comments/CommentsPanel.svelte';
-	import { page } from '$app/stores';
+	import { navigating, page } from '$app/stores';
 
 	import {
 		createTabsState,
@@ -211,8 +216,18 @@
 		'folderId' in $chatTabRequest &&
 		$chatTabRequest.folderId === mainTabFolder?.id
 	) {
+		const savedId = $chatTabRequest.chatId;
 		chatTabRequest.set(null);
-		if (mainTabFolder?.canEdit) openFeatureTab('chat');
+		if (savedId) {
+			// A chat in this folder opens among the folder's tabs, or shows the tab it already has.
+			const existing = tabs.tabs.find((tab) => tab.kind === 'chat' && tab.chatId === savedId);
+			openPanel({
+				id: existing?.id ?? uuidv4(),
+				kind: 'chat',
+				label: $i18n.t('Chat'),
+				chatId: savedId
+			});
+		} else if (mainTabFolder?.canEdit) openFeatureTab('chat');
 	}
 	export let mainChatHref = '/';
 	export let tabTitleEditor: import('svelte').Snippet | undefined = undefined;
@@ -246,6 +261,7 @@
 	let chatViews: Record<string, ChatTab> = {};
 	let chatTitleEditors: Record<string, import('svelte').Snippet | undefined> = {};
 	let chatTabActions: Record<string, import('svelte').Snippet | undefined> = {};
+	let chatTabBarActions: Record<string, import('svelte').Snippet | undefined> = {};
 	let chatStreamingStates: Record<string, boolean> = {};
 	// Each chat writes its artifacts here; its artifacts tab reads them.
 	const chatArtifacts: Record<string, Writable<{ type: string; content: string }[]>> = {};
@@ -325,6 +341,7 @@
 		chatStreamingStates = {};
 		chatTitleEditors = {};
 		chatTabActions = {};
+		chatTabBarActions = {};
 		queuedArtifactCode = null;
 	}
 	/** Starts a new chat that keeps the open pages; everything else stays with the chat being left. */
@@ -343,6 +360,7 @@
 		chatStreamingStates = {};
 		chatTitleEditors = {};
 		chatTabActions = {};
+		chatTabBarActions = {};
 		queuedArtifactCode = null;
 		const entry = chatViewEntry($user.id, null, $temporaryChat);
 		entry.state = {
@@ -415,6 +433,7 @@
 		chatStreamingStates = {};
 		chatTitleEditors = {};
 		chatTabActions = {};
+		chatTabBarActions = {};
 		const entry = chatViewEntry($user.id, id, $temporaryChat);
 		const loading: ViewState = { status: 'loading', entry, chatId: id };
 		setView(loading);
@@ -439,6 +458,8 @@
 				)
 			)
 				panels = activateTab(panels, mainChatTabId);
+			if (poppedHref) pendingPageTab = { href: poppedHref, label: '', replace: true };
+			poppedHref = '';
 			entry.state.panels = panels;
 			tabs = entry.state.panels;
 			dirtyFiles = {};
@@ -451,8 +472,6 @@
 			sessionAttempts = {};
 			lastFolderView = isFolderSessionId(id) ? id : null;
 			setView({ status: 'ready', entry, chatId: id, error: entry.error });
-			if (isFolderSessionId(id) && !entry.persisted && machineIdOf($selectedFolder?.data))
-				openFiles($selectedMachineId, $selectedFolder?.data?.working_directory || undefined);
 			hasExtraTabs = tabs.tabs.some((tab) => tab.id !== mainChatTabId);
 		} catch (error) {
 			if (viewState === loading)
@@ -461,6 +480,8 @@
 	}
 	/** Keeps the layout in step with the chat: carry it over, attach it to the new chat id, or load. */
 	function followChat(current: ViewState, id: string | null) {
+		// Leaving a folder for anything else, even without a restore, means returning to it is not opening it again from inside.
+		if (!isFolderSessionId(id)) lastFolderView = null;
 		if (current.status === 'idle') return void restoreChatView(id);
 		// A folder keeps its own tabs; nothing is carried into it.
 		if (isFolderSessionId(id) && current.entry.chatId !== id) return void restoreChatView(id);
@@ -517,6 +538,7 @@
 		chatStreamingStates = {};
 		chatTitleEditors = {};
 		chatTabActions = {};
+		chatTabBarActions = {};
 		clearChatViews();
 	}
 	const forgetDraftsForUnreachableMachines = (..._connections: unknown[]) => {
@@ -544,19 +566,17 @@
 		if (target) tab.target = target;
 		return target;
 	};
+	/** The folder new sessions on `target` start in: the open file panel's, else the chat folder's. */
+	const workingDirectory = (target: MachineTarget) =>
+		getCurrentDirectory(target.selector) ||
+		(machineIdOf($selectedFolder?.data) === target.selector
+			? $selectedFolder?.data?.working_directory || undefined
+			: undefined);
 	const startSession = (chatView: NonNullable<typeof viewEntry>, tab: Tab) => {
 		const target = resolveTabConnection(tab);
 		if (target) {
 			delete sessionFailures[tab.id];
-			void createViewSession(
-				chatView,
-				tab.id,
-				target,
-				getCurrentDirectory(target.selector) ||
-					(machineIdOf($selectedFolder?.data) === target.selector
-						? $selectedFolder?.data?.working_directory || undefined
-						: undefined)
-			);
+			void createViewSession(chatView, tab.id, target, workingDirectory(target));
 		}
 	};
 	const stopSession = (target: MachineTarget, kind: Tab['kind'], sessionId: string) =>
@@ -635,7 +655,24 @@
 	let supportsMachine = false;
 	let supportsDesktop = false;
 	let supportsBrowser = false;
+	let supportsGit = false;
 	let featureCheckRequestId = 0;
+	// The repo the working directory is in, checked each time the + menu opens.
+	let gitRoot: string | null = null;
+	let gitRootKey = '';
+	const checkGitRoot = async () => {
+		const target = selectedConnection;
+		const key = JSON.stringify([target?.selector, target && workingDirectory(target)]);
+		if (key !== gitRootKey) gitRoot = null;
+		gitRootKey = key;
+		if (!target || !supportsGit) return (gitRoot = null);
+		try {
+			const status = await gitRequest<GitStatus>(target, workingDirectory(target) || '.', 'status');
+			if (key === gitRootKey) gitRoot = status.is_repo ? (status.root ?? null) : null;
+		} catch {
+			if (key === gitRootKey) gitRoot = null;
+		}
+	};
 	let releasePanel: (target: HTMLElement) => void = () => {};
 	const preservePanel = (target: HTMLElement) => ({ destroy: () => releasePanel(target) });
 
@@ -682,6 +719,7 @@
 			chat: 'chat-lines',
 			page: 'page',
 			files: 'folder',
+			git: 'git-branch',
 			file: 'page',
 			terminal: 'terminal',
 			browser: 'browser',
@@ -719,6 +757,37 @@
 		tabs = activateTab(tabs, id);
 		showTabs.set(true);
 	};
+	let historyEntry = `${get(page).state.tab} ${get(page).url.pathname}`;
+	let poppedHref = '';
+	const addHistoryEntry = (href: string) => {
+		if (new URL(href, location.origin).pathname === location.pathname) return;
+		const tab = uuidv4();
+		historyEntry = `${tab} ${get(page).url.pathname}`;
+		pushState(href, { ...get(page).state, tab });
+	};
+	const showAddressed = () => {
+		if (location.pathname !== new URL(mainChatHref, location.origin).pathname) {
+			const href = location.pathname + location.search + location.hash;
+			const active = tabs.tabs.find((tab) => tab.id === tabs.activeId);
+			if (
+				active?.kind === 'page' &&
+				!findPageTab(new URL(location.href)) &&
+				active.href?.split('/')[1] === location.pathname.split('/')[1]
+			)
+				void navigatePageTab(active.id, href);
+			else openPageTab({ href, label: '' });
+			return;
+		}
+		focusMainChat();
+		if (!isLargeScreen) showTabs.set(false);
+	};
+	const onHistoryEntryChange = (entry: string) => {
+		if (entry === historyEntry) return;
+		historyEntry = entry;
+		if (!get(navigating)) showAddressed();
+	};
+	// Only $page triggers this, since addHistoryEntry records its entry before $page catches up.
+	$: onHistoryEntryChange(`${$page.state.tab} ${$page.url.pathname}`);
 	const activateFilesOnDrag = (node: HTMLElement, tab: Tab) => {
 		if (tab.kind !== 'files') return;
 		let timer: ReturnType<typeof setTimeout> | undefined;
@@ -791,7 +860,12 @@
 	// A folder's tabs are not there yet while the chat being left is still shown.
 	const isPanelViewReady = (id: string | null, entry: ChatViewEntry | null) =>
 		!isFolderSessionId(id) || entry?.chatId === id;
-	export const openPageTab = (request: { href: string; label: string; inSplit?: boolean }) => {
+	export const openPageTab = (request: {
+		href: string;
+		label: string;
+		inSplit?: boolean;
+		replace?: boolean;
+	}) => {
 		const url = new URL(request.href, location.origin);
 		if (url.origin !== location.origin || !pageTabKey(url)) return;
 		if (!viewReady || !isPanelViewReady(panelChatId, viewEntry)) {
@@ -799,9 +873,11 @@
 			return;
 		}
 		if ((url.pathname === '/' && !url.search) || request.href === mainChatHref) {
+			if (!request.replace) addHistoryEntry(mainChatHref);
 			focusMainChat();
 			return;
 		}
+		if (!request.replace) addHistoryEntry(request.href);
 		const existing = findPageTab(url);
 		if (existing) {
 			selectTab(existing.id);
@@ -835,7 +911,7 @@
 			tabs = activateTab(openTab(tabs, joined), activeId);
 		}
 	};
-	const navigatePageTab = async (id: string, href: string) => {
+	const navigatePageTab = async (id: string, href: string, push = false) => {
 		const url = new URL(href, location.origin);
 		if (url.pathname === '/' && !url.search) {
 			await closeTab(id);
@@ -845,13 +921,16 @@
 		const existing = findPageTab(url);
 		if (existing?.kind === 'page' && existing.id !== id) {
 			await closeTab(id);
-			if (!tabs.tabs.some((tab) => tab.id === id)) openPageTab({ href, label: '' });
+			if (!tabs.tabs.some((tab) => tab.id === id)) openPageTab({ href, label: '', replace: !push });
 			return;
 		}
 		if (!((await pageViews[id]?.requestClose()) ?? true)) return;
 		if (url.pathname === '/' || url.pathname.startsWith('/c/')) {
-			openPageTab({ href, label: '' });
-		} else if (viewEntry) updateViewTab(viewEntry, id, { href });
+			openPageTab({ href, label: '', replace: !push });
+		} else if (viewEntry) {
+			if (push && id === tabs.activeId) addHistoryEntry(href);
+			updateViewTab(viewEntry, id, { href });
+		}
 		await tick();
 	};
 
@@ -948,6 +1027,21 @@
 			page
 		});
 		if (page != null) fileViews[id]?.revealPage?.(page);
+	};
+	const openGit = (machineId: string, root: string, sourceModelId = modelId) => {
+		if (!isMachineReachable(machineId)) return;
+		const target = resolveMachineTarget(machineId, $machines ?? [], localStorage.token, {
+			chatId: panelChatId,
+			modelId: sourceModelId ?? null
+		});
+		openPanel({
+			id: JSON.stringify(['git', machineId, target?.context.modelId ?? null, root]),
+			kind: 'git',
+			label: root.split('/').filter(Boolean).pop() || $i18n.t('Git'),
+			machineId,
+			target: target ?? undefined,
+			directory: root
+		});
 	};
 	const openNewFileTab = () => {
 		if (!selectedConnection) return askForMachine(openNewFileTab);
@@ -1366,6 +1460,7 @@
 				delete chatStreamingStates[id];
 				delete chatTitleEditors[id];
 				delete chatTabActions[id];
+				delete chatTabBarActions[id];
 				delete artifactSelections[id];
 				if (tab.kind === 'chat') {
 					delete chatArtifacts[id];
@@ -1614,7 +1709,8 @@
 		{
 			kind: 'chat',
 			label: $i18n.t('New Chat'),
-			available: canOpenChat
+			// A new chat here is saved into the folder, which a read-only folder refuses
+			available: canOpenChat && (!mainTabFolder || !!mainTabFolder.canEdit)
 		},
 		{ kind: 'artifacts', label: $i18n.t('Artifacts'), available: showArtifactsTab },
 		{ kind: 'preview', label: $i18n.t('Preview'), available: showPreviewTab },
@@ -1675,6 +1771,14 @@
 				break;
 			case Shortcut.OPEN_DESKTOP:
 				if ((supportsDesktop && selectedConnection) || canSelectMachine) action = openDesktop;
+				break;
+			case Shortcut.OPEN_GIT:
+				if (supportsGit && selectedConnection)
+					action = async () => {
+						const connection = selectedConnection!;
+						await checkGitRoot();
+						if (gitRoot) openGit(connection.selector, gitRoot);
+					};
 				break;
 			case Shortcut.NEW_CHAT_TAB:
 				if (canOpenChat) action = () => openFeatureTab('chat');
@@ -1769,15 +1873,17 @@
 		supportsMachine = false;
 		supportsDesktop = false;
 		supportsBrowser = false;
+		supportsGit = false;
 		if (!selectedConnection) return;
 		try {
 			const result = await machineRequest<{
-				features?: { terminal?: boolean; desktop?: boolean; browser?: boolean };
+				features?: { terminal?: boolean; desktop?: boolean; browser?: boolean; git?: boolean };
 			}>(selectedConnection, '/api/config');
 			if (version === featureCheckRequestId) {
 				supportsMachine = result.features?.terminal !== false;
 				supportsDesktop = result.features?.desktop === true;
 				supportsBrowser = result.features?.browser === true;
+				supportsGit = result.features?.git === true;
 			}
 		} catch {
 			/* Files remain available when interactive terminals are disabled. */
@@ -1858,16 +1964,27 @@
 		);
 	}
 
-	beforeNavigate(({ from, to, cancel, willUnload }) => {
+	beforeNavigate(({ from, to, cancel, willUnload, type }) => {
 		if (from?.url.pathname === to?.url.pathname) {
+			if (type === 'popstate') showAddressed();
 			// The router stays on the main chat while other tabs are in front; going there uncovers it.
-			if (to && location.pathname !== to.url.pathname) {
+			else if (
+				to &&
+				(location.pathname !== to.url.pathname ||
+					tabs.tabs.some(
+						(tab) => tab.id === tabs.activeId && tab.id !== mainChatTabId && tab.kind === 'chat'
+					))
+			) {
 				// A folder's chats are tabs, opened again by the route.
 				if (!mainTabFolder || !to.url.pathname.startsWith('/c/')) focusMainChat();
 				if (!isLargeScreen) showTabs.set(false);
 			}
 			return;
 		}
+		poppedHref =
+			type === 'popstate' && to && location.pathname !== to.url.pathname
+				? location.pathname + location.search + location.hash
+				: '';
 		captureView();
 		if (viewEntry) void flushChatView(viewEntry);
 		if (willUnload && hasChatViewDrafts()) cancel();
@@ -1959,10 +2076,11 @@
 	$: mainChatActive = fullWidth && visibleTabIds.has(mainChatTabId);
 	$: if (isMounted && viewReady && !chatLoading) {
 		const active = tabs.tabs.find((tab) => tab.id === tabs.activeId);
+		const main = active?.id === mainChatTabId || (active?.kind === 'chat' && isSavedChatId(chatId));
 		const href =
 			active?.kind === 'page'
 				? active.href
-				: active?.id === mainChatTabId
+				: main
 					? mainChatHref
 					: active?.kind === 'chat'
 						? active.chatId
@@ -1976,7 +2094,7 @@
 				if ($temporaryChat !== ($settings?.temporaryChatByDefault ?? false))
 					url.searchParams.set('temporary-chat', String($temporaryChat));
 				else if (url.searchParams.has('temporary-chat')) url.searchParams.delete('temporary-chat');
-			} else if (active?.id === mainChatTabId && url.pathname === get(page).url.pathname) {
+			} else if (main && url.pathname === get(page).url.pathname) {
 				// Keep the query, such as ?message=, so a reload lands there again.
 				url.search = get(page).url.search;
 			}
@@ -2235,7 +2353,7 @@
 						bind:this={pageViews[tab.id]}
 						href={tab.href}
 						active={visibleTabIds.has(tab.id)}
-						onNavigate={(href) => navigatePageTab(tab.id, href)}
+						onNavigate={(href, replace) => navigatePageTab(tab.id, href, !replace)}
 						onTitleChange={(label) => {
 							if (label && tabs.tabs.find((item) => item.id === tab.id)?.label !== label)
 								updateViewTab(chatView, tab.id, { label });
@@ -2301,6 +2419,7 @@
 						bind:streaming={chatStreamingStates[tab.id]}
 						bind:tabTitleEditor={chatTitleEditors[tab.id]}
 						bind:tabActions={chatTabActions[tab.id]}
+						bind:tabBarActions={chatTabBarActions[tab.id]}
 						artifacts={getChatArtifacts(tab.id)}
 						onOpenArtifacts={(code) => openArtifacts(code, tab.id)}
 						initialView={chatView.transient[`chat:${tab.id}`]}
@@ -2442,6 +2561,22 @@
 							});
 						}}
 					/>
+				{:else if tab.kind === 'git' && tab.machineId && target}
+					<GitBar
+						standalone
+						bind:this={gitViews[tab.id]}
+						initialView={chatView.transient[`git:${tab.id}`]}
+						bind:diffMode={fileGitDiffModes[tab.machineId]}
+						bind:hideWhitespace={fileGitHideWhitespace[tab.machineId]}
+						{target}
+						chatId={chatView.chatId}
+						directory={tab.directory ?? '.'}
+						active={panelVisible && visibleTabIds.has(tab.id)}
+						onOpenFile={(path) => openFile(path, tab.machineId!, null, target.context.modelId)}
+						onOpenDirectory={(path) =>
+							openFiles(tab.machineId, path, false, target.context.modelId)}
+						{onDraftPrompt}
+					/>
 				{:else if (tab.kind === 'files' || tab.kind === 'file') && tab.machineId}
 					{@const fileTarget = isMounted ? resolveTabConnection(tab) : null}
 					<div class="flex h-full min-h-0 flex-col">
@@ -2524,6 +2659,7 @@
 									openFile(path, tab.machineId!, null, fileTarget?.context.modelId)}
 								onOpenDirectory={(path) =>
 									openFiles(tab.machineId, path, false, fileTarget?.context.modelId)}
+								onOpenTab={(root) => openGit(tab.machineId!, root, fileTarget?.context.modelId)}
 								{onDraftPrompt}
 							/>
 						{/if}
@@ -2701,7 +2837,7 @@
 				{/each}
 			</div>
 			{#if canOpenNewTab && viewReady && !chatLoading}
-				<Dropdown align="start" closeOnSelect>
+				<Dropdown align="start" closeOnSelect onOpenChange={(open) => open && checkGitRoot()}>
 					<button
 						type="button"
 						class="flex items-center justify-center w-7 h-7 rounded-lg text-base-400 hover:text-base-600 dark:hover:text-base-300 transition-colors duration-100 shrink-0"
@@ -2714,6 +2850,15 @@
 									><Icon name="folder" size={14} /><span class="flex-1 text-start"
 										>{$i18n.t('Files')}</span
 									><HotkeyHint name="openFiles" className="ms-auto" /></button
+								>
+							{/if}
+							{#if gitRoot && selectedConnection}
+								{@const root = gitRoot}
+								{@const connection = selectedConnection}
+								<button on:click={() => openGit(connection.selector, root)}
+									><Icon name="git-branch" size={14} /><span class="flex-1 text-start"
+										>{$i18n.t('Git')}</span
+									><HotkeyHint name="openGit" className="ms-auto" /></button
 								>
 							{/if}
 							{#if supportsMachineFiles || canSelectMachine}<button on:click={openNewFileTab}
@@ -2782,6 +2927,10 @@
 		{#if group.activeId === mainChatTabId}
 			<div class="flex shrink-0 items-center gap-2">
 				{@render tabBarActions?.()}
+			</div>
+		{:else if chatTabBarActions[group.activeId]}
+			<div class="flex shrink-0 items-center gap-2">
+				{@render chatTabBarActions[group.activeId]?.()}
 			</div>
 		{/if}
 		{#if !fullWidth && (!isLargeScreen || group.id === tabs.groups[0].id)}

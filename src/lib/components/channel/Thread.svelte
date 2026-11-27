@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { getPageContext } from '$lib/utils/page';
-	const { goto, url: pageUrl } = getPageContext();
+	const { goto, url: pageUrl, active } = getPageContext();
 
 	import { socket, user } from '$lib/stores';
 
@@ -29,7 +29,7 @@
 
 	let messagesContainerElement = null;
 
-	let replyToMessage = null;
+	let replyToMessage: any = null;
 
 	let typingUsers = [];
 	let typingUsersTimeout = {};
@@ -232,10 +232,44 @@
 		$socket?.off('events:channel', channelEventHandler);
 	});
 	let threadRoot: HTMLDivElement;
+
+	// Runs before the thread's own Escape handlers, so what they close is still there to see.
+	const onKeyDown = (event: KeyboardEvent) => {
+		if (event.key !== 'Escape' || event.isComposing || !(event.target instanceof Element)) return;
+
+		const inThread = threadRoot?.contains(event.target);
+		const unfocused =
+			$active &&
+			event.target === document.body &&
+			!document.querySelector('.modal, [role="menu"], [role="listbox"]');
+		if (!inThread && !unfocused) return;
+
+		// Suggestions, voice recording, message editing and open menus handle Escape themselves.
+		if (
+			document.getElementById('suggestions-container') ||
+			document.querySelector('[data-voice-recording]') ||
+			event.target.closest('textarea') ||
+			threadRoot?.querySelector('[aria-haspopup][aria-expanded="true"]')
+		)
+			return;
+
+		event.preventDefault();
+		event.stopPropagation();
+		if (replyToMessage) {
+			replyToMessage = null;
+		} else {
+			onClose();
+		}
+	};
 </script>
 
+<svelte:window on:keydown|capture={onKeyDown} />
+
 {#if channel}
-	<div bind:this={threadRoot} class="flex flex-col w-full h-full bg-base-0 dark:bg-base-900">
+	<div
+		bind:this={threadRoot}
+		class="flex flex-col w-full h-full rounded-[inherit] bg-base-0 dark:bg-base-900"
+	>
 		<div class="sticky top-0 flex min-h-10 items-center justify-between px-4 py-1.5">
 			<div class=" font-medium text-sm">{$i18n.t('Thread')}</div>
 

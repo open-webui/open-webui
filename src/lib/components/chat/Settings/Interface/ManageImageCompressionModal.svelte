@@ -28,7 +28,7 @@
 	ariaLabel={$i18n.t('Image Max Compression Size')}
 	size="sm"
 	bind:show
-	className="bg-base-0 dark:bg-base-900 rounded-4xl"
+	className="bg-base-0 dark:bg-base-900 rounded-3xl"
 >
 	<div>
 		<div class=" flex justify-between text-base-900 dark:text-base-0 px-4 pt-3 pb-1">

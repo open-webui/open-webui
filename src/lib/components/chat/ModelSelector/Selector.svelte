@@ -51,6 +51,7 @@
 	import Switch from '$lib/components/common/Switch.svelte';
 	import ChatBubbleOval from '$lib/components/icons/ChatBubbleOval.svelte';
 	import Keyframes from '$lib/components/icons/Keyframes.svelte';
+	import Cog6 from '$lib/components/icons/Cog6.svelte';
 	import TagSelector from '$lib/components/workspace/common/TagSelector.svelte';
 
 	import ModelItem from './ModelItem.svelte';
@@ -998,8 +999,8 @@
 								}}
 							/>
 
-							{#if modelFilterItems.length > 0 || (multipleEnabled && items.length > 0)}
-								<div class="flex min-w-0 shrink-0 items-center gap-0.5">
+							{#if modelFilterItems.length > 0 || (multipleEnabled && items.length > 0) || $user?.role === 'admin'}
+								<div class="flex min-w-0 shrink-0 items-center">
 									{#if multipleEnabled && items.length > 0}
 										<Tooltip content={$i18n.t('Compare')}>
 											<button
@@ -1039,6 +1040,25 @@
 											contentClass="min-w-36 model-selector-child-menu"
 											onChange={setModelFilter}
 										/>
+									{/if}
+
+									{#if $user?.role === 'admin'}
+										<Tooltip content={$i18n.t('Settings')}>
+											<button
+												type="button"
+												class="focus-ring flex h-[1.375rem] w-5 shrink-0 items-center justify-center rounded-lg transition-colors duration-100 {($settings?.highContrastMode ??
+												false)
+													? 'text-base-700 hover:bg-base-200 hover:text-base-900 dark:text-base-300 dark:hover:bg-base-800 dark:hover:text-base-100'
+													: 'text-base-500 hover:bg-base-50/40 hover:text-base-900 dark:text-base-400 dark:hover:bg-base-800/40 dark:hover:text-base-100'}"
+												aria-label={$i18n.t('Settings')}
+												on:click={() => {
+													show = false;
+													showSettings.set('admin:connections');
+												}}
+											>
+												<Cog6 className="size-3" />
+											</button>
+										</Tooltip>
 									{/if}
 								</div>
 							{/if}

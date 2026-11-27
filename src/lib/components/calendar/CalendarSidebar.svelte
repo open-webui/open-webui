@@ -176,13 +176,9 @@
 						? ($settings?.highContrastMode ?? false)
 							? 'bg-blue-600 text-white'
 							: 'bg-blue-500 text-white'
-						: ''}
-						{day.toDateString() === currentDate.toDateString() && !isToday(day)
-						? 'bg-base-200 dark:bg-base-700'
-						: ''}
-						{!isToday(day) && day.toDateString() !== currentDate.toDateString()
-						? 'hover:bg-base-100 dark:hover:bg-base-800'
-						: ''}"
+						: isSelected(day)
+							? 'bg-base-100 dark:bg-base-800'
+							: 'hover:bg-base-50 dark:hover:bg-base-850'}"
 					on:click={() => onDateSelect(day)}
 				>
 					{day.getDate()}

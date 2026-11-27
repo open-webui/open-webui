@@ -10,6 +10,7 @@
 		getCalendars,
 		getCalendarEvents,
 		getCalendarEventById,
+		updateCalendarEvent,
 		deleteCalendar,
 		type CalendarModel,
 		type CalendarEventModel
@@ -159,6 +160,22 @@
 		showEventModal = true;
 	}
 
+	async function handleMoveEvent(
+		e: CustomEvent<{ event: CalendarEventModel; start_at: number; end_at: number | null }>
+	) {
+		const { event, start_at, end_at } = e.detail;
+		events = events.map((x) => (x.id === event.id ? { ...x, start_at, end_at } : x));
+		try {
+			await updateCalendarEvent(localStorage.token, event.id, {
+				start_at,
+				end_at: end_at ?? undefined
+			});
+		} catch (err) {
+			toast.error(`${err}`);
+		}
+		await refresh();
+	}
+
 	async function handleNavigate() {
 		await tick();
 		refresh();
@@ -166,6 +183,7 @@
 
 	async function handleDateSelect(date: Date) {
 		currentDate = date;
+		view = 'day';
 		await tick();
 		refresh();
 	}
@@ -433,6 +451,7 @@
 					bind:currentDate
 					on:createEvent={handleCreateEvent}
 					on:eventClick={handleEventClick}
+					on:moveEvent={handleMoveEvent}
 					onNavigate={handleNavigate}
 				/>
 			</div>

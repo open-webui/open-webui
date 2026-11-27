@@ -127,6 +127,7 @@ class ERROR_MESSAGES(str, Enum):
 
     FEATURE_DISABLED = lambda name='': f'{name} is disabled'
     INPUT_TOO_LONG = lambda size='': f'Input prompt exceeds maximum length of {size}'
+    MODEL_CONNECTION_CLOSED = 'The connection to the model closed before the reply finished.'
     # LICENSE covers this Open WebUI error identifier.
     # Do not alter, remove, obscure, or replace it except as LICENSE permits:
     # https://docs.openwebui.com/license.

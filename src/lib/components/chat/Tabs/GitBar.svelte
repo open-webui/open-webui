@@ -12,6 +12,8 @@
 		type GitBranch
 	} from '$lib/apis/machines/git';
 	import { copyToClipboard } from '$lib/utils';
+	import { settings } from '$lib/stores';
+	import { formatChord, keybindings } from '$lib/shortcuts';
 	import Icon from '../FileNav/Icon.svelte';
 	import GitDiff from './GitDiff.svelte';
 	import { parseDiffRows } from '../Messages/diff';
@@ -34,7 +36,10 @@
 	const i18n = getContext<any>('i18n');
 	export let status: GitStatus | null = null;
 	export let initialView: any = null;
-	let expanded = initialView?.expanded ?? false;
+	/** Fills a tab of its own: always expanded, no collapse or resize. */
+	export let standalone = false;
+	export let onOpenTab: ((root: string) => void) | null = null;
+	let expanded = standalone || (initialView?.expanded ?? false);
 	export const captureView = () => ({ expanded, summary, description, height, listWidth, view });
 	export let diffMode: 'unified' | 'split' = 'unified';
 	export let hideWhitespace = false;
@@ -266,7 +271,7 @@
 			status = null;
 			error = '';
 			detectionError = '';
-			expanded = restoring?.expanded ?? false;
+			expanded = standalone || (restoring?.expanded ?? false);
 			showBranches =
 				showWorktrees =
 				showRename =
@@ -471,6 +476,7 @@
 		)
 	];
 	const toggle = () => {
+		if (standalone) return;
 		expanded = !expanded;
 		if (expanded) {
 			void refresh(true);
@@ -497,10 +503,12 @@
 
 {#if status?.is_repo}
 	<section
-		class="@container relative shrink-0 border-t border-base-200/40 dark:border-base-850/20"
+		class="@container relative {standalone
+			? 'flex h-full min-h-0 flex-col'
+			: 'shrink-0 border-t border-base-200/40 dark:border-base-850/20'}"
 		aria-label={$i18n.t('Git')}
 	>
-		{#if expanded}
+		{#if expanded && !standalone}
 			<div
 				role="separator"
 				aria-label={$i18n.t('Resize Git panel')}
@@ -769,11 +777,31 @@
 					></button
 				>
 			</Tooltip>
-			<button
-				class="flex h-6 w-5 items-center justify-center text-base-500 dark:text-base-400 hover:text-base-700 dark:hover:text-base-200 ml-0.5 shrink-0"
-				aria-label={expanded ? $i18n.t('Collapse Git panel') : $i18n.t('Expand Git panel')}
-				on:click={toggle}><Icon name={expanded ? 'chevron-down' : 'chevron-up'} size={14} /></button
-			>
+			{#if onOpenTab && !standalone}
+				<Tooltip
+					content={[
+						$i18n.t('Open in tab'),
+						$settings?.keyboardShortcuts !== false ? formatChord($keybindings.openGit) : ''
+					]
+						.filter(Boolean)
+						.join(' · ')}
+				>
+					<button
+						class="flex h-6 w-5 items-center justify-center text-base-400 hover:text-base-600 dark:hover:text-base-300 shrink-0 transition-colors duration-75"
+						aria-label={$i18n.t('Open in tab')}
+						on:click={() => onOpenTab?.(status?.root ?? directory)}
+						><Icon name="arrow-up-right" size={13} /></button
+					>
+				</Tooltip>
+			{/if}
+			{#if !standalone}
+				<button
+					class="flex h-6 w-5 items-center justify-center text-base-500 dark:text-base-400 hover:text-base-700 dark:hover:text-base-200 ml-0.5 shrink-0"
+					aria-label={expanded ? $i18n.t('Collapse Git panel') : $i18n.t('Expand Git panel')}
+					on:click={toggle}
+					><Icon name={expanded ? 'chevron-down' : 'chevron-up'} size={14} /></button
+				>
+			{/if}
 		</div>
 		{#if error}<div
 				role="alert"
@@ -783,8 +811,10 @@
 			</div>{/if}
 		{#if expanded}
 			<div
-				class="flex flex-col min-h-0 max-h-[65dvh] border-t border-base-100/50 dark:border-base-0/2"
-				style:height={`${height + 32}px`}
+				class="flex flex-col min-h-0 {standalone
+					? 'flex-1'
+					: 'max-h-[65dvh]'} border-t border-base-100/50 dark:border-base-0/2"
+				style:height={standalone ? null : `${height + 32}px`}
 			>
 				<div
 					class="flex items-center gap-0.5 px-1 h-8 shrink-0 border-b border-base-100/50 dark:border-base-0/2"
@@ -1259,6 +1289,12 @@
 			aria-label={$i18n.t('Retry Git detection')}
 			on:click={() => refresh(true)}><Icon name="refresh" size={12} /></button
 		>
+	</div>
+{:else if standalone && status}
+	<div
+		class="flex h-full items-center justify-center p-3 text-center text-xs text-base-400 dark:text-base-500"
+	>
+		{$i18n.t('Not a Git repository')}
 	</div>
 {/if}
 

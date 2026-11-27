@@ -12,6 +12,8 @@
 	export let closeOnDragBelowMinWidth = false;
 	export let storageKey = '';
 	export let subtleDivider = false;
+	// Lets className size the panel instead, with no resizing.
+	export let fill = false;
 	export let className = '';
 	export let resizerId = 'controls-resizer';
 	export let portalTarget: string | null = null;
@@ -120,7 +122,7 @@
 		}
 	});
 
-	$: if (open && panelElement) {
+	$: if (open && !fill && panelElement) {
 		const clampedWidth = clamp(width);
 		if (clampedWidth !== width) {
 			width = clampedWidth;
@@ -141,14 +143,14 @@
 		resizeHandler(e.clientX);
 	}}
 	on:resize={() => {
-		if (open) width = clamp(width);
+		if (open && !fill) width = clamp(width);
 	}}
 	on:pointerup={resizeEndHandler}
 	on:pointercancel={resizeEndHandler}
 />
 
 {#if open}
-	{#if side === 'right'}
+	{#if side === 'right' && !fill}
 		<!-- svelte-ignore a11y_no_noninteractive_element_interactions, a11y_no_noninteractive_tabindex -->
 		<div
 			class="relative flex items-center justify-center group border-l border-base-50 dark:border-base-850/30 hover:border-base-200 dark:hover:border-base-800 transition z-20 bg-transparent p-0 appearance-none {subtleDivider
@@ -185,12 +187,12 @@
 		use:portal
 		bind:this={panelElement}
 		class={className}
-		style="width: {width}px; flex: 0 0 {width}px;"
+		style={fill ? undefined : `width: ${width}px; flex: 0 0 ${width}px;`}
 	>
 		<slot />
 	</div>
 
-	{#if side === 'left'}
+	{#if side === 'left' && !fill}
 		<!-- svelte-ignore a11y_no_noninteractive_element_interactions, a11y_no_noninteractive_tabindex -->
 		<div
 			class="relative flex items-center justify-center group border-r border-base-50 dark:border-base-850/30 hover:border-base-200 dark:hover:border-base-800 transition z-20 bg-transparent p-0 appearance-none {subtleDivider

@@ -474,7 +474,7 @@
 		{:else}
 			<div class="flex justify-center h-full">
 				<div class="my-auto">
-					<Spinner className="size-6" />
+					<Spinner className="size-5" />
 				</div>
 			</div>
 		{/if}

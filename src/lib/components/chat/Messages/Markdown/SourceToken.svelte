@@ -4,6 +4,7 @@
 	import type { Tokens } from 'marked';
 	import { LinkPreview } from 'bits-ui';
 	import { decodeString } from '$lib/utils';
+	import { getParagraphIds } from '$lib/utils/citations';
 	import ArrowLeft from '$lib/components/icons/ArrowLeft.svelte';
 	import ArrowRight from '$lib/components/icons/ArrowRight.svelte';
 	import Source from './Source.svelte';
@@ -19,13 +20,34 @@
 
 	$: if (!openPreview) sourceIdx = 0;
 
-	// The sources this marker cites, each under the identifier it is cited by ("2" or "2#page")
+	// The sources this marker cites, each under the identifier it is cited by ("2" or "2#page").
+	// Paragraphs of one source, as in [1#3][1#4], are one entry cited by "1#3,1#4".
 	$: sources = [...new Set<string>(token.citationIdentifiers)]
 		.map((id) => ({
 			id,
 			citation: $citations.find((citation) => citation.number === parseInt(id.split('#')[0]))
 		}))
-		.filter(({ citation }) => citation && citation.title !== 'N/A');
+		.filter(({ citation }) => citation && citation.title !== 'N/A')
+		.reduce(
+			(entries: { id: string; citation: any; paragraphIds: number[] }[], { id, citation }) => {
+				const paragraphIds = (citation.paragraphs ?? []).some(
+					(paragraphs: any[]) => paragraphs?.length
+				)
+					? getParagraphIds([id])
+					: [];
+				const entry = paragraphIds.length
+					? entries.find((entry) => entry.citation === citation && entry.paragraphIds.length)
+					: null;
+				if (entry) {
+					entry.id = `${entry.id},${id}`;
+					entry.paragraphIds = [...entry.paragraphIds, ...paragraphIds];
+				} else {
+					entries.push({ id, citation, paragraphIds });
+				}
+				return entries;
+			},
+			[]
+		);
 
 	$: label = sources.length > 0 ? formattedTitle(decodeString(sources[0].citation.title)) : '';
 
@@ -75,9 +97,25 @@
 		return { destroy: () => window.removeEventListener('keydown', keydownHandler, true) };
 	};
 
+	let marker: HTMLElement;
+
+	// The answer text this marker follows, back to the marker before it or the start of its block
+	const getClaim = () => {
+		const block = marker?.closest('p, li, td, th, blockquote, h1, h2, h3, h4, h5, h6');
+		if (!block) return '';
+		const range = document.createRange();
+		range.selectNodeContents(block);
+		const previous = [...block.querySelectorAll('[data-citation]')]
+			.filter((node) => node.compareDocumentPosition(marker) & Node.DOCUMENT_POSITION_FOLLOWING)
+			.pop();
+		if (previous) range.setStartAfter(previous);
+		range.setEndBefore(marker);
+		return range.toString();
+	};
+
 	const openSource = (id: string) => {
 		openPreview = false;
-		onClick(id);
+		onClick(id, getClaim());
 	};
 </script>
 
@@ -87,6 +125,8 @@
 			{#snippet child({ props })}
 				<button
 					{...props}
+					bind:this={marker}
+					data-citation
 					aria-label={sources.length === 1
 						? $i18n.t('View source: {{title}}', { title: label })
 						: `${getDisplayTitle(label)} +${sources.length - 1} more sources`}
@@ -148,9 +188,9 @@
 				{/if}
 				<!-- Every source shares one cell, so the card keeps its size while paging. -->
 				<div class="grid">
-					{#each sources as { id, citation }, idx (id)}
+					{#each sources as { id, citation, paragraphIds }, idx (id)}
 						<div class="col-start-1 row-start-1 min-w-0 {idx === sourceIdx ? '' : 'invisible'}">
-							<Source {citation} onClick={() => openSource(id)} />
+							<Source {citation} {paragraphIds} onClick={() => openSource(id)} />
 						</div>
 					{/each}
 				</div>

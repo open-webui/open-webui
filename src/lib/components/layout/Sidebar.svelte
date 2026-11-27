@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import equal from 'fast-deep-equal';
-	import { v4 as uuidv4 } from 'uuid';
 	import Sortable from 'sortablejs';
 
 	import { goto } from '$app/navigation';
@@ -25,6 +24,7 @@
 		socket,
 		onSocketRestored,
 		config,
+		machines,
 		visiblePinnedModels,
 		visibleControls,
 		selectedFolder,
@@ -81,6 +81,8 @@
 	} from '$lib/apis/folders';
 	import { createNewNote, getPinnedNoteList, toggleNotePinnedStatusById } from '$lib/apis/notes';
 	import { updateUserSettings } from '$lib/apis/users';
+	import { placeInSection, saveFolderListSettings } from '$lib/utils/folderSections';
+	import { v4 as uuidv4 } from 'uuid';
 	import { createNoteHandler } from '$lib/components/notes/utils';
 	import { WEBUI_API_BASE_URL, WEBUI_BASE_URL } from '$lib/constants';
 
@@ -100,6 +102,8 @@
 	import Spinner from '../common/Spinner.svelte';
 	import Loader from '../common/Loader.svelte';
 	import Folder from '../common/Folder.svelte';
+	import NewFolderAlt from '../icons/NewFolderAlt.svelte';
+	import FolderOpen from '../icons/FolderOpen.svelte';
 	import SidebarSection from './Sidebar/Section.svelte';
 	import Tooltip from '../common/Tooltip.svelte';
 	import Folders from './Sidebar/Folders.svelte';
@@ -109,6 +113,7 @@
 	import ChannelItem from './Sidebar/ChannelItem.svelte';
 	import SearchModal from './SearchModal.svelte';
 	import FolderModal from './Sidebar/Folders/FolderModal.svelte';
+	import OpenDirectoryModal from './Sidebar/Folders/OpenDirectoryModal.svelte';
 	import PinnedModelList from './Sidebar/PinnedModelList.svelte';
 	import PinnedNoteList from './Sidebar/PinnedNoteList.svelte';
 	import CalendarIcon from './Sidebar/icons/Calendar.svelte';
@@ -130,9 +135,11 @@
 	import XMarkIcon from '../icons/XMark.svelte';
 	import ConfirmDialog from '../common/ConfirmDialog.svelte';
 	import MoreHorizontalIcon from './Sidebar/icons/MoreHorizontal.svelte';
+	import PlusIcon from './Sidebar/icons/Plus.svelte';
 	import MobileSwipePanel from '../common/MobileSwipePanel.svelte';
 
 	const DEFAULT_PINNED_ITEMS = ['notes', 'workspace'];
+	const SIDEBAR_SECTIONS = ['models', 'notes', 'channels', 'folders', 'chats'];
 
 	let scrollTop = 0;
 
@@ -261,6 +268,14 @@
 
 	let showCreateFolderModal = false;
 
+	let showOpenDirectory = false;
+	// A machine per chat or model has no one directory to open.
+	$: directoryMachines = $config?.features?.enable_tool_servers
+		? ($machines ?? []).filter(
+				(machine) => machine.id && machine.scope !== 'chat' && machine.scope !== 'model'
+			)
+		: [];
+
 	let showPinnedModels = true;
 	let showPinnedNotes = false;
 	let showChannels = false;
@@ -270,7 +285,80 @@
 		$channels.filter((channel) => channel.type === 'dm')
 	].filter((group) => group.length > 0);
 	let showFolders = false;
-	let showSharedFolders = false;
+	let showFoldersMenu = false;
+	// Sections of the user's own in the folder list
+	$: folderSections = $settings?.folderSections ?? [];
+	let renamingSectionId: string | null = null;
+
+	const createFolderSection = async () => {
+		const section = { id: uuidv4(), name: $i18n.t('New section'), folderIds: [] };
+		showFolders = true;
+		await saveFolderListSettings({ folderSections: [...folderSections, section] });
+		renamingSectionId = section.id;
+	};
+
+	// Machines with top-level folders, the only ones worth filtering by
+	$: folderMachineIds = [
+		...new Set(
+			Object.values(folders)
+				.filter((folder) => folder.machine_id && !folder.parent_id)
+				.map((folder) => folder.machine_id as string)
+		)
+	];
+	$: folderListMenus = [
+		{
+			label: $i18n.t('Owner'),
+			key: 'folderOwner',
+			choices: [
+				{ value: 'all', label: $i18n.t('All') },
+				{ value: 'yours', label: $i18n.t('Yours') },
+				{ value: 'shared', label: $i18n.t('Shared') }
+			]
+		},
+		...(folderMachineIds.length
+			? [
+					{
+						label: $i18n.t('Machine'),
+						key: 'folderMachine',
+						choices: [
+							{ value: 'all', label: $i18n.t('All') },
+							{ value: 'none', label: $i18n.t('None') },
+							...folderMachineIds.map((id) => ({
+								value: id,
+								label: ($machines ?? []).find((machine) => machine.id === id)?.name || id
+							}))
+						]
+					}
+				]
+			: []),
+		{
+			label: $i18n.t('Group by'),
+			key: 'folderGroup',
+			choices: [
+				// Your own layout: sections and manual order
+				{ value: 'none', label: $i18n.t('Default') },
+				{ value: 'owner', label: $i18n.t('Owner') },
+				...(folderMachineIds.length ? [{ value: 'machine', label: $i18n.t('Machine') }] : [])
+			]
+		},
+		{
+			label: $i18n.t('Sort by'),
+			key: 'folderSort',
+			choices: [
+				{ value: 'manual', label: $i18n.t('Manual') },
+				{ value: 'name', label: $i18n.t('Name') },
+				{ value: 'updated_at', label: $i18n.t('Last activity') },
+				{ value: 'created_at', label: $i18n.t('Created') }
+			]
+		}
+	] as const;
+
+	const setFolderListView = (key: (typeof folderListMenus)[number]['key'], value: string) => {
+		settings.set({ ...$settings, [key]: value });
+		updateUserSettings(localStorage.token, { ui: { [key]: value } }).catch((error) =>
+			toast.error(`${error}`)
+		);
+	};
 	let showChatsMenu = false;
 	$: chatListMenus = [
 		{
@@ -406,6 +494,62 @@
 		}
 	};
 
+	$: sectionOrder = [
+		...($settings?.sidebarSectionOrder ?? []).filter((id) => SIDEBAR_SECTIONS.includes(id)),
+		...SIDEBAR_SECTIONS.filter((id) => !($settings?.sidebarSectionOrder ?? []).includes(id))
+	];
+
+	$: visibleSections = sectionOrder.filter((id) => {
+		switch (id) {
+			case 'models':
+				return $visiblePinnedModels.length > 0;
+			case 'notes':
+				return (
+					($config?.features?.enable_notes ?? false) &&
+					($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true)) &&
+					$pinnedNotes.length > 0
+				);
+			case 'channels':
+				return (
+					$config?.features?.enable_channels &&
+					($user?.role === 'admin' || ($user?.permissions?.features?.channels ?? true))
+				);
+			case 'folders':
+				return (
+					$config?.features?.enable_folders &&
+					($user?.role === 'admin' || ($user?.permissions?.features?.folders ?? true))
+				);
+			default:
+				return true;
+		}
+	});
+
+	const sortableSections = (node: HTMLElement) => {
+		if ($mobile) return;
+		const sortable = new Sortable(node, {
+			forceFallback: true,
+			fallbackOnBody: true,
+			fallbackTolerance: 4,
+			ghostClass: 'opacity-40',
+			draggable: '[data-section-id]',
+			dataIdAttr: 'data-section-id',
+			handle: '[data-section-handle]',
+			onEnd: async ({ item, from, oldIndex, newIndex }) => {
+				if (oldIndex === newIndex) return;
+				const visibleOrder = sortable.toArray();
+				// Put the node back so Svelte's keyed each does the move.
+				from.insertBefore(item, from.children[oldIndex + (oldIndex < newIndex ? 0 : 1)] ?? null);
+
+				// Hidden sections keep their slots; visible ones fill the rest in the new order.
+				const queue = [...visibleOrder];
+				const next = sectionOrder.map((id) => (visibleOrder.includes(id) ? queue.shift() : id));
+				settings.set({ ...$settings, sidebarSectionOrder: next });
+				await updateUserSettings(localStorage.token, { ui: { sidebarSectionOrder: next } });
+			}
+		});
+		return { destroy: () => sortable.destroy() };
+	};
+
 	$: initSelectedFolderChats($selectedFolder as SelectedSidebarFolder);
 
 	const initFolders = async () => {
@@ -478,7 +622,7 @@
 		folders = folderMap;
 	};
 
-	const createFolder = async ({ name, data, meta, parent_id }) => {
+	const createFolder = async ({ name, data, meta, parent_id }: any) => {
 		name = name?.trim();
 		if (!name) {
 			toast.error($i18n.t('Folder name cannot be empty.'));
@@ -499,19 +643,6 @@
 			name = `${name} ${i}`;
 		}
 
-		// Add a dummy folder to the list to show the user that the folder is being created
-		const tempId = uuidv4();
-		folders = {
-			...folders,
-			[tempId]: {
-				id: tempId,
-				name: name,
-				parent_id: parent_id,
-				created_at: Date.now(),
-				updated_at: Date.now()
-			}
-		};
-
 		const res = await createNewFolder(localStorage.token, {
 			name,
 			data,
@@ -527,6 +658,35 @@
 			await initFolders();
 			showFolders = true;
 		}
+		return res;
+	};
+
+	// Opens the folder on a machine's directory, or makes one named after it.
+	const openDirectory = async (machineId: string, directory: string) => {
+		const owned = await getFolders(localStorage.token).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+		if (!owned) return false;
+
+		// Browsing ends a path with a slash; cloning and typing may not.
+		const trim = (path: string) => path.replace(/\/+$/, '');
+		const folder =
+			owned.find(
+				(folder: any) =>
+					folder.machine_id === machineId &&
+					folder.directory &&
+					trim(folder.directory) === trim(directory)
+			) ??
+			(await createFolder({
+				name: directory.split('/').filter(Boolean).at(-1) ?? directory,
+				data: { machine_id: machineId, working_directory: directory },
+				parent_id: null
+			}));
+		if (!folder) return false;
+		await goto(`/folders/${folder.id}`);
+		closeMobileSidebar();
+		return true;
 	};
 
 	// Only fetch channels if the feature is enabled and user has permission
@@ -1129,13 +1289,15 @@
 />
 
 {#if $config?.features?.enable_folders && ($user?.role === 'admin' || ($user?.permissions?.features?.folders ?? true))}
-	<FolderModal
-		bind:show={showCreateFolderModal}
-		onSubmit={async (folder) => {
-			await createFolder(folder);
-			showCreateFolderModal = false;
-		}}
-	/>
+	<FolderModal bind:show={showCreateFolderModal} onSubmit={createFolder} />
+
+	{#if showOpenDirectory}
+		<OpenDirectoryModal
+			bind:show={showOpenDirectory}
+			machines={directoryMachines}
+			onSelect={openDirectory}
+		/>
+	{/if}
 {/if}
 
 <svelte:document on:click|capture={sidebarLinkClickHandler} />
@@ -1578,292 +1740,252 @@
 						</div>
 					</div>
 
-					{#if $visiblePinnedModels.length > 0}
-						<SidebarSection
-							id="sidebar-models"
-							bind:open={showPinnedModels}
-							name={$i18n.t('Models')}
-							dragAndDrop={false}
-						>
-							<PinnedModelList bind:selectedChatId {shiftKey} />
-						</SidebarSection>
-					{/if}
-
-					{#if ($config?.features?.enable_notes ?? false) && ($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true)) && $pinnedNotes.length > 0}
-						<SidebarSection
-							id="sidebar-pinned-notes"
-							bind:open={showPinnedNotes}
-							name={$i18n.t('Notes')}
-							dragAndDrop={false}
-							onAdd={async () => {
-								const note = await createNoteHandler('New Note');
-								if (note) {
-									if (!openSidebarPage(`/notes/${note.id}`, note.title)) goto(`/notes/${note.id}`);
-								}
-							}}
-							onAddLabel={$i18n.t('New Note')}
-						>
-							<PinnedNoteList bind:selectedChatId />
-						</SidebarSection>
-					{/if}
-
-					{#if $config?.features?.enable_channels && ($user?.role === 'admin' || ($user?.permissions?.features?.channels ?? true))}
-						<SidebarSection
-							id="sidebar-channels"
-							bind:open={showChannels}
-							name={$i18n.t('Channels')}
-							dragAndDrop={false}
-							onAdd={$user?.role === 'admin' || ($user?.permissions?.features?.channels ?? true)
-								? async () => {
-										await tick();
-
-										setTimeout(() => {
-											showCreateChannel = true;
-										}, 0);
-									}
-								: null}
-							onAddLabel={$i18n.t('Create Channel')}
-						>
-							{#each channelGroups as group, groupIdx}
-								{#if groupIdx > 0}
-									<hr class=" border-base-100/40 dark:border-base-800/10 my-1.5 w-full" />
-								{/if}
-								{#each group as channel (channel.id)}
-									<ChannelItem
-										{channel}
-										onUpdate={async () => {
-											await initChannels();
-										}}
-									/>
-								{/each}
-							{/each}
-						</SidebarSection>
-					{/if}
-
-					{#if $config?.features?.enable_folders && ($user?.role === 'admin' || ($user?.permissions?.features?.folders ?? true))}
-						<SidebarSection
-							id="sidebar-folders"
-							bind:open={showFolders}
-							name={$i18n.t('Folders')}
-							onAdd={() => {
-								showCreateFolderModal = true;
-							}}
-							onAddLabel={$i18n.t('New Folder')}
-							on:drop={async (e) => {
-								const { type, id, item } = e.detail;
-
-								if (type === 'folder') {
-									if (folders[id].parent_id === null) {
-										return;
-									}
-
-									const res = await updateFolderParentIdById(localStorage.token, id, null).catch(
-										(error) => {
-											toast.error(`${error}`);
-											return null;
-										}
-									);
-
-									if (res) {
-										updateFolderDetails(id, res);
-										await initFolders();
-									}
-								}
-							}}
-						>
-							<Folders
-								bind:folderRegistry
-								{folders}
-								{shiftKey}
-								onFolderUnreadCounts={applyFolderUnreadCounts}
-								onDelete={(folderId) => {
-									for (const childId of Object.keys(folders)) {
-										let parentId = childId;
-										while (parentId && parentId !== folderId)
-											parentId = folders[parentId]?.parent_id;
-										if (parentId) removeFolderState(childId);
-									}
-									let id = $selectedFolder?.id;
-									while (id && id !== folderId) id = folders[id]?.parent_id;
-									if (id) selectedFolder.set(null);
-									initChatList();
-								}}
-								on:update={() => {
-									initChatList();
-								}}
-								on:import={(e) => {
-									const { folderId, items } = e.detail;
-									importChatHandler(items, false, folderId);
-								}}
-								on:change={async () => {
-									initChatList();
-								}}
-							/>
-						</SidebarSection>
-					{/if}
-
-					<SidebarSection
-						id="sidebar-chats"
-						name={$i18n.t('Chats')}
-						on:change={async (e) => {
-							selectedFolder.set(null);
-						}}
-						on:import={(e) => {
-							importChatHandler(e.detail);
-						}}
-						on:drop={async (e) => {
-							const { type, id, item } = e.detail;
-
-							if (type === 'chat') {
-								let chat = await getChatById(localStorage.token, id).catch((error) => {
-									return null;
-								});
-								if (!chat && item) {
-									if (!canImportChats) {
-										toast.error($i18n.t('Access prohibited'));
-										return;
-									}
-
-									chat = await importChats(localStorage.token, [
-										{
-											chat: item.chat,
-											meta: item?.meta ?? {},
-											pinned: false,
-											folder_id: null,
-											created_at: item?.created_at ?? null,
-											updated_at: item?.updated_at ?? null
-										}
-									]);
-								}
-
-								if (chat) {
-									console.log(chat);
-									if (!chat.folder_id && !chat.pinned) {
-										return;
-									}
-
-									if (chat.folder_id) {
-										const res = await updateChatFolderIdById(
-											localStorage.token,
-											chat.id,
-											null
-										).catch((error) => {
-											toast.error(`${error}`);
-											return null;
-										});
-
-										folderRegistry[chat.folder_id]?.setFolderItems();
-
-										if (res) {
-											updateFolderChatLists(res, null);
-											chat = res;
-										}
-									}
-
-									if (chat.pinned) {
-										const res = await toggleChatPinnedStatusById(localStorage.token, chat.id);
-									}
-
-									await initChatList();
-									void refreshFolderChatLists();
-								}
-							} else if (type === 'folder') {
-								if (folders[id].parent_id === null) {
-									return;
-								}
-
-								const res = await updateFolderParentIdById(localStorage.token, id, null).catch(
-									(error) => {
-										toast.error(`${error}`);
-										return null;
-									}
-								);
-
-								if (res) {
-									await initFolders();
-								}
-							}
-						}}
-					>
-						<svelte:fragment slot="action">
-							<Dropdown bind:show={showChatsMenu} align="start">
-								<Tooltip content={$i18n.t('More')}>
-									<button
-										type="button"
-										class="flex items-center justify-center w-7 h-7 rounded-lg text-base-300 hover:text-base-500 dark:text-base-600 dark:hover:text-base-400 transition-colors duration-100"
-										aria-label={$i18n.t('More')}
+					<div class="flex flex-col space-y-1.5" use:sortableSections>
+						{#each visibleSections as sectionId (sectionId)}
+							<div data-section-id={sectionId}>
+								{#if sectionId === 'models'}
+									<SidebarSection
+										id="sidebar-models"
+										bind:open={showPinnedModels}
+										name={$i18n.t('Models')}
+										dragAndDrop={false}
 									>
-										<MoreHorizontalIcon className="size-3.5" strokeWidth="2" />
-									</button>
-								</Tooltip>
+										<PinnedModelList bind:selectedChatId {shiftKey} />
+									</SidebarSection>
+								{:else if sectionId === 'notes'}
+									<SidebarSection
+										id="sidebar-pinned-notes"
+										bind:open={showPinnedNotes}
+										name={$i18n.t('Notes')}
+										dragAndDrop={false}
+										onAdd={async () => {
+											const note = await createNoteHandler('New Note');
+											if (note) {
+												if (!openSidebarPage(`/notes/${note.id}`, note.title))
+													goto(`/notes/${note.id}`);
+											}
+										}}
+										onAddLabel={$i18n.t('New Note')}
+									>
+										<PinnedNoteList bind:selectedChatId />
+									</SidebarSection>
+								{:else if sectionId === 'channels'}
+									<SidebarSection
+										id="sidebar-channels"
+										bind:open={showChannels}
+										name={$i18n.t('Channels')}
+										dragAndDrop={false}
+										onAdd={$user?.role === 'admin' ||
+										($user?.permissions?.features?.channels ?? true)
+											? async () => {
+													await tick();
 
-								<div slot="content">
-									<DropdownMenu className="min-w-[10.625rem]">
-										{#each chatListMenus as menu (menu.key)}
-											{@const current = menu.choices.find(
-												(choice) => choice.value === $chatListView[menu.key]
-											)}
-											<DropdownSub
-												contentClass="select-none z-50 max-h-80 overflow-y-auto"
-												maxWidth={320}
-												sideOffset={6}
-											>
-												<button
-													slot="trigger"
-													type="button"
-													class="flex h-[1.6875rem] w-full cursor-pointer select-none items-center gap-2 rounded-xl px-2 text-left text-[0.8125rem] outline-hidden"
-												>
-													<span class="min-w-0 flex-1 truncate text-left">{menu.label}</span>
-													<span class="truncate text-base-500 dark:text-base-400"
-														>{current?.label}</span
-													>
-													<ChevronRight
-														className="size-3.5 shrink-0 text-base-400 rtl:rotate-180"
-													/>
-												</button>
-												{#each menu.choices as choice (choice.value)}
+													setTimeout(() => {
+														showCreateChannel = true;
+													}, 0);
+												}
+											: null}
+										onAddLabel={$i18n.t('Create Channel')}
+									>
+										{#each channelGroups as group, groupIdx}
+											{#if groupIdx > 0}
+												<hr class=" border-base-100/40 dark:border-base-800/10 my-1.5 w-full" />
+											{/if}
+											{#each group as channel (channel.id)}
+												<ChannelItem
+													{channel}
+													onUpdate={async () => {
+														await initChannels();
+													}}
+												/>
+											{/each}
+										{/each}
+									</SidebarSection>
+								{:else if sectionId === 'folders'}
+									<SidebarSection
+										id="sidebar-folders"
+										bind:open={showFolders}
+										name={$i18n.t('Folders')}
+										onAdd={directoryMachines.length
+											? null
+											: () => {
+													showCreateFolderModal = true;
+												}}
+										onAddLabel={$i18n.t('New Folder')}
+										on:drop={async (e) => {
+											const { type, id, item } = e.detail;
+
+											if (type === 'folder') {
+												// Dropped on the section itself: top level, outside any section of yours.
+												// While grouped, sections are hidden and keep their folders.
+												if (
+													($settings?.folderGroup ?? 'none') === 'none' &&
+													folderSections.some((section) => section.folderIds.includes(id))
+												) {
+													saveFolderListSettings({
+														folderSections: placeInSection(folderSections, id)
+													});
+												}
+												if (folders[id].parent_id === null || folders[id].shared) {
+													return;
+												}
+
+												const res = await updateFolderParentIdById(
+													localStorage.token,
+													id,
+													null
+												).catch((error) => {
+													toast.error(`${error}`);
+													return null;
+												});
+
+												if (res) {
+													updateFolderDetails(id, res);
+													await initFolders();
+												}
+											}
+										}}
+									>
+										<svelte:fragment slot="action">
+											<Dropdown bind:show={showFoldersMenu} align="start">
+												<Tooltip content={$i18n.t('More')}>
 													<button
 														type="button"
-														role="menuitemradio"
-														aria-checked={choice.value === current?.value}
-														on:click={() => {
-															showChatsMenu = false;
-															if (choice.value !== current?.value) {
-																setChatListView(localStorage.token, {
-																	[menu.key]: choice.value
-																});
-															}
-														}}
+														class="flex items-center justify-center w-7 h-7 rounded-lg text-base-300 hover:text-base-500 dark:text-base-600 dark:hover:text-base-400 transition-colors duration-100"
+														aria-label={$i18n.t('More')}
 													>
-														<span class="flex-1 text-left">{choice.label}</span>
-														{#if choice.value === current?.value}<CheckIcon
-																className="size-3! shrink-0"
-															/>{/if}
+														<MoreHorizontalIcon className="size-3.5" strokeWidth="2" />
 													</button>
-												{/each}
-											</DropdownSub>
-										{/each}
-										<hr class="border-base-50/30 dark:border-base-800/30" />
-										<button
-											class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] select-none cursor-pointer hover:bg-base-100 dark:hover:bg-base-900"
-											on:click={markAllChatsReadHandler}
-										>
-											<CheckIcon className="size-3.5" />
-											<div class="flex items-center">{$i18n.t('Mark all as read')}</div>
-										</button>
-									</DropdownMenu>
-								</div>
-							</Dropdown>
-						</svelte:fragment>
+												</Tooltip>
 
-						{#if $pinnedChats.length > 0}
-							<div class="mb-1">
-								<div class="flex flex-col space-y-1 rounded-xl">
-									<Folder
-										id="sidebar-pinned-chats"
-										buttonClassName=" text-base-500"
+												<div slot="content">
+													<DropdownMenu className="min-w-[10.625rem]">
+														{#each folderListMenus as menu (menu.key)}
+															{@const current =
+																menu.choices.find(
+																	(choice) =>
+																		choice.value ===
+																		($settings as Record<string, unknown> | undefined)?.[menu.key]
+																) ?? menu.choices[0]}
+															<DropdownSub
+																contentClass="select-none z-50 max-h-80 overflow-y-auto"
+																maxWidth={320}
+																sideOffset={6}
+															>
+																<button
+																	slot="trigger"
+																	type="button"
+																	class="flex h-[1.6875rem] w-full cursor-pointer select-none items-center gap-2 rounded-xl px-2 text-left text-[0.8125rem] outline-hidden"
+																>
+																	<span class="min-w-0 flex-1 truncate text-left">{menu.label}</span
+																	>
+																	<span class="truncate text-base-500 dark:text-base-400"
+																		>{current.label}</span
+																	>
+																	<ChevronRight
+																		className="size-3.5 shrink-0 text-base-400 rtl:rotate-180"
+																	/>
+																</button>
+																{#each menu.choices as choice (choice.value)}
+																	<button
+																		type="button"
+																		role="menuitemradio"
+																		aria-checked={choice.value === current.value}
+																		on:click={() => {
+																			showFoldersMenu = false;
+																			if (choice.value !== current.value)
+																				setFolderListView(menu.key, choice.value);
+																		}}
+																	>
+																		<span class="flex-1 text-left">{choice.label}</span>
+																		{#if choice.value === current.value}<CheckIcon
+																				className="size-3! shrink-0"
+																			/>{/if}
+																	</button>
+																{/each}
+															</DropdownSub>
+														{/each}
+														<hr class="border-base-50/30 dark:border-base-800/30" />
+														<button
+															class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] select-none cursor-pointer hover:bg-base-100 dark:hover:bg-base-900"
+															on:click={() => {
+																showFoldersMenu = false;
+																createFolderSection();
+															}}
+														>
+															<PlusIcon className="size-3.5" />
+															<div class="flex items-center">{$i18n.t('New section')}</div>
+														</button>
+													</DropdownMenu>
+												</div>
+											</Dropdown>
+
+											{#if directoryMachines.length}
+												<Dropdown align="start" closeOnSelect>
+													<Tooltip content={$i18n.t('New Folder')}>
+														<button
+															type="button"
+															class="flex items-center justify-center w-7 h-7 rounded-lg text-base-300 hover:text-base-500 dark:text-base-600 dark:hover:text-base-400 transition-colors duration-100"
+															aria-label={$i18n.t('New Folder')}
+														>
+															<PlusIcon className="size-3.5" />
+														</button>
+													</Tooltip>
+
+													<div slot="content">
+														<DropdownMenu className="min-w-[10.625rem]">
+															<button type="button" on:click={() => (showCreateFolderModal = true)}>
+																<NewFolderAlt />
+																{$i18n.t('New Folder')}
+															</button>
+															<button type="button" on:click={() => (showOpenDirectory = true)}>
+																<FolderOpen />
+																{$i18n.t('Open directory')}
+															</button>
+														</DropdownMenu>
+													</div>
+												</Dropdown>
+											{/if}
+										</svelte:fragment>
+										<Folders
+											bind:folderRegistry
+											bind:renamingSectionId
+											{folders}
+											{shiftKey}
+											onFolderUnreadCounts={applyFolderUnreadCounts}
+											onDelete={(folderId) => {
+												for (const childId of Object.keys(folders)) {
+													let parentId = childId;
+													while (parentId && parentId !== folderId)
+														parentId = folders[parentId]?.parent_id;
+													if (parentId) removeFolderState(childId);
+												}
+												let id = $selectedFolder?.id;
+												while (id && id !== folderId) id = folders[id]?.parent_id;
+												if (id) selectedFolder.set(null);
+												initChatList();
+											}}
+											on:update={() => {
+												initChatList();
+											}}
+											on:import={(e) => {
+												const { folderId, items } = e.detail;
+												importChatHandler(items, false, folderId);
+											}}
+											on:change={async () => {
+												initChatList();
+											}}
+										/>
+									</SidebarSection>
+								{:else}
+									<SidebarSection
+										id="sidebar-chats"
+										name={$i18n.t('Chats')}
+										on:change={async (e) => {
+											selectedFolder.set(null);
+										}}
 										on:import={(e) => {
-											importChatHandler(e.detail, true);
+											importChatHandler(e.detail);
 										}}
 										on:drop={async (e) => {
 											const { type, id, item } = e.detail;
@@ -1892,6 +2014,10 @@
 
 												if (chat) {
 													console.log(chat);
+													if (!chat.folder_id && !chat.pinned) {
+														return;
+													}
+
 													if (chat.folder_id) {
 														const res = await updateChatFolderIdById(
 															localStorage.token,
@@ -1902,13 +2028,15 @@
 															return null;
 														});
 
+														folderRegistry[chat.folder_id]?.setFolderItems();
+
 														if (res) {
 															updateFolderChatLists(res, null);
 															chat = res;
 														}
 													}
 
-													if (!chat.pinned) {
+													if (chat.pinned) {
 														const res = await toggleChatPinnedStatusById(
 															localStorage.token,
 															chat.id
@@ -1918,65 +2046,221 @@
 													await initChatList();
 													void refreshFolderChatLists();
 												}
+											} else if (type === 'folder') {
+												if (folders[id].parent_id === null || folders[id].shared) {
+													return;
+												}
+
+												const res = await updateFolderParentIdById(
+													localStorage.token,
+													id,
+													null
+												).catch((error) => {
+													toast.error(`${error}`);
+													return null;
+												});
+
+												if (res) {
+													await initFolders();
+												}
 											}
 										}}
-										name={$i18n.t('Pinned')}
 									>
-										<div
-											class="ml-3 pl-1 mt-[0.0625rem] flex flex-col overflow-y-auto scrollbar-hidden border-s border-base-100 dark:border-base-900 text-base-700 dark:text-base-300"
-											role="list"
-										>
-											{#each $pinnedChats as chat, idx (`pinned-chat-${chat?.id ?? idx}`)}
-												<div role="listitem">
-													<ChatItem
-														className=""
-														id={chat.id}
-														title={chat.title}
-														createdAt={chat.created_at}
-														updatedAt={chat.updated_at}
-														lastReadAt={chat.last_read_at}
-														active={chat.active ?? false}
-														pendingApproval={chat.pending_approval ?? false}
-														{shiftKey}
-														selected={selectedChatId === chat.id}
-														on:select={() => {
-															selectedChatId = chat.id;
-														}}
-														on:unselect={() => {
-															selectedChatId = null;
-														}}
-														on:change={async () => {
-															initChatList();
-														}}
-														onReadStateChange={applyChatReadState}
-														on:tag={(e) => {
-															const { type, name } = e.detail;
-															tagEventHandler(type, name, chat.id);
-														}}
-													/>
-												</div>
-											{/each}
-										</div>
-									</Folder>
-								</div>
-							</div>
-						{/if}
-
-						<div class=" flex-1 flex flex-col overflow-y-auto scrollbar-hidden">
-							<div class="pt-1.5">
-								{#if $chats}
-									<div role="list">
-										{#each $chats as chat, idx (`chat-${chat?.id ?? idx}`)}
-											<div role="listitem">
-												{#if idx === 0 || (idx > 0 && chat.time_range !== $chats[idx - 1].time_range)}
-													<h3
-														class="w-full pl-2.5 text-xs text-base-500 dark:text-base-500 font-normal {idx ===
-														0
-															? ''
-															: 'pt-4'} pb-1"
+										<svelte:fragment slot="action">
+											<Dropdown bind:show={showChatsMenu} align="start">
+												<Tooltip content={$i18n.t('More')}>
+													<button
+														type="button"
+														class="flex items-center justify-center w-7 h-7 rounded-lg text-base-300 hover:text-base-500 dark:text-base-600 dark:hover:text-base-400 transition-colors duration-100"
+														aria-label={$i18n.t('More')}
 													>
-														{$i18n.t(chat.time_range)}
-														<!-- localisation keys for time_range to be recognized from the i18next parser (so they don't get automatically removed):
+														<MoreHorizontalIcon className="size-3.5" strokeWidth="2" />
+													</button>
+												</Tooltip>
+
+												<div slot="content">
+													<DropdownMenu className="min-w-[10.625rem]">
+														{#each chatListMenus as menu (menu.key)}
+															{@const current = menu.choices.find(
+																(choice) => choice.value === $chatListView[menu.key]
+															)}
+															<DropdownSub
+																contentClass="select-none z-50 max-h-80 overflow-y-auto"
+																maxWidth={320}
+																sideOffset={6}
+															>
+																<button
+																	slot="trigger"
+																	type="button"
+																	class="flex h-[1.6875rem] w-full cursor-pointer select-none items-center gap-2 rounded-xl px-2 text-left text-[0.8125rem] outline-hidden"
+																>
+																	<span class="min-w-0 flex-1 truncate text-left">{menu.label}</span
+																	>
+																	<span class="truncate text-base-500 dark:text-base-400"
+																		>{current?.label}</span
+																	>
+																	<ChevronRight
+																		className="size-3.5 shrink-0 text-base-400 rtl:rotate-180"
+																	/>
+																</button>
+																{#each menu.choices as choice (choice.value)}
+																	<button
+																		type="button"
+																		role="menuitemradio"
+																		aria-checked={choice.value === current?.value}
+																		on:click={() => {
+																			showChatsMenu = false;
+																			if (choice.value !== current?.value) {
+																				setChatListView(localStorage.token, {
+																					[menu.key]: choice.value
+																				});
+																			}
+																		}}
+																	>
+																		<span class="flex-1 text-left">{choice.label}</span>
+																		{#if choice.value === current?.value}<CheckIcon
+																				className="size-3! shrink-0"
+																			/>{/if}
+																	</button>
+																{/each}
+															</DropdownSub>
+														{/each}
+														<hr class="border-base-50/30 dark:border-base-800/30" />
+														<button
+															class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] select-none cursor-pointer hover:bg-base-100 dark:hover:bg-base-900"
+															on:click={markAllChatsReadHandler}
+														>
+															<CheckIcon className="size-3.5" />
+															<div class="flex items-center">{$i18n.t('Mark all as read')}</div>
+														</button>
+													</DropdownMenu>
+												</div>
+											</Dropdown>
+										</svelte:fragment>
+
+										{#if $pinnedChats.length > 0}
+											<div class="mb-1">
+												<div class="flex flex-col space-y-1 rounded-xl">
+													<Folder
+														id="sidebar-pinned-chats"
+														buttonClassName=" text-base-500"
+														on:import={(e) => {
+															importChatHandler(e.detail, true);
+														}}
+														on:drop={async (e) => {
+															const { type, id, item } = e.detail;
+
+															if (type === 'chat') {
+																let chat = await getChatById(localStorage.token, id).catch(
+																	(error) => {
+																		return null;
+																	}
+																);
+																if (!chat && item) {
+																	if (!canImportChats) {
+																		toast.error($i18n.t('Access prohibited'));
+																		return;
+																	}
+
+																	chat = await importChats(localStorage.token, [
+																		{
+																			chat: item.chat,
+																			meta: item?.meta ?? {},
+																			pinned: false,
+																			folder_id: null,
+																			created_at: item?.created_at ?? null,
+																			updated_at: item?.updated_at ?? null
+																		}
+																	]);
+																}
+
+																if (chat) {
+																	console.log(chat);
+																	if (chat.folder_id) {
+																		const res = await updateChatFolderIdById(
+																			localStorage.token,
+																			chat.id,
+																			null
+																		).catch((error) => {
+																			toast.error(`${error}`);
+																			return null;
+																		});
+
+																		if (res) {
+																			updateFolderChatLists(res, null);
+																			chat = res;
+																		}
+																	}
+
+																	if (!chat.pinned) {
+																		const res = await toggleChatPinnedStatusById(
+																			localStorage.token,
+																			chat.id
+																		);
+																	}
+
+																	await initChatList();
+																	void refreshFolderChatLists();
+																}
+															}
+														}}
+														name={$i18n.t('Pinned')}
+													>
+														<div
+															class="ml-3 pl-1 mt-[0.0625rem] flex flex-col overflow-y-auto scrollbar-hidden border-s border-base-100 dark:border-base-900 text-base-700 dark:text-base-300"
+															role="list"
+														>
+															{#each $pinnedChats as chat, idx (`pinned-chat-${chat?.id ?? idx}`)}
+																<div role="listitem">
+																	<ChatItem
+																		className=""
+																		id={chat.id}
+																		title={chat.title}
+																		createdAt={chat.created_at}
+																		updatedAt={chat.updated_at}
+																		lastReadAt={chat.last_read_at}
+																		active={chat.active ?? false}
+																		pendingApproval={chat.pending_approval ?? false}
+																		{shiftKey}
+																		selected={selectedChatId === chat.id}
+																		on:select={() => {
+																			selectedChatId = chat.id;
+																		}}
+																		on:unselect={() => {
+																			selectedChatId = null;
+																		}}
+																		on:change={async () => {
+																			initChatList();
+																		}}
+																		onReadStateChange={applyChatReadState}
+																		on:tag={(e) => {
+																			const { type, name } = e.detail;
+																			tagEventHandler(type, name, chat.id);
+																		}}
+																	/>
+																</div>
+															{/each}
+														</div>
+													</Folder>
+												</div>
+											</div>
+										{/if}
+
+										<div class=" flex-1 flex flex-col overflow-y-auto scrollbar-hidden">
+											<div class="pt-1.5">
+												{#if $chats}
+													<div role="list">
+														{#each $chats as chat, idx (`chat-${chat?.id ?? idx}`)}
+															<div role="listitem">
+																{#if idx === 0 || (idx > 0 && chat.time_range !== $chats[idx - 1].time_range)}
+																	<h3
+																		class="w-full pl-2.5 text-xs text-base-500 dark:text-base-500 font-normal {idx ===
+																		0
+																			? ''
+																			: 'pt-4'} pb-1"
+																	>
+																		{$i18n.t(chat.time_range)}
+																		<!-- localisation keys for time_range to be recognized from the i18next parser (so they don't get automatically removed):
 							{$i18n.t('Today')}
 							{$i18n.t('Yesterday')}
 							{$i18n.t('Previous 7 days')}
@@ -1994,67 +2278,71 @@
 							{$i18n.t('November')}
 							{$i18n.t('December')}
 							-->
-													</h3>
+																	</h3>
+																{/if}
+
+																<ChatItem
+																	className=""
+																	id={chat.id}
+																	title={chat.title}
+																	createdAt={chat.created_at}
+																	updatedAt={chat.updated_at}
+																	lastReadAt={chat.last_read_at}
+																	archived={chat.archived === true}
+																	active={chat.active ?? false}
+																	pendingApproval={chat.pending_approval ?? false}
+																	{shiftKey}
+																	selected={selectedChatId === chat.id}
+																	on:select={() => {
+																		selectedChatId = chat.id;
+																	}}
+																	on:unselect={() => {
+																		selectedChatId = null;
+																	}}
+																	on:change={async () => {
+																		initChatList();
+																	}}
+																	onReadStateChange={applyChatReadState}
+																	on:tag={(e) => {
+																		const { type, name } = e.detail;
+																		tagEventHandler(type, name, chat.id);
+																	}}
+																/>
+															</div>
+														{/each}
+													</div>
+
+													{#if chatListReady && !allChatsLoaded}
+														<Loader
+															on:visible={(e) => {
+																if (!chatListLoading) {
+																	loadMoreChats();
+																}
+															}}
+														>
+															<div
+																class="w-full flex justify-center py-1 text-xs animate-pulse items-center gap-2"
+															>
+																<Spinner className=" size-4" />
+																<div class=" ">{$i18n.t('Loading...')}</div>
+															</div>
+														</Loader>
+													{/if}
+												{:else}
+													<div
+														class="w-full flex justify-center py-1 text-xs animate-pulse items-center gap-2"
+													>
+														<Spinner className=" size-4" />
+														<div class=" ">{$i18n.t('Loading...')}</div>
+													</div>
 												{/if}
-
-												<ChatItem
-													className=""
-													id={chat.id}
-													title={chat.title}
-													createdAt={chat.created_at}
-													updatedAt={chat.updated_at}
-													lastReadAt={chat.last_read_at}
-													archived={chat.archived === true}
-													active={chat.active ?? false}
-													pendingApproval={chat.pending_approval ?? false}
-													{shiftKey}
-													selected={selectedChatId === chat.id}
-													on:select={() => {
-														selectedChatId = chat.id;
-													}}
-													on:unselect={() => {
-														selectedChatId = null;
-													}}
-													on:change={async () => {
-														initChatList();
-													}}
-													onReadStateChange={applyChatReadState}
-													on:tag={(e) => {
-														const { type, name } = e.detail;
-														tagEventHandler(type, name, chat.id);
-													}}
-												/>
 											</div>
-										{/each}
-									</div>
-
-									{#if chatListReady && !allChatsLoaded}
-										<Loader
-											on:visible={(e) => {
-												if (!chatListLoading) {
-													loadMoreChats();
-												}
-											}}
-										>
-											<div
-												class="w-full flex justify-center py-1 text-xs animate-pulse items-center gap-2"
-											>
-												<Spinner className=" size-4" />
-												<div class=" ">{$i18n.t('Loading...')}</div>
-											</div>
-										</Loader>
-									{/if}
-								{:else}
-									<div
-										class="w-full flex justify-center py-1 text-xs animate-pulse items-center gap-2"
-									>
-										<Spinner className=" size-4" />
-										<div class=" ">{$i18n.t('Loading...')}</div>
-									</div>
+										</div>
+									</SidebarSection>
 								{/if}
 							</div>
-						</div>
-					</SidebarSection>
+						{/each}
+					</div>
 				</div>
 
 				<div class="px-1 pt-1 pb-1.5 sticky bottom-0 z-10 -mt-2 sidebar">

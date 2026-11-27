@@ -237,7 +237,7 @@ export const openEmbeddedChatIds = writable<Set<string>>(new Set());
 /** The saved chat whose tab is in front, when it is not the main chat. */
 export const activeChatTabId = writable<string | null>(null);
 export const chatTabRequest = writable<
-	{ parentChatId: string; prompt: string } | { folderId: string } | null
+	{ parentChatId: string; prompt: string } | { folderId: string; chatId?: string } | null
 >(null);
 
 export type QueryData = {
@@ -323,6 +323,13 @@ type OllamaModelDetails = {
 	quantization_level: string;
 };
 
+/** A section of the user's own in the sidebar's folder list, holding top-level folders. */
+export type FolderListSection = {
+	id: string;
+	name: string;
+	folderIds: string[];
+};
+
 type Settings = {
 	pinnedModels?: string[];
 	temporaryChatByDefault?: boolean;
@@ -392,8 +399,20 @@ type Settings = {
 	recentEmojis?: string[];
 	pinnedMenuItems?: string[];
 	pinnedNotesOrder?: string[];
-	/** Folder ids in display order, by parent folder id ('root' for top-level folders). */
+	/** Sidebar section ids ('models', 'notes', 'channels', 'folders', 'chats') in display order. */
+	sidebarSectionOrder?: string[];
+	/** Folder ids in display order, by parent folder id ('root' for top-level folders and folderSections). */
 	folderOrder?: Record<string, string[]>;
+	/** Whose top-level folders the sidebar lists. */
+	folderOwner?: 'all' | 'yours' | 'shared';
+	/** Which machine's top-level folders the sidebar lists: 'all', 'none' or a machine id. */
+	folderMachine?: string;
+	/** How the sidebar orders folders; 'manual' follows folderOrder. */
+	folderSort?: 'manual' | 'name' | 'updated_at' | 'created_at';
+	/** How the sidebar groups top-level folders that aren't in a section. */
+	folderGroup?: 'none' | 'owner' | 'machine';
+	/** The user's own sections of top-level folders; folderOrder.root places them among folders. */
+	folderSections?: FolderListSection[];
 
 	defaultUploadContext?: 'full' | 'focused';
 

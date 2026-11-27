@@ -8,7 +8,7 @@ from typing import Literal
 
 from open_webui.internal.db import Base, get_async_db_context
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import JSON, BigInteger, Column, Index, String, Text, delete, select
+from sqlalchemy import JSON, BigInteger, Column, Index, String, Text, delete, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
@@ -16,12 +16,16 @@ class Memory(Base):  # user memory store
     """Stores user-created memory entries linked to a vector collection."""
 
     __tablename__ = 'memory'
-    __table_args__ = (Index('ix_memory_id_user_id', 'id', 'user_id'),)
+    __table_args__ = (
+        Index('ix_memory_id_user_id', 'id', 'user_id'),
+        Index('ix_memory_user_id_folder_id', 'user_id', 'folder_id'),
+    )
 
     id = Column(String, primary_key=True, unique=True)
     user_id = Column(String, index=True)
     type = Column(String, default='context', server_default='context', index=True)
     path = Column(Text, nullable=True)
+    folder_id = Column(Text, nullable=True)  # null: every chat
     content = Column(Text)  # free-form text learned from conversation
     meta = Column(JSON, nullable=True)
     updated_at = Column(BigInteger)  # epoch seconds
@@ -35,6 +39,7 @@ class MemoryModel(BaseModel):
     user_id: str
     type: Literal['user', 'context'] = 'context'
     path: str | None = None
+    folder_id: str | None = None
     content: str
     meta: dict | None = None
     updated_at: int  # timestamp in epoch
@@ -54,6 +59,7 @@ class MemoriesTable:
         memory_type: str | None = None,
         path: str | None = None,
         meta: dict | None = None,
+        folder_id: str | None = None,
         db: AsyncSession | None = None,
     ) -> MemoryModel | None:
         """Persist a new memory entry and return the created model."""
@@ -64,6 +70,7 @@ class MemoriesTable:
                 user_id=user_id,
                 type=self.normalize_memory_type(memory_type),
                 path=path,
+                folder_id=folder_id,
                 content=content,
                 meta=meta,
                 created_at=now,
@@ -123,6 +130,20 @@ class MemoriesTable:
             except Exception:
                 return None
 
+    async def get_chat_memories(
+        self, user_id: str, folder_id: str | None, folder_only: bool = False, db: AsyncSession | None = None
+    ) -> list[MemoryModel]:
+        """What a chat can see: its folder's memories, plus the user's account memories unless folder_only."""
+        if folder_id and folder_only:
+            condition = Memory.folder_id == folder_id
+        else:
+            condition = Memory.folder_id.is_(None)
+            if folder_id:
+                condition = or_(condition, Memory.folder_id == folder_id)
+        async with get_async_db_context(db) as db:
+            result = await db.execute(select(Memory).filter(Memory.user_id == user_id, condition))
+            return [MemoryModel.model_validate(memory) for memory in result.scalars().all()]
+
     async def get_memory_by_id(self, id: str, db: AsyncSession | None = None) -> MemoryModel | None:
         async with get_async_db_context(db) as db:
             try:
@@ -151,6 +172,20 @@ class MemoriesTable:
                 return True
             except Exception:
                 return False
+
+    async def delete_memories_by_folder_ids(
+        self, folder_ids: list[str], db: AsyncSession | None = None
+    ) -> dict[str, list[str]]:
+        """Delete everyone's memories for these folders. Returns the deleted ids by user, for the vector store."""
+        async with get_async_db_context(db) as db:
+            result = await db.execute(select(Memory.user_id, Memory.id).filter(Memory.folder_id.in_(folder_ids)))
+            deleted: dict[str, list[str]] = {}
+            for user_id, memory_id in result.all():
+                deleted.setdefault(user_id, []).append(memory_id)
+            if deleted:
+                await db.execute(delete(Memory).filter(Memory.folder_id.in_(folder_ids)))
+                await db.commit()
+            return deleted
 
     async def delete_memory_by_id_and_user_id(self, id: str, user_id: str, db: AsyncSession | None = None) -> bool:
         async with get_async_db_context(db) as db:
@@ -182,8 +217,11 @@ class MemoriesTable:
                     content = operation.get('content', '').strip()
                     memory_type = self.normalize_memory_type(operation.get('type'))
                     path = operation.get('path')
+                    folder_id = operation.get('folder_id')
                     result = await db.execute(
-                        select(Memory).filter_by(user_id=user_id, content=content, type=memory_type, path=path)
+                        select(Memory).filter_by(
+                            user_id=user_id, content=content, type=memory_type, path=path, folder_id=folder_id
+                        )
                     )
                     existing = result.scalars().first()
                     if existing:
@@ -202,6 +240,7 @@ class MemoriesTable:
                         user_id=user_id,
                         type=memory_type,
                         path=path,
+                        folder_id=folder_id,
                         content=content,
                         meta=operation.get('meta'),
                         created_at=now,

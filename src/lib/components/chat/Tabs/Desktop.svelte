@@ -22,6 +22,7 @@
 	let transport = 'vnc';
 	let clipboardAvailable = true;
 	let audioAvailable = false;
+	let hideCursor = false;
 	const send = (message: Record<string, unknown>) => {
 		if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify(message));
 	};
@@ -32,6 +33,7 @@
 	let generation = 0;
 	let connecting = false;
 	let retry: ReturnType<typeof setTimeout>;
+	let retryDelay = 250;
 
 	const syncFullscreenCursor = () => {
 		const cursor = viewer?._cursor._canvas;
@@ -71,11 +73,13 @@
 				transport?: string;
 				audio?: boolean;
 				clipboard?: boolean;
+				cursor?: boolean;
 			}>(target, '/desktop');
 			if (version !== generation) return;
 			transport = info.transport ?? 'vnc';
 			clipboardAvailable = info.clipboard !== false;
 			audioAvailable = info.audio === true;
+			hideCursor = info.cursor === true;
 			await tick();
 			if (version !== generation) return;
 			if (transport === 'frames') {
@@ -90,7 +94,8 @@
 						});
 						await framePending;
 						if (version !== generation) return;
-						send({ type: 'frameAck', window: 3 });
+						send({ type: 'frameAck', window: 3, h264: native.supportsH264() });
+						retryDelay = 250;
 						status = '';
 					} catch (reason) {
 						if (version === generation)
@@ -116,6 +121,7 @@
 					viewer.qualityLevel = 6;
 					viewer.addEventListener('connect', () => {
 						status = '';
+						retryDelay = 250;
 						syncFullscreenCursor();
 					});
 					viewer.addEventListener('securityfailure', () => {
@@ -133,7 +139,8 @@
 					status = '';
 				} else {
 					status = $i18n.t('Reconnecting…');
-					retry = setTimeout(connect, 2000);
+					retry = setTimeout(connect, retryDelay);
+					retryDelay = Math.min(retryDelay * 2, 5000);
 				}
 			});
 		} catch (reason) {
@@ -147,7 +154,7 @@
 	};
 	const paste = (text: string, shift = false) => {
 		if (transport === 'frames' || !clipboardAvailable) {
-			send({ type: 'paste', text });
+			send({ type: 'paste', text, shift });
 			return;
 		}
 		if (!viewer) return;
@@ -200,7 +207,7 @@
 			}
 		}}
 	>
-		{#if transport === 'frames'}<NativeDesktop bind:this={native} {send} />{/if}
+		{#if transport === 'frames'}<NativeDesktop bind:this={native} {send} {hideCursor} />{/if}
 	</div>
 	{#if status || error}
 		<div

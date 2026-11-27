@@ -12,6 +12,7 @@
 	import Folder from '$lib/components/icons/Folder.svelte';
 	import Stop from '$lib/components/icons/Stop.svelte';
 	import Play from '$lib/components/icons/Play.svelte';
+	import Icon from '$lib/components/chat/FileNav/Icon.svelte';
 
 	const i18n = getContext<any>('i18n');
 
@@ -23,6 +24,7 @@
 	export let onStart: (() => void) | null = null;
 	export let onInfo: (() => void) | null = null;
 	export let onFiles: (() => void) | null = null;
+	export let onSessions: (() => void) | null = null;
 	export let onSettings: (() => void) | null = null;
 
 	let show = false;
@@ -48,7 +50,7 @@
 	};
 </script>
 
-{#if loadStatus || onInfo || onFiles || onSettings}
+{#if loadStatus || onInfo || onFiles || onSessions || onSettings}
 	<Dropdown bind:show align="start" sideOffset={-2}>
 		<Tooltip content={$i18n.t('More')}>
 			<button
@@ -94,6 +96,11 @@
 					{#if onFiles}
 						<button type="button" class={item} on:click={(e) => run(e, onFiles)}
 							><Folder className="size-3.5" />{$i18n.t('View files')}</button
+						>
+					{/if}
+					{#if onSessions}
+						<button type="button" class={item} on:click={(e) => run(e, onSessions)}
+							><Icon name="terminal" size={14} />{$i18n.t('Sessions')}</button
 						>
 					{/if}
 				{/if}

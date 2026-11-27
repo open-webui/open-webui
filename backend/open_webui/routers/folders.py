@@ -29,9 +29,11 @@ from open_webui.models.folders import (
     folder_status_ids,
 )
 from open_webui.models.groups import Groups
+from open_webui.models.memories import Memories
 from open_webui.models.notes import NoteListResponse, Notes, NoteUserResponse
 from open_webui.models.shared_chats import ChatShareMode
 from open_webui.models.users import Users
+from open_webui.retrieval.vector.async_client import ASYNC_VECTOR_DB_CLIENT
 from open_webui.routers.notes import check_notes_access, truncate_note_data
 from open_webui.socket.main import close_note
 from open_webui.tasks import has_active_tasks, stop_item_tasks
@@ -147,7 +149,12 @@ async def get_folders(
     unread_counts = await get_folder_unread_counts(user.id, db=db)
 
     return [
-        FolderNameIdResponse(**folder.model_dump(), unread_count=unread_counts.get(folder.id, 0))
+        FolderNameIdResponse(
+            **folder.model_dump(),
+            machine_id=machine_id_of(folder.data or {}),
+            directory=(folder.data or {}).get('working_directory'),
+            unread_count=unread_counts.get(folder.id, 0),
+        )
         for folder in folder_list
     ]
 
@@ -1112,16 +1119,20 @@ async def delete_folder_by_id(
             try:
                 folder_ids = await Folders.delete_folder_by_id_and_user_id(folder.id, folder_owner_id, db=db)
                 await FolderViewStates.delete_by_folder_ids(folder_ids, db)
+                for memory_user_id, memory_ids in (
+                    await Memories.delete_memories_by_folder_ids(folder_ids, db=db)
+                ).items():
+                    await ASYNC_VECTOR_DB_CLIENT.delete(collection_name=f'user-memory-{memory_user_id}', ids=memory_ids)
 
                 for folder_id in folder_ids:
                     if delete_contents:
-                        for chat_id in await Chats.get_chat_ids_by_user_id_and_folder_id(
-                            folder_owner_id, folder_id, db=db
-                        ):
-                            await stop_item_tasks(request.app.state.redis, chat_id)
-                            for child_id in await Chats.get_internal_chat_ids_by_parent_id(chat_id, folder_owner_id):
-                                await stop_item_tasks(request.app.state.redis, child_id)
+                        chat_ids = await Chats.get_chat_ids_by_user_id_and_folder_id(folder_owner_id, folder_id, db=db)
+                        for chat_id in list(chat_ids):
+                            chat_ids += await Chats.get_internal_chat_ids_by_parent_id(chat_id, folder_owner_id)
+                        # Delete first so stopped sub-agents have no chat to report back to.
                         await Chats.delete_chats_by_user_id_and_folder_id(folder_owner_id, folder_id, db=db)
+                        for chat_id in chat_ids:
+                            await stop_item_tasks(request.app.state.redis, chat_id)
                         for note in await Notes.get_notes_by_folder_id_and_user_id(folder_id, folder_owner_id, db=db):
                             await Notes.delete_note_by_id(note.id, db=db)
                             for chat_id in await Chats.get_internal_chat_ids_by_note_id(note.id, db=db):

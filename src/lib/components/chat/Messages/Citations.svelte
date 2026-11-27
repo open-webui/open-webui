@@ -2,7 +2,14 @@
 	import { getContext } from 'svelte';
 	import { embed, showTabs, showEmbeds } from '$lib/stores';
 	import { isValidHttpUrl } from '$lib/utils';
-	import { getCitations } from '$lib/utils/citations';
+	import {
+		getCitations,
+		getCitedPassages,
+		getClaimSpans,
+		getParagraphIds,
+		getQuoteSelector,
+		type CitedSpan
+	} from '$lib/utils/citations';
 
 	import CitationModal from './Citations/CitationModal.svelte';
 
@@ -25,19 +32,41 @@
 
 	let selectedCitation: any = null;
 
-	export const showSourceModal = (sourceId) => {
-		// "2#page" and 2 both name citation number 2
+	// claim is the answer text the citation follows
+	export const showSourceModal = (sourceId, claim = '') => {
+		// "2#page", "2#3,2#4" and 2 all name citation number 2
 		const number = typeof sourceId === 'string' ? parseInt(sourceId.split('#')[0]) : sourceId;
 		const citation = citations.find((citation) => citation.number === number);
-		if (citation) openCitation(citation, sourceId);
+		if (citation) openCitation(citation, sourceId, claim);
 	};
 
-	const openCitation = (citation, sourceId) => {
+	const openCitation = (citation, sourceId, claim = '') => {
 		console.log('Showing citation modal for:', citation);
 
 		// A cited file opens beside the chat, at the cited page when one is known. Web pages,
 		// and files that cannot be previewed, show their retrieved text in the popup.
-		const metadata = citation.metadata?.[0];
+		// [1#3][1#4] points at those paragraphs; plain [1] at the whole source
+		const paragraphIds = typeof sourceId === 'string' ? getParagraphIds(sourceId.split(',')) : [];
+		const cited = getCitedPassages(citation, paragraphIds);
+		const spans: CitedSpan[] = cited.length
+			? cited
+			: (citation.document ?? []).map((document: string, i: number) => ({
+					document,
+					start: 0,
+					end: document.length,
+					metadata: citation.metadata?.[i],
+					distance: citation.distances?.[i]
+				}));
+		const fileSpans = spans.filter(
+			(span) => span.metadata?.file_id === spans[0]?.metadata?.file_id
+		);
+		// The sentences that match the claim are marked alone. Without any, the cited text is marked,
+		// except for plain [1] on a source with numbered paragraphs: that cites it as a whole.
+		const claimed = claim ? getClaimSpans(claim, fileSpans) : [];
+		const wholeSource =
+			!cited.length && (citation.paragraphs ?? []).some((paragraphs: any[]) => paragraphs?.length);
+		const marked = claimed.length ? claimed : wholeSource ? [] : fileSpans;
+		const metadata = (marked[0] ?? spans[0])?.metadata ?? citation.metadata?.[0];
 		const fileName = String(metadata?.name ?? citation.source?.name ?? '');
 		if (
 			!readOnly &&
@@ -52,20 +81,13 @@
 			embed.set({
 				file: {
 					id: metadata.file_id,
-					page: Number.isInteger(metadata.page) ? metadata.page + 1 : null,
-					// The cited passages of this file, each with its page and relevance
-					passages: (citation.document ?? [])
-						.map((text, i) => ({
-							text,
-							metadata: citation.metadata?.[i],
-							distance: showRelevance ? citation.distances?.[i] : undefined
-						}))
-						.filter((passage) => passage.metadata?.file_id === metadata.file_id)
-						.map(({ text, metadata, distance }) => ({
-							text,
-							page: Number.isInteger(metadata?.page) ? metadata.page + 1 : null,
-							distance
-						})),
+					page: marked.length && Number.isInteger(metadata.page) ? metadata.page + 1 : null,
+					// The marked passages of this file, each with its page and relevance
+					passages: marked.map((span) => ({
+						selector: getQuoteSelector(span),
+						page: Number.isInteger(span.metadata?.page) ? span.metadata.page + 1 : null,
+						distance: showRelevance ? span.distance : undefined
+					})),
 					showPercentage
 				},
 				title: fileName,

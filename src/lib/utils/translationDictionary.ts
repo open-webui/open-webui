@@ -25,11 +25,14 @@ export const validateDictionary = (
 	return value as Record<string, string>;
 };
 
-export const validateI18n = (value: I18nOverrides): I18nOverrides => {
+export const validateI18n = (
+	value: I18nOverrides,
+	source: Record<string, string> = {}
+): I18nOverrides => {
 	const cleaned: I18nOverrides = {};
 	for (const [locale, entries] of Object.entries(value)) {
 		if (!locale.trim() || unsafeKeys.has(locale)) throw new Error(`Invalid language: ${locale}`);
-		const dictionary = validateDictionary(entries);
+		const dictionary = validateDictionary(entries, source);
 		const nonempty = Object.fromEntries(
 			Object.entries(dictionary).filter(([, text]) => text.trim())
 		);
@@ -51,7 +54,10 @@ export const i18nToEntries = (value: I18nOverrides): I18nEntry[] => {
 	return [...entries.values()];
 };
 
-export const entriesToI18n = (entries: I18nEntry[]): I18nOverrides => {
+export const entriesToI18n = (
+	entries: I18nEntry[],
+	source: Record<string, string> = {}
+): I18nOverrides => {
 	const value: I18nOverrides = {};
 	const seen = new Set<string>();
 	for (const entry of entries) {
@@ -67,7 +73,7 @@ export const entriesToI18n = (entries: I18nEntry[]): I18nOverrides => {
 			value[locale] = { ...value[locale], [entry.content]: translation.content };
 		}
 	}
-	return validateI18n(value);
+	return validateI18n(value, source);
 };
 
 const unsafeKeys = new Set(['__proto__', 'prototype', 'constructor']);

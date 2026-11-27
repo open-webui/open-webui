@@ -9,7 +9,9 @@
 	import AccessControl from '$lib/components/workspace/common/AccessControl.svelte';
 	import XMark from '../icons/XMark.svelte';
 	import { updateFolderAccessById } from '$lib/apis/folders';
-	import { user } from '$lib/stores';
+	import { checkMachineAccess } from '$lib/apis/machines';
+	import { machines, user } from '$lib/stores';
+	import { machineIdOf } from '$lib/utils/machines';
 	import {
 		loadFolderDetails,
 		updateFolderDetails,
@@ -29,6 +31,25 @@
 	let accessGrants: AccessGrant[] = [];
 	let loading = false;
 	let shareMode: 'continue' | null = null;
+
+	// Sharing a folder does not share the machine its directory is on.
+	$: machineId = machineIdOf(folder?.data) ?? folder?.machine_id;
+	$: machineName = ($machines ?? []).find(({ id }) => id === machineId)?.name || $i18n.t('Machine');
+	let withoutMachine = 0;
+	let accessCheck = 0;
+	const checkAccess = async (id: string | undefined, grants: AccessGrant[]) => {
+		const check = ++accessCheck;
+		const principals = grants.map(({ principal_type, principal_id }) => ({
+			principal_type,
+			principal_id
+		}));
+		const missing =
+			id && principals.length
+				? await checkMachineAccess(localStorage.token, id, principals).catch(() => [])
+				: [];
+		if (check === accessCheck) withoutMachine = missing.length;
+	};
+	$: if (show) checkAccess(machineId, accessGrants);
 
 	// Fetch fresh folder data (with access_grants) when modal opens
 	$: if (show && folder?.id) {
@@ -129,6 +150,14 @@
 					</select>
 				</label>
 			</AccessControl>
+			{#if withoutMachine}
+				<p class="mt-2 text-xs text-base-500 dark:text-base-400">
+					{$i18n.t(
+						"Some people you've shared with can't use {{MACHINE}}. They'll see this folder's chats, not its files.",
+						{ MACHINE: machineName }
+					)}
+				</p>
+			{/if}
 		</div>
 	</div>
 </Modal>

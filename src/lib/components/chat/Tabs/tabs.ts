@@ -1,11 +1,13 @@
 import { v4 as uuidv4 } from 'uuid';
 import type { MachineContext } from '$lib/types';
 import type { MachineTarget } from '$lib/apis/machines';
+import type { FolderSection } from '$lib/utils/folders';
 
 export type TabKind =
 	| 'chat'
 	| 'page'
 	| 'files'
+	| 'git'
 	| 'file'
 	| 'terminal'
 	| 'browser'
@@ -65,6 +67,8 @@ export type ChatViewState = {
 	schemaVersion: 1;
 	selectedMachineId: string | null;
 	panels: TabsState;
+	/** A folder's own page as it was left. */
+	folderPage?: { section: FolderSection; directory?: string | null };
 };
 export type GroupRect = { left: number; top: number; width: number; height: number };
 export type SplitDivider = GroupRect & {

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { createEventDispatcher, onDestroy, onMount } from 'svelte';
+	import { createEventDispatcher, onDestroy, onMount, tick } from 'svelte';
 
 	import Collapsible from '$lib/components/common/Collapsible.svelte';
 	import Tooltip from '$lib/components/common/Tooltip.svelte';
@@ -19,6 +19,33 @@
 	export let onAddLabel = '';
 	export let onAdd: null | AddHandler = null;
 	export let dragAndDrop = true;
+	/** Shows the name as a text field; saving calls onRename. */
+	export let editing = false;
+	export let onRename: ((name: string) => void) | null = null;
+	/** Whether the heading reorders the sidebar's sections; off for one nested in another. */
+	export let sortHandle = true;
+	/** Makes the heading draggable on its own, e.g. to reorder nested sections. */
+	export let onHeadingDragStart: ((e: DragEvent) => void) | null = null;
+	export let onHeadingDragEnd: (() => void) | null = null;
+
+	let nameInput: HTMLInputElement | undefined;
+	let nameDraft = '';
+	$: if (editing && !nameInput) void startRename();
+
+	const startRename = async () => {
+		nameDraft = name;
+		editing = true;
+		await tick();
+		nameInput?.focus();
+		nameInput?.select();
+	};
+
+	const saveRename = () => {
+		if (!editing) return;
+		editing = false;
+		const next = nameDraft.trim();
+		if (next && next !== name) onRename?.(next);
+	};
 
 	let sectionElement: HTMLDivElement;
 	let loaded = false;
@@ -125,23 +152,49 @@
 
 		{#if collapsible}
 			<Collapsible bind:open className="w-full" buttonClassName="w-full" onChange={setOpen}>
-				<div class="flex items-center justify-between h-6 w-full pl-3.5 pr-1.5 shrink-0">
+				<!-- svelte-ignore a11y-no-static-element-interactions -->
+				<div
+					class="flex items-center justify-between h-6 w-full pl-3.5 pr-1.5 shrink-0"
+					data-section-handle={sortHandle ? '' : undefined}
+					draggable={onHeadingDragStart && !editing ? 'true' : undefined}
+					on:dragstart={(e) => onHeadingDragStart?.(e)}
+					on:dragend={() => onHeadingDragEnd?.()}
+				>
 					<h2 class="flex flex-1 h-full">
-						<button
-							type="button"
-							class="group flex flex-1 h-full items-center gap-1 text-left text-xs text-base-400 hover:text-base-500 dark:text-base-500 dark:hover:text-base-400 transition-colors duration-100 {buttonClassName}"
-							id="{id}-button"
-							aria-expanded={open}
-							aria-controls="{id}-content"
-						>
-							<span>{name}</span>
-							<span
-								class="flex opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-all duration-100"
-								style="transform: rotate({open ? '90deg' : '0deg'})"
+						{#if editing}
+							<!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->
+							<div class="contents" on:click={(e) => e.stopPropagation()}>
+								<input
+									bind:this={nameInput}
+									bind:value={nameDraft}
+									class="flex-1 h-full min-w-0 bg-transparent text-xs text-base-500 dark:text-base-400 outline-hidden"
+									on:blur={saveRename}
+									on:keydown={(e) => {
+										if (e.key === 'Enter') e.currentTarget.blur();
+										if (e.key === 'Escape') {
+											nameDraft = name;
+											e.currentTarget.blur();
+										}
+									}}
+								/>
+							</div>
+						{:else}
+							<button
+								type="button"
+								class="group flex flex-1 h-full items-center gap-1 text-left text-xs text-base-400 hover:text-base-500 dark:text-base-500 dark:hover:text-base-400 transition-colors duration-100 {buttonClassName}"
+								id="{id}-button"
+								aria-expanded={open}
+								aria-controls="{id}-content"
 							>
-								<ChevronRight className="size-[0.6875rem]" />
-							</span>
-						</button>
+								<span>{name}</span>
+								<span
+									class="flex opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-all duration-100"
+									style="transform: rotate({open ? '90deg' : '0deg'})"
+								>
+									<ChevronRight className="size-[0.6875rem]" />
+								</span>
+							</button>
+						{/if}
 					</h2>
 
 					<!-- svelte-ignore a11y-click-events-have-key-events a11y-no-static-element-interactions -->

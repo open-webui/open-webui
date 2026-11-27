@@ -490,6 +490,7 @@
 <div
 	bind:this={containerElement}
 	bind:clientWidth={containerWidth}
+	data-voice-recording
 	class="flex items-center gap-3 overflow-hidden rounded-3xl border border-base-200/60 bg-base-0/80 px-2 py-2 shadow-[0_6px_24px_-4px_rgba(0,0,0,0.1)] backdrop-blur-md dark:border-base-800/40 dark:bg-[color-mix(in_oklab,var(--color-base-850)_55%,var(--color-base-900))]/90 {className}"
 >
 	<button

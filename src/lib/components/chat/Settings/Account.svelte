@@ -11,7 +11,8 @@
 		getAPIKey,
 		getSessionUser
 	} from '$lib/apis/auths';
-	import { getUserVariables, updateUserVariables } from '$lib/apis/users';
+	import { getUserVariables, updateUserBanner, updateUserVariables } from '$lib/apis/users';
+	import { WEBUI_API_BASE_URL } from '$lib/constants';
 
 	import UpdatePassword from './Account/UpdatePassword.svelte';
 	import Mfa from './Account/Mfa.svelte';
@@ -28,6 +29,7 @@
 	import Textarea from '$lib/components/common/Textarea.svelte';
 	import Modal from '$lib/components/common/Modal.svelte';
 	import ConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
+	import UserProfileBanner from './Account/UserProfileBanner.svelte';
 	import UserProfileImage from './Account/UserProfileImage.svelte';
 	import UserSettingField from './UserSettingField.svelte';
 	import UserSettingRow from './UserSettingRow.svelte';
@@ -39,6 +41,9 @@
 	export let saveHandler: () => void | Promise<void>;
 
 	let profileImageUrl = '';
+	let savedBannerUrl: string | null = null;
+	let bannerUrl: string | null = null;
+	let bannerFile: File | null = null;
 	let name = '';
 	let bio = '';
 
@@ -135,6 +140,23 @@
 		return variables;
 	};
 
+	const bannerSrc = (userId: string, url: string | null) =>
+		url
+			? `${WEBUI_API_BASE_URL}/users/${userId}/profile/banner?v=${encodeURIComponent(url)}`
+			: null;
+
+	const saveBanner = async () => {
+		if (!bannerFile && bannerUrl === savedBannerUrl) return true;
+		const res = await updateUserBanner(localStorage.token, bannerFile).catch((error) => {
+			toast.error(`${error}`);
+			return null;
+		});
+		if (!res) return false;
+		savedBannerUrl = bannerUrl = bannerSrc($user?.id ?? '', res.profile_banner_image_url);
+		bannerFile = null;
+		return true;
+	};
+
 	const submitHandler = async () => {
 		let variables: Record<string, string>;
 		try {
@@ -160,12 +182,14 @@
 			toast.error(`${error}`);
 		});
 
+		const bannerSaved = await saveBanner();
+
 		const variablesRes = await updateUserVariables(localStorage.token, variables).catch((error) => {
 			toast.error(`${error}`);
 			return null;
 		});
 
-		if (updatedUser && variablesRes) {
+		if (updatedUser && bannerSaved && variablesRes) {
 			setVariableRows(variablesRes.variables ?? {});
 			// Get Session User Info
 			const sessionUser = await getSessionUser(localStorage.token).catch((error) => {
@@ -209,6 +233,7 @@
 		if (user) {
 			name = user?.name ?? '';
 			profileImageUrl = user?.profile_image_url ?? '';
+			savedBannerUrl = bannerUrl = bannerSrc(user.id, user?.profile_banner_image_url ?? null);
 			bio = user?.bio ?? '';
 
 			gender = user?.gender ?? '';
@@ -254,12 +279,14 @@
 		</h2>
 
 		<UserSettingSection title={$i18n.t('settings.personal.account.sections.profile.title')} first>
-			<UserProfileImage
-				bind:profileImageUrl
-				user={$user}
-				variant="account"
-				displayName={$user?.name}
-			/>
+			<UserProfileBanner bind:src={bannerUrl} bind:file={bannerFile}>
+				<UserProfileImage
+					bind:profileImageUrl
+					user={$user}
+					variant="account"
+					displayName={$user?.name}
+				/>
+			</UserProfileBanner>
 
 			<UserSettingField
 				label={$i18n.t('settings.personal.account.name.label')}

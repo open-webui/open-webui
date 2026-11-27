@@ -4,7 +4,12 @@
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 	import { getFileById, getFileContentById } from '$lib/apis/files';
 	import { safeLinkUrl } from '$lib/utils';
-	import { quoteLines, quoteMarks } from '$lib/utils/comments/highlights';
+	import {
+		QUOTE_CONTEXT_LENGTH,
+		quoteLines,
+		quoteMarks,
+		type TextQuoteSelector
+	} from '$lib/utils/comments/highlights';
 
 	import FullHeightIframe from '$lib/components/common/FullHeightIframe.svelte';
 	import PdfPagesPreview from '$lib/components/common/PdfPagesPreview.svelte';
@@ -119,9 +124,9 @@
 	];
 	// Only the lines in view are drawn, so the first cited one is scrolled to
 	let textTargetId = 0;
-	const getTextTarget = (content: string, passages: { text: string }[]) => {
-		for (const { text } of passages) {
-			const passage = (text ?? '').trim();
+	const getTextTarget = (content: string, passages: { selector: TextQuoteSelector }[]) => {
+		for (const { selector } of passages) {
+			const passage = selector.exact.trim();
 			const quote = [passage, ...textLines(passage)].find(
 				(quote) => quote && content.includes(quote)
 			);
@@ -142,13 +147,14 @@
 			? getTextTarget(fileContent, embed?.file?.passages ?? [])
 			: null;
 	let filePage: number | null = null;
-	let fileQuotes: string[] = [];
+	let fileQuotes: TextQuoteSelector[] = [];
 	// Hovering a mark shows the retrieved passage it came from.
 	let fileQuoteTexts: { text: string; page: number | null; distance?: number | null }[] = [];
 	let hoveredText: {
 		text: string;
 		page: number | null;
 		distance?: number | null;
+		showText: boolean;
 		left: number;
 		top: number;
 		above: boolean;
@@ -168,12 +174,14 @@
 		const passage = index === null ? null : fileQuoteTexts[index];
 		if (!passage || !rect) return closeQuoteText();
 		// Plain text already reads as its passage does, so only its relevance is worth showing
-		if (isPlainText && typeof passage.distance !== 'number') return closeQuoteText();
+		const showText = !isPlainText;
+		if (!showText && typeof passage.distance !== 'number') return closeQuoteText();
 		keepQuoteText();
 		// Below the mark, or above it when there is more room there
 		const above = rect.bottom > window.innerHeight / 2;
 		hoveredText = {
 			...passage,
+			showText,
 			left: Math.max(12, Math.min(rect.left, window.innerWidth - CARD_WIDTH - 12)),
 			top: above ? rect.top - 6 : rect.bottom + 6,
 			above
@@ -182,7 +190,7 @@
 	onDestroy(keepQuoteText);
 	// The marks can be put away to read the page undisturbed
 	let showQuotes = true;
-	const NO_QUOTES: string[] = [];
+	const NO_QUOTES: TextQuoteSelector[] = [];
 	$: shownQuotes = showQuotes ? fileQuotes : NO_QUOTES;
 	$: if (!showQuotes) hoveredText = null;
 	// A web page has no file of its own, so its address is opened
@@ -207,20 +215,32 @@
 	$: if (embed?.file !== fileSource) {
 		fileSource = embed?.file ?? null;
 		filePage = fileSource?.page ?? null;
-		// The cited passages are marked on the pages they appear on
+		// The cited passages are marked line by line, as a retrieved line can read differently on the
+		// page than the lines beside it. Each line keeps the text around it to tell repeats apart.
 		// Overlapping passages share lines; each line is marked once, for its most relevant passage
 		const seen = new Set<string>();
 		const quotes = [...(fileSource?.passages ?? [])]
 			.sort((a, b) => (b.distance ?? -Infinity) - (a.distance ?? -Infinity) || 0)
-			.flatMap((passage) =>
-				(isPlainText ? textLines : quoteLines)(passage.text ?? '').map((quote) => ({
-					quote,
+			.flatMap((passage) => {
+				const { exact, prefix = '', suffix = '' } = passage.selector;
+				const lines = (isPlainText ? textLines : quoteLines)(exact);
+				return lines.map((line, i) => ({
+					quote: {
+						type: 'TextQuoteSelector' as const,
+						exact: line,
+						prefix: [prefix, ...lines.slice(0, i)].join('\n').slice(-QUOTE_CONTEXT_LENGTH),
+						suffix: [...lines.slice(i + 1), suffix].join('\n').slice(0, QUOTE_CONTEXT_LENGTH)
+					},
 					passage
-				}))
-			)
-			.filter(({ quote }) => !seen.has(quote) && seen.add(quote));
+				}));
+			})
+			.filter(({ quote }) => !seen.has(quote.exact) && seen.add(quote.exact));
 		fileQuotes = quotes.map(({ quote }) => quote);
-		fileQuoteTexts = quotes.map(({ passage }) => passage);
+		fileQuoteTexts = quotes.map(({ passage }) => ({
+			text: passage.selector.exact,
+			page: passage.page,
+			distance: passage.distance
+		}));
 		hoveredText = null;
 	}
 
@@ -416,7 +436,9 @@
 					<!-- The file itself cannot be shown, but what was retrieved from it can -->
 					<FilePreview
 						selectedFile={isPlainText ? fileName : `${fileName}.md`}
-						fileContent={fileSource.passages.map((passage) => passage.text ?? '').join('\n\n')}
+						fileContent={fileSource.passages
+							.map((passage: { selector: TextQuoteSelector }) => passage.selector.exact)
+							.join('\n\n')}
 						wrapLines={true}
 						readOnly={true}
 					/>
@@ -455,13 +477,14 @@
 				{/if}
 				{#if hoveredText}
 					{@const hasRelevance = typeof hoveredText.distance === 'number'}
-					{@const hasLabel = hoveredText.page || hasRelevance}
+					<!-- The passage always sits under a label line, as it does under its relevance -->
+					{@const hasLabel = hasRelevance || hoveredText.showText}
 					<!-- Styled as the file and chat hover previews are -->
 					<div
 						role="tooltip"
-						class="fixed z-[9999] flex max-h-[min(17.5rem,calc(100vh-1.5rem))] {isPlainText
-							? 'pointer-events-none w-fit'
-							: 'w-[22rem]'} max-w-[calc(100vw-1.5rem)] flex-col overflow-hidden rounded-2xl bg-base-0 font-normal text-base-900 shadow-[0_16px_40px_-28px_rgba(0,0,0,0.55)] ring-1 ring-base-1000/5 dark:bg-base-850 dark:text-base-100 dark:ring-base-0/10"
+						class="fixed z-[9999] flex max-h-[min(17.5rem,calc(100vh-1.5rem))] {hoveredText.showText
+							? 'w-[22rem]'
+							: 'pointer-events-none w-fit'} max-w-[calc(100vw-1.5rem)] flex-col overflow-hidden rounded-2xl bg-base-0 font-normal text-base-900 shadow-[0_16px_40px_-28px_rgba(0,0,0,0.55)] ring-1 ring-base-1000/5 dark:bg-base-850 dark:text-base-100 dark:ring-base-0/10"
 						style:left={`${hoveredText.left}px`}
 						style:top={`${hoveredText.top}px`}
 						style:transform={hoveredText.above ? 'translateY(-100%)' : ''}
@@ -471,12 +494,14 @@
 						<!-- Labelled as the comment popover on a file is: one quiet line above the text -->
 						{#if hasLabel}
 							<div
-								class="flex shrink-0 items-center gap-3 px-3 pt-2 {isPlainText
-									? 'pb-2'
-									: 'pb-1'} text-[0.6875rem] leading-4 text-base-500 dark:text-base-400"
+								class="flex shrink-0 items-center gap-3 px-3 pt-2 {hoveredText.showText
+									? 'pb-1'
+									: 'pb-2'} text-[0.6875rem] leading-4 text-base-500 dark:text-base-400"
 							>
 								{#if hoveredText.page}
 									<span>{$i18n.t('Page')} {hoveredText.page}</span>
+								{:else if !hasRelevance}
+									<span>{$i18n.t('Citation')}</span>
 								{/if}
 								{#if hasRelevance}
 									<span class="flex items-center gap-1.5">
@@ -489,7 +514,7 @@
 								{/if}
 							</div>
 						{/if}
-						{#if !isPlainText}
+						{#if hoveredText.showText}
 							<!-- Everything at the small preview size, headings and tables included -->
 							<div
 								class="markdown-prose-xs min-h-0 min-w-full max-w-full flex-1 overflow-auto scrollbar-thin px-3 pb-2 {hasLabel

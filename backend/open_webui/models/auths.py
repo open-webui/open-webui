@@ -108,6 +108,7 @@ class SessionUserResponse(Token, UserProfileImageResponse):
 
 
 class SessionUserInfoResponse(SessionUserResponse, UserStatus):
+    profile_banner_image_url: str | None = None
     bio: str | None = None
     gender: str | None = None
     date_of_birth: dt.date | None = None

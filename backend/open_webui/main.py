@@ -196,6 +196,8 @@ from open_webui.routers.retrieval import (
 )
 from open_webui.socket.main import (
     MODELS,
+    OLLAMA_MODELS,
+    OPENAI_MODELS,
     get_event_emitter,
     get_models_in_use,
     get_user_id_from_session_pool,
@@ -611,12 +613,12 @@ if ENABLE_OTEL:
 # Ollama
 
 
-app.state.OLLAMA_MODELS = {}
+app.state.OLLAMA_MODELS = OLLAMA_MODELS
 
 # OpenAI
 
 
-app.state.OPENAI_MODELS = {}
+app.state.OPENAI_MODELS = OPENAI_MODELS
 
 # Tool servers
 
@@ -1818,6 +1820,9 @@ async def chat_completion(
                 error_detail = e.detail if isinstance(e, HTTPException) else str(e)
                 if not (metadata.get('session_id') and metadata.get('chat_id')):
                     raise
+                if isinstance(e, aiohttp.ClientPayloadError):
+                    log.error('Model connection closed partway through the reply: %s', error_detail)
+                    error_detail = ERROR_MESSAGES.MODEL_CONNECTION_CLOSED
             finally:
                 if error_detail is not None:
                     log.error('Error processing chat payload: %s', error_detail)

@@ -6,9 +6,14 @@ import re
 from typing import Any
 
 from fastapi import HTTPException
+from sqlalchemy import or_, select
+from open_webui.models.chats import Chat, Chats
 from open_webui.models.config import Config
+from open_webui.models.folders import Folder, FolderModel, Folders
 from open_webui.models.memories import Memories
 from open_webui.utils.access_control import has_permission
+from open_webui.utils.access_control.folders import has_folder_access
+from open_webui.utils.chat_id import is_saved_chat_id
 from open_webui.utils.json_codec import JSONCodec
 from open_webui.utils.misc import get_content_from_message, get_last_user_message_item
 
@@ -248,6 +253,32 @@ def memory_path_hints(query: str, memories: list, limit: int = 6) -> list[str]:
     return hints
 
 
+async def get_memory_folder(user, metadata: dict | None) -> FolderModel | None:
+    """The folder a chat's memories belong to: the saved chat's folder, else the one a temporary chat names."""
+    metadata = metadata or {}
+    chat_id = metadata.get('chat_id')
+    folder_id = await Chats.get_chat_folder_id(chat_id, user.id) if is_saved_chat_id(chat_id) else None
+    folder_id = folder_id or metadata.get('folder_id')
+    folder = await Folders.get_folder_by_id(folder_id) if folder_id else None
+    if not folder or (user.role != 'admin' and not await has_folder_access(user.id, folder, 'read', db=None)):
+        return None
+    return folder
+
+
+async def get_chat_search_condition(user, metadata: dict | None):
+    """Past chats this chat may look up: its folder's if that is Folder only, else all but Folder only folders'."""
+    folder = await get_memory_folder(user, metadata)
+    if is_folder_only(folder):
+        return Chat.folder_id == folder.id
+    folder_only_ids = select(Folder.id).where(Folder.user_id == user.id, Folder.data['memory'].as_string() == 'folder')
+    return or_(Chat.folder_id.is_(None), Chat.folder_id.notin_(folder_only_ids))
+
+
+def is_folder_only(folder: FolderModel | None) -> bool:
+    """Whether the folder's chats use only its own memories, leaving out account memories."""
+    return bool(folder) and (folder.data or {}).get('memory') == 'folder'
+
+
 def validate_memory_operations(form_data) -> list[dict]:
     if not form_data.operations:
         raise HTTPException(status_code=400, detail='No memory operations provided')
@@ -303,7 +334,9 @@ async def memory_context_enabled(user, features: dict) -> bool:
     )
 
 
-async def recall_memories(request, messages: list[dict], user, model: dict | None = None, sent: str = '') -> str:
+async def recall_memories(
+    request, messages: list[dict], user, model: dict | None = None, sent: str = '', folder: FolderModel | None = None
+) -> str:
     """Recall memories for the latest turn, leaving out any whose line is already in the earlier recall text `sent`."""
     if not model_allows_memory(model):
         return ''
@@ -328,27 +361,33 @@ async def recall_memories(request, messages: list[dict], user, model: dict | Non
     if not query:
         return ''
 
-    all_memories = await Memories.get_memories_by_user_id(user.id)
+    memories = (
+        await Memories.get_chat_memories(user.id, folder.id if folder else None, folder_only=is_folder_only(folder))
+        or []
+    )
+    visible_ids = {memory.id for memory in memories}
     results = None
     try:
         from open_webui.routers.memories import QueryMemoryForm, query_memory
 
-        results = await query_memory(request, QueryMemoryForm(content=query, k=8), user)
+        # Other folders' memories are dropped below, so ask for more than are kept.
+        results = await query_memory(request, QueryMemoryForm(content=query, k=16), user)
     except Exception as e:
         log.debug(e)
 
-    sections = {'user': [], 'neighborhood': [], 'context': []}
+    sections = {'user': [], 'folder': [], 'neighborhood': [], 'context': []}
     seen_ids = set()
-    for memory in sorted(
-        [memory for memory in (all_memories or []) if memory.type == 'user'],
-        key=lambda item: (item.path or '', item.updated_at or 0, item.id or ''),
+    for key, rows in (
+        ('user', [memory for memory in memories if memory.type == 'user' and not memory.folder_id]),
+        ('folder', [memory for memory in memories if memory.type == 'user' and memory.folder_id]),
     ):
-        seen_ids.add(memory.id)
-        sections['user'].append(memory_label(memory))
+        for memory in sorted(rows, key=lambda item: (item.path or '', item.updated_at or 0, item.id or '')):
+            seen_ids.add(memory.id)
+            sections[key].append(memory_label(memory))
 
-    for hint in memory_path_hints(query, all_memories):
+    for hint in memory_path_hints(query, memories):
         for memory in search_memory_rows(
-            all_memories,
+            memories,
             path=hint,
             memory_type='context',
             limit=4,
@@ -370,7 +409,7 @@ async def recall_memories(request, messages: list[dict], user, model: dict | Non
             memory_id = None
             if results.ids and results.ids[0] and len(results.ids[0]) > doc_idx:
                 memory_id = results.ids[0][doc_idx]
-            if memory_id and memory_id in seen_ids:
+            if memory_id and (memory_id in seen_ids or memory_id not in visible_ids):
                 continue
             if memory_id:
                 seen_ids.add(memory_id)
@@ -384,6 +423,7 @@ async def recall_memories(request, messages: list[dict], user, model: dict | Non
     parts = []
     for title, key in (
         ('User Memory', 'user'),
+        ('Folder Memory', 'folder'),
         ('Memory Neighborhood', 'neighborhood'),
         ('Relevant Context', 'context'),
     ):
@@ -422,8 +462,10 @@ async def recall_memories(request, messages: list[dict], user, model: dict | Non
     return f'{MEMORY_CONTEXT_OPEN}\n{rendered}\n{MEMORY_CONTEXT_CLOSE}'
 
 
-async def add_memory_context(request, form_data: dict, user, model: dict | None = None):
-    context = await recall_memories(request, form_data.get('messages', []), user, model)
+async def add_memory_context(
+    request, form_data: dict, user, model: dict | None = None, folder: FolderModel | None = None
+):
+    context = await recall_memories(request, form_data.get('messages', []), user, model, folder=folder)
     target = get_last_user_message_item(form_data.get('messages', []))
     if context and target is not None:
         content = target.get('content') or ''
@@ -507,7 +549,10 @@ async def _review_memory(
     assistant_message: dict,
     messages: list[dict],
 ) -> None:
-    existing_memories = await Memories.get_memories_by_user_id(user.id)
+    folder = await get_memory_folder(user, metadata)
+    existing_memories = await Memories.get_chat_memories(
+        user.id, folder.id if folder else None, folder_only=is_folder_only(folder)
+    )
     existing_lines = [
         f'- id={memory.id} type={memory.type} path={memory.path or ""} content={memory.content}'
         for memory in (existing_memories or [])[:80]

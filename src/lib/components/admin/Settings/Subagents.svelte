@@ -87,7 +87,7 @@
 
 	<div class="flex-1 min-h-0 overflow-y-auto scrollbar-hover pr-1.5">
 		{#if loading}
-			<div class="flex justify-center py-8"><Spinner className="size-6" /></div>
+			<div class="flex justify-center py-8"><Spinner className="size-5" /></div>
 		{:else}
 			<div class="flex flex-col gap-2.5">
 				<AdminSettingRow let:labelId>

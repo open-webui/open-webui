@@ -3,7 +3,7 @@
 from collections import defaultdict
 
 from open_webui.models.notifications import Notification, insert_notifications
-from sqlalchemy import and_, false, or_, select, true
+from sqlalchemy import and_, case, false, or_, select, true, union
 from sqlalchemy.orm import load_only
 
 
@@ -136,18 +136,18 @@ async def resource_queries(user, db):
             allowed = or_(allowed, model.folder_id.in_(select(folders.c.id)))
         queries[kind] = select(model.id).where(allowed)
     chat = models['chat']
-    shared = select(SharedChat.chat_id).where(
-        SharedChat.chat['share_mode'].as_string() == 'continue', grant('shared_chat', SharedChat.chat_id)
-    )
-    queries['chat'] = select(chat.id).where(
-        or_(
-            chat.user_id == user.id,
-            true() if admin and ENABLE_ADMIN_CHAT_ACCESS else false(),
-            and_(true() if admin else false(), chat.meta['internal'].as_boolean().is_(True)),
-            chat.id.in_(shared),
-            chat.folder_id.in_(select(folders.c.id)),
-        )
-    )
+    if admin and ENABLE_ADMIN_CHAT_ACCESS:
+        queries['chat'] = select(chat.id)
+    else:
+        # Check the grant first so only snapshots shared with this user get parsed.
+        share_mode = case((grant('shared_chat', SharedChat.chat_id), SharedChat.chat['share_mode'].as_string()))
+        chats = union(
+            select(chat.id).where(chat.user_id == user.id),
+            select(chat.id).where(true() if admin else false(), chat.meta['internal'].as_boolean().is_(True)),
+            select(SharedChat.chat_id).where(share_mode == 'continue'),
+            select(chat.id).where(chat.folder_id.in_(select(folders.c.id))),
+        ).subquery()
+        queries['chat'] = select(chats.c.id)
     if await enabled('channels'):
         channel = models['channel']
         member = (
@@ -201,7 +201,7 @@ async def eligible_recipients(recipients, resource_type, resource_id, actor_id, 
             queries = await resource_queries(UserModel.model_validate(row), db=db)
             query = queries.get(resource_type)
             if query is None or not await db.scalar(
-                select(query.where(source_models()[resource_type].id == resource_id).exists())
+                select(query.where(query.selected_columns.id == resource_id).exists())
             ):
                 continue
         eligible[row.id] = kind

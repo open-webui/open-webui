@@ -22,6 +22,7 @@ export enum Shortcut {
 	VOICE_NOTE = 'voiceNote',
 	OPEN_FILES = 'openFiles',
 	OPEN_DESKTOP = 'openDesktop',
+	OPEN_GIT = 'openGit',
 	NEW_CHAT_TAB = 'newChatTab',
 	OPEN_COMMENTS = 'openComments',
 	NEW_FILE = 'newFile',
@@ -77,6 +78,7 @@ export const CONFIGURABLE_SHORTCUTS = [
 	Shortcut.VOICE_NOTE,
 	Shortcut.OPEN_FILES,
 	Shortcut.OPEN_DESKTOP,
+	Shortcut.OPEN_GIT,
 	Shortcut.NEW_CHAT_TAB,
 	Shortcut.OPEN_COMMENTS,
 
@@ -119,6 +121,8 @@ export const DEFAULT_KEYBINDINGS: KeybindingsMap = {
 	[Shortcut.VOICE_NOTE]: 'Cmd+Alt+M',
 	[Shortcut.OPEN_FILES]: 'Cmd+Shift+E',
 	[Shortcut.OPEN_DESKTOP]: 'Cmd+Alt+D',
+	// VS Code's Source Control shortcut.
+	[Shortcut.OPEN_GIT]: 'Ctrl+Shift+G',
 	[Shortcut.NEW_CHAT_TAB]: 'Cmd+Alt+O',
 	[Shortcut.OPEN_COMMENTS]: 'Cmd+Shift+Y',
 
@@ -283,6 +287,12 @@ export const shortcuts: ShortcutRegistry = {
 	},
 	[Shortcut.OPEN_DESKTOP]: {
 		name: (t) => t('settings.personal.shortcuts.openDesktop.label'),
+		keys: [],
+		category: 'Tabs',
+		configurable: true
+	},
+	[Shortcut.OPEN_GIT]: {
+		name: (t) => t('settings.personal.shortcuts.openGit.label'),
 		keys: [],
 		category: 'Tabs',
 		configurable: true

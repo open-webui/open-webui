@@ -292,6 +292,23 @@ export const getMachines = async (token: string): Promise<MachineServer[]> => {
 	return res.json().catch(() => []);
 };
 
+export type AccessPrincipal = { principal_type: 'user' | 'group'; principal_id: string };
+
+/** The given users and groups that cannot use a machine. */
+export const checkMachineAccess = async (
+	token: string,
+	machineId: string,
+	principals: AccessPrincipal[]
+): Promise<AccessPrincipal[]> => {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/machines/access/check`, {
+		method: 'POST',
+		headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+		body: JSON.stringify({ machine_id: machineId, principals })
+	});
+	if (!res.ok) throw (await res.json().catch(() => null))?.detail ?? res.statusText;
+	return (await res.json()).principals_without_access ?? [];
+};
+
 export const getCwd = async (target: MachineTarget): Promise<MachineCwd | null> => {
 	const url = `${target.baseUrl.replace(/\/$/, '')}/files/cwd`;
 	const headers: Record<string, string> = machineHeaders(target);

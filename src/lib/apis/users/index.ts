@@ -360,6 +360,21 @@ export const getUserInfoById = async (token: string, userId: string) => {
 	return res;
 };
 
+// Sets the session user's profile banner, or removes it when no image is given.
+export const updateUserBanner = async (token: string, image: File | null) => {
+	const data = new FormData();
+	if (image) data.append('file', image);
+
+	const res = await fetch(`${WEBUI_API_BASE_URL}/users/user/profile/banner`, {
+		method: image ? 'POST' : 'DELETE',
+		headers: { Authorization: `Bearer ${token}` },
+		...(image ? { body: data } : {})
+	});
+	const body = await res.json();
+	if (!res.ok) throw body.detail;
+	return body as { profile_banner_image_url: string | null };
+};
+
 export const updateUserStatus = async (token: string, formData: object) => {
 	let error = null;
 

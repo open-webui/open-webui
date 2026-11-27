@@ -3,6 +3,7 @@ from typing import Any, Dict, Generator, List, Optional, Sequence, Union
 from urllib.parse import parse_qs, urlparse
 from xml.etree.ElementTree import ParseError
 
+import requests
 from langchain_core.documents import Document
 
 log = logging.getLogger(__name__)
@@ -20,6 +21,17 @@ ALLOWED_NETLOCS = {
 
 class YoutubeTranscriptError(Exception):
     """A YouTube transcript could not be retrieved."""
+
+
+class _YoutubeProxySession(requests.Session):
+    """A session whose own proxies win over the environment's proxies."""
+
+    def merge_environment_settings(
+        self, url: str, proxies: dict | None, stream: bool | None, verify: bool | str | None, cert: str | tuple | None
+    ) -> dict:
+        settings = super().merge_environment_settings(url, proxies, stream, verify, cert)
+        settings['proxies'] = self.proxies
+        return settings
 
 
 def _transcript_error_message(error: Exception, video_id: str) -> str:
@@ -116,11 +128,13 @@ class YoutubeLoader:
 
         if self.proxy_url:
             youtube_proxies = GenericProxyConfig(http_url=self.proxy_url, https_url=self.proxy_url)
+            http_client = _YoutubeProxySession()
             log.debug('Using proxy URL: %s...', self.proxy_url[:14])
         else:
             youtube_proxies = None
+            http_client = None
 
-        transcript_api = YouTubeTranscriptApi(proxy_config=youtube_proxies)
+        transcript_api = YouTubeTranscriptApi(proxy_config=youtube_proxies, http_client=http_client)
         try:
             transcript_list = transcript_api.list(self.video_id)
         except Exception as e:

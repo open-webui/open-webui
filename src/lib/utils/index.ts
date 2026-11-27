@@ -557,6 +557,17 @@ export const formatDate = (inputDate) => {
 	}
 };
 
+// Whether a message needs a date line above it: the first one, a new day, or an hour after
+// the previous message finished. All times are in milliseconds.
+export const needsDateSeparator = (
+	sentAt: number,
+	previousSentAt?: number | null,
+	previousEndedAt = previousSentAt
+) =>
+	!previousSentAt ||
+	!dayjs(sentAt).isSame(previousSentAt, 'day') ||
+	sentAt - (previousEndedAt ?? previousSentAt) > 60 * 60 * 1000;
+
 const messageTimestampDate = (inputDate) => {
 	const date = new Date(inputDate < 1_000_000_000_000 ? inputDate * 1000 : inputDate);
 	return Number.isNaN(date.getTime()) ? null : date;

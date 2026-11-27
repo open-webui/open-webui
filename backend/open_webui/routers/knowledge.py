@@ -598,6 +598,8 @@ def _get_external_connection_provider_and_config(form_data: ExternalKnowledgeCon
     if provider == 'milvus':
         allowed_config_keys.add('db_name')
     normalized = {key: value for key, value in config.items() if key in allowed_config_keys}
+    # Reranks results with the configured reranker and applies RELEVANCE_THRESHOLD.
+    normalized['rerank'] = config.get('rerank') is True
 
     # Like model_ids on provider connections: a store_ids list (empty means all) lists the stores as
     # knowledge bases, readable by whoever access_grants allows.

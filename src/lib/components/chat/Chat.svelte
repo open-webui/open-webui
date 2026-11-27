@@ -104,7 +104,12 @@
 	import { RealtimeCall, getBridgeTurnState, type BridgeSubmission } from '$lib/utils/realtime';
 	import { acquireWakeLock } from '$lib/utils/wakeLock';
 	import { routeAvatarAnimation } from '$lib/utils/voice-avatar';
-	import { createTemporaryChatId, isSavedChatId, isTemporaryChatId } from '$lib/utils/chatId';
+	import {
+		createTemporaryChatId,
+		folderSessionId,
+		isSavedChatId,
+		isTemporaryChatId
+	} from '$lib/utils/chatId';
 	import { canUseTemporaryChats } from '$lib/utils/settings-access';
 	import { resolveLocalizedModelPromptSuggestions } from '$lib/utils/localizedContent';
 	import { resumeTemporaryChat } from '$lib/apis';
@@ -2929,7 +2934,7 @@
 			await tick();
 			if ($page.params.id !== id) return true;
 		}
-		tabs?.openPageTab({ href: `/c/${id}`, label: found?.title ?? '' });
+		tabs?.openPageTab({ href: `/c/${id}`, label: found?.title ?? '', replace: true });
 		void tabs?.joinChatSessions(id);
 		return true;
 	};
@@ -2959,7 +2964,7 @@
 		} else if (initialPage) {
 			if (!preserveTabs) await initNewChat();
 			loading = false;
-			tabs?.openPageTab({ href: initialPage, label: '' });
+			tabs?.openPageTab({ href: initialPage, label: '', replace: true });
 		}
 	};
 	// Set-up checks its choices against the model list, so a page is followed once the list is in.
@@ -4565,6 +4570,9 @@
 		}
 	};
 
+	// Note chats can't be forked.
+	const forkHandler = embedded && !tabbed ? null : handleForkChat;
+
 	const clearCommandInput = () => {
 		messageInput?.setText('');
 		prompt = '';
@@ -4591,6 +4599,8 @@
 	$: tabTitleEditor = editingTitle ? renderTitleEditor : undefined;
 	/** A chat's actions on its tab: the Navbar's for the main chat, the chat menu for a side chat. */
 	export let tabActions: import('svelte').Snippet | undefined = undefined;
+	/** The tab bar's actions while this chat is focused: the Navbar's for the main chat, the status for a side chat. */
+	export let tabBarActions: import('svelte').Snippet | undefined = undefined;
 	let showShareModal = false;
 	$: showChatMenu =
 		!loading &&
@@ -4604,6 +4614,7 @@
 	$: chatMenu = showChatMenu && !editingTitle ? renderChatMenu : undefined;
 	$: chatStatus = showChatMenu && !$temporaryChat && !isShared ? renderChatStatus : undefined;
 	$: if (embedded && tabbed) tabActions = chatMenu;
+	$: if (embedded && tabbed) tabBarActions = chatStatus;
 
 	export const getOverview = () => ({ history, chatUser: chatOwner, showMessage });
 
@@ -4696,8 +4707,6 @@
 			toast.error(String(error));
 		}
 	};
-
-	let tabBarActions: import('svelte').Snippet | undefined;
 
 	let initializedMachineChatId: string | null = null;
 	const initializeMachineDirectory = async (id: string, context: MachineContext | null) => {
@@ -4838,9 +4847,9 @@
 			showTabs.set('chat');
 			return { status: 'rejected' };
 		}
-		if (String(userPrompt).trim() === '/fork') {
+		if (forkHandler && String(userPrompt).trim() === '/fork') {
 			clearCommandInput();
-			await handleForkChat();
+			await forkHandler();
 			return { status: 'rejected' };
 		}
 		const modelCommandMatch = String(userPrompt)
@@ -5011,11 +5020,14 @@
 		if (parent?.files?.some((file: any) => file.type === 'filesystem')) {
 			const attached = parent.files.filter((file: any) => file.type === 'filesystem');
 			const machine = machineIdOf(attached.find((file: any) => machineIdOf(file)));
+			// Chats in a folder work in the folder's workspace.
+			const folderSession =
+				chat?.folder_id && $user ? folderSessionId(chat.folder_id, $user.id) : null;
 			if (
 				attached.some(
 					(file: any) =>
 						(machineIdOf(file) && machineIdOf(file) !== machine) ||
-						(file.session_id && file.session_id !== $chatId)
+						(file.session_id && file.session_id !== $chatId && file.session_id !== folderSession)
 				)
 			)
 				throw new Error('Attached files must belong to this chat and the same machine.');
@@ -6545,7 +6557,7 @@
 										{addMessages}
 										{onToolCallResolved}
 										allowDelete={!(generating || taskIds?.length)}
-										forkHandler={$temporaryChat ? null : handleForkChat}
+										forkHandler={$temporaryChat ? null : forkHandler}
 										topPadding={!embedded && !fullWidthTabs}
 										bottomPadding={files.length > 0}
 										{onSelect}
@@ -6624,7 +6636,7 @@
 										{onRecordedAudio}
 										compactHandler={handleManualCompact}
 										statusHandler={handleStatusCommand}
-										forkHandler={handleForkChat}
+										{forkHandler}
 										{toolApprovalMode}
 										onToolApprovalModeChange={handleToolApprovalModeChange}
 										{generating}
@@ -6762,7 +6774,7 @@
 										{onRecordedAudio}
 										compactHandler={handleManualCompact}
 										statusHandler={handleStatusCommand}
-										forkHandler={handleForkChat}
+										{forkHandler}
 										{toolApprovalMode}
 										onToolApprovalModeChange={handleToolApprovalModeChange}
 										{generating}

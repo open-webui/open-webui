@@ -282,7 +282,11 @@ export function buildToolCallToken(
 function buildReasoningToken(item: OutputItem, isLastItem: boolean) {
 	const duration = item.duration ?? '';
 	const isDone = isDoneStatus(item.status) || item.duration !== undefined || !isLastItem;
-	const text = getReasoningText(item)
+	const reasoningText = getReasoningText(item);
+	if (isDone && !reasoningText.trim()) {
+		return null;
+	}
+	const text = reasoningText
 		.split('\n')
 		.map((line) => (line.startsWith('>') ? line : `> ${line}`))
 		.join('\n');

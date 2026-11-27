@@ -238,6 +238,7 @@ async def get_session_user(
         'name': user.name,
         'role': user.role,
         'profile_image_url': user.profile_image_url,
+        'profile_banner_image_url': user.profile_banner_image_url,
         'bio': user.bio,
         'gender': user.gender,
         'date_of_birth': user.date_of_birth,
@@ -1230,7 +1231,7 @@ class AdminConfig(MfaConfigForm):
                 if not key.strip() or key in unsafe_keys:
                     raise ValueError(f'Invalid translation key: {key}')
                 if text.strip():
-                    if placeholders(key) != placeholders(text):
+                    if placeholders(key) and placeholders(key) != placeholders(text):
                         raise ValueError(f'Interpolation placeholders do not match: {locale}: {key}')
                     translations[key] = text
             if translations:

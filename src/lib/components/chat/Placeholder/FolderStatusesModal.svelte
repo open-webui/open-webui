@@ -2,11 +2,13 @@
 	import { getContext, tick } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import {
+		NO_STATUS,
 		newStatusId,
 		statusGlyphs,
 		suggestedStatuses,
 		type CustomStatus,
-		type StatusDef
+		type StatusDef,
+		type StatusEntry
 	} from '$lib/utils/folders';
 	import { colorDot, tagColors } from '$lib/utils/tags';
 	import Modal from '$lib/components/common/Modal.svelte';
@@ -22,8 +24,9 @@
 	const i18n = getContext<typeof import('$lib/i18n').default>('i18n');
 
 	export let show = false;
+	/** In board order, "No status" included. */
 	export let statuses: StatusDef[] = [];
-	export let onSave: (statuses: CustomStatus[]) => Promise<void>;
+	export let onSave: (statuses: StatusEntry[]) => Promise<void>;
 
 	let draft: CustomStatus[] = [];
 	let saving = false;
@@ -39,20 +42,31 @@
 		done: 'Done'
 	};
 
-	// Start a fresh draft each time the modal opens.
+	// Start a fresh draft each time the modal opens. "No status" rides along so it can be moved.
 	$: {
 		if (show && !wasOpen)
-			draft = statuses
-				.filter((item) => item.custom)
-				.map(({ id, name, glyph, color, icon }) => ({ id, name, glyph, color, icon }));
+			draft = statuses.map(({ id, name, glyph, color, icon }) => ({
+				id,
+				name,
+				glyph,
+				color,
+				icon
+			}));
 		wasOpen = show;
 	}
 
 	const update = (id: string, patch: Partial<CustomStatus>) =>
 		(draft = draft.map((item) => (item.id === id ? { ...item, ...patch } : item)));
 
+	// New statuses go before a trailing "No status", where they'd land without a saved position.
+	const append = (item: CustomStatus) =>
+		(draft =
+			draft.at(-1)?.id === NO_STATUS
+				? [...draft.slice(0, -1), item, draft.at(-1)!]
+				: [...draft, item]);
+
 	async function add() {
-		draft = [...draft, { id: newStatusId(), name: '', glyph: 'todo', color: 'gray' }];
+		append({ id: newStatusId(), name: '', glyph: 'todo', color: 'gray' });
 		await tick();
 		[...(list?.querySelectorAll<HTMLInputElement>('input[data-status-name]') ?? [])]
 			.at(-1)
@@ -69,8 +83,7 @@
 						!draft.some((entry) => entry.name.trim().toLowerCase() === item.name.toLowerCase())
 				);
 
-	const addSuggestion = (item: CustomStatus) =>
-		(draft = [...draft, { ...item, id: newStatusId() }]);
+	const addSuggestion = (item: CustomStatus) => append({ ...item, id: newStatusId() });
 
 	function reorder(overId: string) {
 		if (!dragId || dragId === overId) return;
@@ -86,7 +99,9 @@
 		const cleaned = draft
 			.map((item) => ({ ...item, name: item.name.trim() }))
 			.filter((item) => item.name);
-		const names = cleaned.map((item) => item.name.toLowerCase());
+		const names = cleaned
+			.filter((item) => item.id !== NO_STATUS)
+			.map((item) => item.name.toLowerCase());
 		if (
 			new Set(names).size !== names.length ||
 			names.includes($i18n.t('No status').toLowerCase())
@@ -96,7 +111,7 @@
 		}
 		saving = true;
 		try {
-			await onSave(cleaned);
+			await onSave(cleaned.map((item) => (item.id === NO_STATUS ? { id: NO_STATUS } : item)));
 			show = false;
 		} catch (error) {
 			toast.error(String(error));
@@ -119,13 +134,6 @@
 
 		<form on:submit|preventDefault={save}>
 			<div bind:this={list} class="max-h-[60vh] overflow-y-auto">
-				<div class="flex h-8 items-center gap-2 px-1 text-sm text-base-500 dark:text-base-400">
-					<span class="w-3 shrink-0"></span>
-					<span class="flex size-6 items-center justify-center"><StatusIcon /></span>
-					<span class="flex-1">{$i18n.t('No status')}</span>
-					<span class="text-xs text-base-400 dark:text-base-500">{$i18n.t('Default')}</span>
-				</div>
-
 				{#each draft as item (item.id)}
 					<!-- svelte-ignore a11y_no_static_element_interactions -->
 					<div
@@ -161,92 +169,99 @@
 							>
 						</span>
 
-						<Dropdown align="start">
+						{#if item.id === NO_STATUS}
+							<span class="flex size-6 shrink-0 items-center justify-center"><StatusIcon /></span>
+							<span class="flex-1 text-sm text-base-500 dark:text-base-400">{item.name}</span>
+							<span class="px-1 text-xs text-base-400 dark:text-base-500">{$i18n.t('Default')}</span
+							>
+						{:else}
+							<Dropdown align="start">
+								<button
+									type="button"
+									class="flex size-6 shrink-0 items-center justify-center rounded-lg transition hover:bg-base-50 dark:hover:bg-base-850"
+									aria-label={$i18n.t('Change status icon')}
+									title={$i18n.t('Change status icon')}
+								>
+									<StatusIcon glyph={item.glyph} color={item.color} emoji={item.icon} />
+								</button>
+								<DropdownMenu slot="content" className="w-48">
+									<div class="px-2 pt-1.5 pb-0.5 text-xs text-base-400 dark:text-base-500">
+										{$i18n.t('Icon')}
+									</div>
+									<div class="flex gap-0.5 px-1 pb-1">
+										{#each statusGlyphs as glyph}
+											<button
+												type="button"
+												role="menuitemradio"
+												aria-checked={!item.icon && item.glyph === glyph}
+												aria-label={$i18n.t(glyphLabels[glyph])}
+												title={$i18n.t(glyphLabels[glyph])}
+												class="flex size-7 items-center justify-center rounded-lg transition hover:bg-base-50 dark:hover:bg-base-800 {!item.icon &&
+												item.glyph === glyph
+													? 'bg-base-50 dark:bg-base-800'
+													: ''}"
+												on:click={() => update(item.id, { glyph, icon: undefined })}
+											>
+												<StatusIcon {glyph} color={item.color} />
+											</button>
+										{/each}
+									</div>
+									<div class="px-2 pt-0.5 pb-0.5 text-xs text-base-400 dark:text-base-500">
+										{$i18n.t('Color')}
+									</div>
+									<div class="grid grid-cols-8 gap-0.5 px-1 pb-1">
+										{#each tagColors as color}
+											<button
+												type="button"
+												role="menuitemradio"
+												aria-checked={item.color === color}
+												aria-label={$i18n.t(color)}
+												title={$i18n.t(color)}
+												class="flex size-5 items-center justify-center rounded-md hover:bg-base-50 dark:hover:bg-base-800"
+												on:click={() => update(item.id, { color, icon: undefined })}
+											>
+												<span
+													class="size-2.5 rounded-full {colorDot(color)} {item.color === color &&
+													!item.icon
+														? 'ring-2 ring-base-300 ring-offset-1 ring-offset-base-0 dark:ring-base-600 dark:ring-offset-base-850'
+														: ''}"
+												></span>
+											</button>
+										{/each}
+									</div>
+									<hr class="border-base-50/30 dark:border-base-800/30" />
+									<EmojiPicker
+										side="bottom"
+										selected={item.icon ?? null}
+										onSubmit={(icon: string | null) => update(item.id, { icon: icon ?? undefined })}
+									>
+										<button
+											type="button"
+											class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] hover:bg-base-50/60 dark:hover:bg-base-800/60"
+										>
+											<span class="flex-1 text-left">{$i18n.t('Use emoji…')}</span>
+											{#if item.icon}<Check className="size-3! shrink-0" />{/if}
+										</button>
+									</EmojiPicker>
+								</DropdownMenu>
+							</Dropdown>
+
+							<input
+								data-status-name
+								class="min-w-0 flex-1 bg-transparent text-sm outline-hidden placeholder:text-base-300 dark:placeholder:text-base-700"
+								placeholder={$i18n.t('Status name')}
+								maxlength="40"
+								value={item.name}
+								on:input={(event) => update(item.id, { name: event.currentTarget.value })}
+							/>
 							<button
 								type="button"
-								class="flex size-6 shrink-0 items-center justify-center rounded-lg transition hover:bg-base-50 dark:hover:bg-base-850"
-								aria-label={$i18n.t('Change status icon')}
-								title={$i18n.t('Change status icon')}
+								class="rounded-lg p-1 text-base-400 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100 hover:text-base-700 dark:hover:text-base-200"
+								aria-label={$i18n.t('Delete status')}
+								on:click={() => (draft = draft.filter((entry) => entry.id !== item.id))}
+								><XMark className="size-3.5" /></button
 							>
-								<StatusIcon glyph={item.glyph} color={item.color} emoji={item.icon} />
-							</button>
-							<DropdownMenu slot="content" className="w-48">
-								<div class="px-2 pt-1.5 pb-0.5 text-xs text-base-400 dark:text-base-500">
-									{$i18n.t('Icon')}
-								</div>
-								<div class="flex gap-0.5 px-1 pb-1">
-									{#each statusGlyphs as glyph}
-										<button
-											type="button"
-											role="menuitemradio"
-											aria-checked={!item.icon && item.glyph === glyph}
-											aria-label={$i18n.t(glyphLabels[glyph])}
-											title={$i18n.t(glyphLabels[glyph])}
-											class="flex size-7 items-center justify-center rounded-lg transition hover:bg-base-50 dark:hover:bg-base-800 {!item.icon &&
-											item.glyph === glyph
-												? 'bg-base-50 dark:bg-base-800'
-												: ''}"
-											on:click={() => update(item.id, { glyph, icon: undefined })}
-										>
-											<StatusIcon {glyph} color={item.color} />
-										</button>
-									{/each}
-								</div>
-								<div class="px-2 pt-0.5 pb-0.5 text-xs text-base-400 dark:text-base-500">
-									{$i18n.t('Color')}
-								</div>
-								<div class="grid grid-cols-8 gap-0.5 px-1 pb-1">
-									{#each tagColors as color}
-										<button
-											type="button"
-											role="menuitemradio"
-											aria-checked={item.color === color}
-											aria-label={$i18n.t(color)}
-											title={$i18n.t(color)}
-											class="flex size-5 items-center justify-center rounded-md hover:bg-base-50 dark:hover:bg-base-800"
-											on:click={() => update(item.id, { color, icon: undefined })}
-										>
-											<span
-												class="size-2.5 rounded-full {colorDot(color)} {item.color === color &&
-												!item.icon
-													? 'ring-2 ring-base-300 ring-offset-1 ring-offset-base-0 dark:ring-base-600 dark:ring-offset-base-850'
-													: ''}"
-											></span>
-										</button>
-									{/each}
-								</div>
-								<hr class="border-base-50/30 dark:border-base-800/30" />
-								<EmojiPicker
-									side="bottom"
-									selected={item.icon ?? null}
-									onSubmit={(icon: string | null) => update(item.id, { icon: icon ?? undefined })}
-								>
-									<button
-										type="button"
-										class="flex h-[1.6875rem] w-full items-center gap-2 rounded-xl px-2 text-[0.8125rem] hover:bg-base-50/60 dark:hover:bg-base-800/60"
-									>
-										<span class="flex-1 text-left">{$i18n.t('Use emoji…')}</span>
-										{#if item.icon}<Check className="size-3! shrink-0" />{/if}
-									</button>
-								</EmojiPicker>
-							</DropdownMenu>
-						</Dropdown>
-
-						<input
-							data-status-name
-							class="min-w-0 flex-1 bg-transparent text-sm outline-hidden placeholder:text-base-300 dark:placeholder:text-base-700"
-							placeholder={$i18n.t('Status name')}
-							maxlength="40"
-							value={item.name}
-							on:input={(event) => update(item.id, { name: event.currentTarget.value })}
-						/>
-						<button
-							type="button"
-							class="rounded-lg p-1 text-base-400 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100 hover:text-base-700 dark:hover:text-base-200"
-							aria-label={$i18n.t('Delete status')}
-							on:click={() => (draft = draft.filter((entry) => entry.id !== item.id))}
-							><XMark className="size-3.5" /></button
-						>
+						{/if}
 					</div>
 				{/each}
 

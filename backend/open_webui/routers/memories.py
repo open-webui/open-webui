@@ -11,11 +11,14 @@ from open_webui.models.config import Config
 from open_webui.models.memories import Memories, MemoryModel
 from open_webui.models.users import Users
 from open_webui.retrieval.vector.async_client import ASYNC_VECTOR_DB_CLIENT
+from open_webui.routers.folders import check_folder_read_access
 from open_webui.utils.access_control import has_permission
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from open_webui.utils.memory import (
     clean_memory_content,
     clean_memory_path,
+    get_memory_folder,
+    is_folder_only,
     list_memory_path_groups,
     memory_vector_text,
     read_memory_path_rows,
@@ -68,6 +71,7 @@ class AddMemoryForm(BaseModel):
     content: str
     type: Literal['user', 'context'] = 'context'
     path: str | None = None
+    folder_id: str | None = None
 
 
 class MemoryUpdateModel(BaseModel):
@@ -116,6 +120,7 @@ def _memory_metadata(memory: MemoryModel) -> dict:
         'updated_at': memory.updated_at,
         'type': memory.type,
         'path': memory.path,
+        'folder_id': memory.folder_id,
     }
 
 
@@ -158,6 +163,12 @@ async def reindex_memory_vectors_for_user(
     return len(memories)
 
 
+async def get_request_chat_memories(request: Request, user) -> list[MemoryModel]:
+    """The memories the chat making this request can see."""
+    folder = await get_memory_folder(user, getattr(request.state, 'metadata', None))
+    return await Memories.get_chat_memories(user.id, folder.id if folder else None, folder_only=is_folder_only(folder))
+
+
 async def upsert_memory_vectors_or_reindex(request: Request, user, items: list[dict]) -> None:
     try:
         await ASYNC_VECTOR_DB_CLIENT.upsert(collection_name=f'user-memory-{user.id}', items=items)
@@ -186,12 +197,16 @@ async def add_memory(
 
     content = clean_memory_content(form_data.content)
     path = clean_memory_path(form_data.path)
+    folder_id = None
+    if form_data.folder_id:
+        folder_id = (await check_folder_read_access(request, form_data.folder_id, user, None)).id
     memory = await Memories.insert_new_memory(
         user.id,
         content,
         memory_type=form_data.type,
         path=path,
         meta={'created_by': 'manual'},
+        folder_id=folder_id,
     )
 
     vector = await request.app.state.EMBEDDING_FUNCTION(
@@ -235,6 +250,10 @@ async def update_memories(
     metadata = getattr(request.state, 'metadata', {}) or {}
     model = metadata.get('model')
     source = form_data.source or 'tool'
+    folder = await get_memory_folder(user, metadata)
+    for operation in operations:
+        if operation.get('action') == 'add':
+            operation['folder_id'] = folder.id if folder else None
     for operation in operations:
         if operation.get('action') in {'add', 'replace', 'move'}:
             operation['meta'] = {
@@ -375,12 +394,13 @@ async def query_memory(
 
 @router.post('/search', response_model=list[MemoryModel])
 async def search_memories(
+    request: Request,
     form_data: SearchMemoriesForm,
     user=Depends(get_verified_user),
 ):
     await check_memories_permission(user)
 
-    memories = await Memories.get_memories_by_user_id(user.id)
+    memories = await get_request_chat_memories(request, user)
     return search_memory_rows(
         memories,
         query=form_data.query,
@@ -393,12 +413,13 @@ async def search_memories(
 
 @router.post('/paths')
 async def list_memory_paths(
+    request: Request,
     form_data: ListMemoryPathsForm,
     user=Depends(get_verified_user),
 ):
     await check_memories_permission(user)
 
-    memories = await Memories.get_memories_by_user_id(user.id)
+    memories = await get_request_chat_memories(request, user)
     return list_memory_path_groups(
         memories,
         query=form_data.query or '',
@@ -409,12 +430,13 @@ async def list_memory_paths(
 
 @router.post('/path')
 async def read_memory_path(
+    request: Request,
     form_data: ReadMemoryPathForm,
     user=Depends(get_verified_user),
 ):
     await check_memories_permission(user)
 
-    memories = await Memories.get_memories_by_user_id(user.id)
+    memories = await get_request_chat_memories(request, user)
     result = read_memory_path_rows(
         memories,
         path=form_data.path,

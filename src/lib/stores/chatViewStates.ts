@@ -73,6 +73,7 @@ export function serializeChatView(state: ChatViewState): ChatViewState {
 	return {
 		schemaVersion: 1,
 		selectedMachineId: state.selectedMachineId,
+		...(state.folderPage ? { folderPage: state.folderPage } : {}),
 		panels: {
 			...panels,
 			tabs: panels.tabs.map((tab) => ({

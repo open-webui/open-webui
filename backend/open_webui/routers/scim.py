@@ -879,15 +879,17 @@ async def delete_user(
             detail=ERROR_MESSAGES.ACTION_PROHIBITED,
         )
 
-    for chat_id in await Chats.get_chat_ids_by_user_id(user_id, db=db):
-        await stop_item_tasks(request.app.state.redis, chat_id)
-
+    chat_ids = await Chats.get_chat_ids_by_user_id(user_id, db=db)
     success = await Auths.delete_auth_by_id(user_id, db=db)
     if not success:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail='Failed to delete user',
         )
+
+    # Delete first so stopped sub-agents have no chat to report back to.
+    for chat_id in chat_ids:
+        await stop_item_tasks(request.app.state.redis, chat_id)
 
     await publish_event(
         request,
