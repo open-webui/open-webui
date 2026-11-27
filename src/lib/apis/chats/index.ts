@@ -1378,6 +1378,23 @@ export const updateChatParams = async (
 	return res.json();
 };
 
+export const addChatMessagesById = async (
+	token: string,
+	id: string,
+	messages: Record<string, unknown>
+) => {
+	const res = await fetch(`${WEBUI_API_BASE_URL}/chats/${id}/messages`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+			...(token && { authorization: `Bearer ${token}` })
+		},
+		body: JSON.stringify({ messages })
+	});
+	if (!res.ok) throw getErrorDetail(await res.json());
+	return res.json();
+};
+
 export const compactChatById = async (token: string, id: string, model?: string | null) => {
 	let error = null;
 

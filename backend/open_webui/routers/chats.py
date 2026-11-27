@@ -1672,6 +1672,46 @@ async def update_chat_params(
     return chat.chat['params']
 
 
+# Add Chat Messages
+class MessagesForm(BaseModel):
+    messages: dict[str, dict]
+
+
+@router.post('/{id}/messages', response_model=bool)
+async def add_chat_messages_by_id(
+    request: Request,
+    id: str,
+    form_data: MessagesForm,
+    user=Depends(get_verified_user),
+    db: AsyncSession = Depends(get_async_session),
+):
+    if not await Chats.is_chat_owner(id, user.id, db=db):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=ERROR_MESSAGES.ACCESS_PROHIBITED,
+        )
+
+    if not form_data.messages or await ChatMessages.get_messages_map_by_message_ids(
+        id, list(form_data.messages), db=db
+    ):
+        raise HTTPException(409, 'Message already exists or has an invalid ID.')
+
+    set_message_authors({'history': {'messages': form_data.messages}}, user)
+    for message_id, message in form_data.messages.items():
+        chat = await Chats.upsert_message_to_chat_by_id_and_message_id(id, message_id, message)
+        if chat is None:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=ERROR_MESSAGES.DEFAULT())
+
+    await publish_event(
+        request,
+        EVENTS.CHAT_UPDATED,
+        actor=user,
+        subject_id=id,
+        data={'title': chat.title},
+    )
+    return True
+
+
 # Update Chat Message By Id
 class MessageForm(BaseModel):
     content: str | None = None
