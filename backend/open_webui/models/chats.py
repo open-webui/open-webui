@@ -1934,11 +1934,14 @@ class ChatTable:
             return None
 
     async def get_chat_by_id_and_user_id(
-        self, id: str, user_id: str, db: AsyncSession | None = None
+        self, id: str, user_id: str, where: ColumnElement[bool] | None = None, db: AsyncSession | None = None
     ) -> ChatModel | None:
         try:
             async with get_async_db_context(db) as session:
-                result = await session.execute(select(Chat).filter_by(id=id, user_id=user_id))
+                stmt = select(Chat).filter_by(id=id, user_id=user_id)
+                if where is not None:
+                    stmt = stmt.filter(where)
+                result = await session.execute(stmt)
                 chat = result.scalars().first()
                 if not chat:
                     return None
