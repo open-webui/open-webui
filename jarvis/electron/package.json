@@ -1,0 +1,16 @@
+{
+  "name": "jarvis-openwebui-desktop",
+  "version": "1.0.0",
+  "description": "JARVIS desktop shell around the local Open WebUI (tray, global hotkey, Barehands overlay)",
+  "main": "main.cjs",
+  "private": true,
+  "scripts": {
+    "start": "electron ."
+  },
+  "devDependencies": {
+    "electron": "^32.0.0"
+  },
+  "allowScripts": {
+    "electron": true
+  }
+}

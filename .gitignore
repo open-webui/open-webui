@@ -316,3 +316,10 @@ cypress/screenshots
 # Local temporary fixtures and screenshots
 /tmp/
 /artifacts/
+
+# JARVIS local launcher (setup.bat / run.bat)
+/jarvis-data/
+/jarvis.env
+/.venv/
+/integrations/barehands/
+jarvis/electron/node_modules/

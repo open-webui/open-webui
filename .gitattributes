@@ -47,3 +47,6 @@
 # Misc
 *.env text eol=lf
 *.lock text eol=lf
+# Windows batch files must have CRLF endings
+*.bat text eol=crlf
+*.cmd text eol=crlf
