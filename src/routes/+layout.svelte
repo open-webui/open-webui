@@ -235,6 +235,7 @@
 				}
 			}
 
+			clearInterval(heartbeatInterval);
 			heartbeatInterval = setInterval(
 				() => {
 					if (_socket.connected) {
