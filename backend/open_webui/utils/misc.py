@@ -23,6 +23,8 @@ from open_webui.utils.tool_calling import prepare_tool_call
 
 log = logging.getLogger(__name__)
 SURROGATE_RE = re.compile('[\ud800-\udfff]')
+# Attachment references added by add_file_context, not typed by the user.
+FILE_CONTEXT_RE = re.compile(r'^<attached_files>\n.*?\n</attached_files>\n\n', re.DOTALL)
 MAX_DIFF_LINES = 5000
 
 
@@ -699,7 +701,16 @@ def get_last_user_message(messages: list[dict]) -> str | None:
     message = get_last_user_message_item(messages)
     if message is None:
         return None
-    return get_content_from_message(message)
+    content = message.get('content')
+    if isinstance(content, list):
+        content = [
+            item
+            for item in content
+            if not (isinstance(item, dict) and FILE_CONTEXT_RE.fullmatch(item.get('text') or ''))
+        ]
+    elif isinstance(content, str):
+        content = FILE_CONTEXT_RE.sub('', content)
+    return get_content_from_message({**message, 'content': content})
 
 
 def set_last_user_message_content(content: str, messages: list[dict]) -> list[dict]:
