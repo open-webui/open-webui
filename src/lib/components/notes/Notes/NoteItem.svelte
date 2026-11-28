@@ -18,7 +18,7 @@
 		formatDateDetails,
 		formatShortDate
 	} from '$lib/utils';
-	import { downloadNote, setNoteDragData } from '../utils';
+	import { canCopyNoteLink, downloadNote, setNoteDragData } from '../utils';
 
 	import FolderTags from '$lib/components/chat/Placeholder/FolderTags.svelte';
 	import ProfileImage from '$lib/components/chat/Messages/ProfileImage.svelte';
@@ -251,7 +251,7 @@
 						onRename={editable ? startRename : null}
 						onMove={note.user_id === $user?.id ? moveHandler : null}
 						onDownload={downloadHandler}
-						onCopyLink={copyLinkHandler}
+						onCopyLink={canCopyNoteLink(note, $user) ? copyLinkHandler : null}
 						onDelete={onDelete ? () => onDelete?.(true) : null}
 						isPinned={$pinnedNotes.some((n) => n.id === note.id)}
 						onPin={pinHandler}

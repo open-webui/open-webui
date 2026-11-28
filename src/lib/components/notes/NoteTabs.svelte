@@ -26,7 +26,7 @@
 	export let busy = false;
 	export let onSelect: (id: string) => Promise<void>;
 	export let onAction: (operation: Omit<NotePageOperation, 'revision'>) => Promise<string | null>;
-	export let onCopyLink: (id: string) => void;
+	export let onCopyLink: ((id: string) => void) | null = null;
 	export let onDownload: (id: string, type: string) => void;
 	export let onClose: () => void;
 	let collapsed = new Set<string>();

@@ -156,6 +156,22 @@ export const setNoteDragData = (
 	event.dataTransfer.effectAllowed = 'copyMove';
 };
 
+export const canCopyNoteLink = (
+	note: { user_id?: string | null; access_grants?: unknown[] | null } | null | undefined,
+	user:
+		| { id?: string | null; role?: string | null; permissions?: { sharing?: { notes?: boolean } } }
+		| null
+		| undefined
+) => {
+	if (!note || !user) return false;
+	return (
+		user.role === 'admin' ||
+		Boolean(user.permissions?.sharing?.notes) ||
+		Boolean(note.user_id && user.id && note.user_id !== user.id) ||
+		(note.access_grants?.length ?? 0) > 0
+	);
+};
+
 export const createNoteHandler = async (
 	title: string,
 	md?: string,

@@ -39,7 +39,7 @@
 	export let showAutoFormat = false;
 	export let autoFormat = true;
 
-	export let onCopyLink = null;
+	export let onCopyLink: (() => void | Promise<void>) | null = null;
 	export let onCopyToClipboard = null;
 
 	export let onChange = () => {};

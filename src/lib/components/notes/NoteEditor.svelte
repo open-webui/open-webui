@@ -62,7 +62,7 @@
 	import { uploadFile } from '$lib/apis/files';
 	import { generateOpenAIChatCompletion } from '$lib/apis/openai';
 
-	import { contentFiles, downloadNote } from './utils';
+	import { canCopyNoteLink, contentFiles, downloadNote } from './utils';
 	import NoteTabs from './NoteTabs.svelte';
 	import ChevronDown from '../icons/ChevronDown.svelte';
 	import ChevronLeft from '../icons/ChevronLeft.svelte';
@@ -1318,16 +1318,18 @@ ${content}
 									onDownload={(type) => {
 										downloadHandler(type);
 									}}
-									onCopyLink={async () => {
-										const baseUrl = window.location.origin;
-										const res = await copyToClipboard(`${baseUrl}/notes/${note.id}`);
+									onCopyLink={canCopyNoteLink(note, $user)
+										? async () => {
+												const baseUrl = window.location.origin;
+												const res = await copyToClipboard(`${baseUrl}/notes/${note.id}`);
 
-										if (res) {
-											toast.success($i18n.t('Copied link to clipboard'));
-										} else {
-											toast.error($i18n.t('Failed to copy link'));
-										}
-									}}
+												if (res) {
+													toast.success($i18n.t('Copied link to clipboard'));
+												} else {
+													toast.error($i18n.t('Failed to copy link'));
+												}
+											}
+										: null}
 									onCopyToClipboard={async () => {
 										const res = await copyToClipboard(
 											activePage.content.md,
@@ -1533,12 +1535,14 @@ ${content}
 									if ($mobile) showNoteTabs = false;
 								}}
 								onAction={pageAction}
-								onCopyLink={async (pageId) => {
-									await copyToClipboard(
-										`${window.location.origin}/notes/${id}?page=${encodeURIComponent(pageId)}`
-									);
-									toast.success($i18n.t('Copied link to clipboard'));
-								}}
+								onCopyLink={canCopyNoteLink(note, $user)
+									? async (pageId) => {
+											await copyToClipboard(
+												`${window.location.origin}/notes/${id}?page=${encodeURIComponent(pageId)}`
+											);
+											toast.success($i18n.t('Copied link to clipboard'));
+										}
+									: null}
 								onDownload={(pageId, format) => downloadHandler(format, pageId)}
 							/>
 						</NotePanel>

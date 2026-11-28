@@ -36,7 +36,13 @@
 		getPinnedNoteList
 	} from '$lib/apis/notes';
 	import { copyToClipboard } from '$lib/utils';
-	import { downloadNote, createNoteHandler, groupNotes, setNoteDragData } from './utils';
+	import {
+		canCopyNoteLink,
+		downloadNote,
+		createNoteHandler,
+		groupNotes,
+		setNoteDragData
+	} from './utils';
 
 	import GarbageBin from '../icons/GarbageBin.svelte';
 	import DeleteConfirmDialog from '$lib/components/common/ConfirmDialog.svelte';
@@ -1107,16 +1113,18 @@
 
 															downloadHandler(type);
 														}}
-														onCopyLink={async () => {
-															const baseUrl = window.location.origin;
-															const res = await copyToClipboard(`${baseUrl}/notes/${note.id}`);
+														onCopyLink={canCopyNoteLink(note, $user)
+															? async () => {
+																	const baseUrl = window.location.origin;
+																	const res = await copyToClipboard(`${baseUrl}/notes/${note.id}`);
 
-															if (res) {
-																toast.success($i18n.t('Copied link to clipboard'));
-															} else {
-																toast.error($i18n.t('Failed to copy link'));
-															}
-														}}
+																	if (res) {
+																		toast.success($i18n.t('Copied link to clipboard'));
+																	} else {
+																		toast.error($i18n.t('Failed to copy link'));
+																	}
+																}
+															: null}
 														onDelete={() => {
 															selectedNote = note;
 															showDeleteConfirm = true;

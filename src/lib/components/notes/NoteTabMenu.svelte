@@ -15,7 +15,7 @@
 	export let onCreate: (parentId: string | null) => void;
 	export let onMoveTo: (page: NotePage) => void;
 	export let onMove: (id: string, direction: number) => void;
-	export let onCopyLink: (id: string) => void;
+	export let onCopyLink: ((id: string) => void) | null = null;
 	export let onDownload: (id: string, type: string) => void;
 	$: siblings = pages.filter((p) => (p.parent_id ?? null) === (page.parent_id ?? null));
 	$: index = siblings.findIndex((p) => p.id === page.id);
@@ -52,10 +52,14 @@
 					>
 				{/if}
 			{/if}
-			<hr class="border-base-100 dark:border-base-800" />
-			<button class="w-full text-start px-3 py-1.5" on:click={() => onCopyLink(page.id)}
-				>{$i18n.t('Copy page link')}</button
-			>
+			{#if editable}
+				<hr class="border-base-100 dark:border-base-800" />
+			{/if}
+			{#if onCopyLink}
+				<button class="w-full text-start px-3 py-1.5" on:click={() => onCopyLink(page.id)}
+					>{$i18n.t('Copy page link')}</button
+				>
+			{/if}
 			{#each ['md', 'txt', 'pdf'] as format}
 				<button class="w-full text-start px-3 py-1.5" on:click={() => onDownload(page.id, format)}
 					>{$i18n.t('Download page')} (.{format})</button
